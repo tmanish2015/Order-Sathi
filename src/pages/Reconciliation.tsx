@@ -314,7 +314,7 @@ export default function Reconciliation() {
                   <th className="px-4 py-2 font-medium text-right">TDS 194O</th>
                   <th className="px-4 py-2 font-medium text-right">Expected settle</th>
                   <th className="px-4 py-2 font-medium text-right">Actual settle</th>
-                  <th className="px-4 py-2 font-medium">Status</th>
+                  <th className="px-4 py-2 font-medium">Reconciliation status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">

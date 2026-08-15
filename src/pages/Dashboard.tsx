@@ -402,7 +402,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <Stat label="Gross sales (all orders)" value={formatINR(stats.gross)} accent="indigo" />
-        <Stat label="Pending" value={String(stats.pending)} accent="amber" />
+        <Stat label="Awaiting shipment" value={String(stats.pending)} accent="amber" />
         <Stat label="Shipped" value={String(stats.shipped)} accent="purple" />
         <Stat label="Channels connected" value={String(connectedChannels.length)} />
       </div>
@@ -444,9 +444,9 @@ export default function Dashboard() {
                   <th className="px-4 py-2 font-medium">Order ID</th>
                   <th className="px-4 py-2 font-medium">Channel</th>
                   <th className="px-4 py-2 font-medium">Date</th>
-                  <th className="px-4 py-2 font-medium">Status</th>
+                  <th className="px-4 py-2 font-medium">Shipment status</th>
                   <th className="px-4 py-2 font-medium text-right">Amount</th>
-                  <th className="px-4 py-2 font-medium text-right">Invoice</th>
+                  <th className="px-4 py-2 font-medium text-right">GST invoice</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
