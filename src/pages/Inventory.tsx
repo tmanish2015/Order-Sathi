@@ -1,13 +1,27 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/AuthContext'
 import { useToast } from '../lib/Toast'
 import { reportError } from '../lib/errors'
+import ConfirmDialog from '../components/ConfirmDialog'
+import Skeleton from '../components/Skeleton'
+import EmptyState from '../components/EmptyState'
 import type { Tables } from '../lib/database.types'
 
 type Sku = Tables<'skus'>
 type Ledger = Tables<'inventory_ledger'>
 type Channel = Tables<'channels'>
+
+interface SkuFormValues {
+  title: string
+  gst_rate: string
+  buffer_stock: string
+  product_type: string
+}
+
+function toFormValues(s: Sku): SkuFormValues {
+  return { title: s.title, gst_rate: String(s.gst_rate), buffer_stock: String(s.buffer_stock), product_type: s.product_type ?? '' }
+}
 
 export default function Inventory() {
   const { profile } = useAuth()
@@ -17,16 +31,23 @@ export default function Inventory() {
   const [channels, setChannels] = useState<Channel[]>([])
   const [selectedChannel, setSelectedChannel] = useState('')
   const [pushing, setPushing] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [editValue, setEditValue] = useState('')
+  const [editForm, setEditForm] = useState<SkuFormValues>({ title: '', gst_rate: '', buffer_stock: '', product_type: '' })
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Sku | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [showAddSku, setShowAddSku] = useState(false)
   const [newSku, setNewSku] = useState({ sku: '', title: '', gst_rate: '18', buffer_stock: '0' })
   const [savingSku, setSavingSku] = useState(false)
   const orgId = profile?.organization_id
   const canEdit = profile?.role === 'admin' || profile?.role === 'ops'
+  const canDelete = canEdit
 
   async function load() {
     if (!orgId) return
+    setLoading(true)
     const [{ data: s }, { data: l }, { data: c }] = await Promise.all([
       supabase.from('skus').select('*').order('sku'),
       supabase.from('inventory_ledger').select('*'),
@@ -40,24 +61,59 @@ export default function Inventory() {
     setStockBySku(totals)
     setChannels(c ?? [])
     if (c && c.length === 1) setSelectedChannel(c[0].id)
+    setLoading(false)
   }
 
   useEffect(() => {
     load()
   }, [orgId])
 
+  const filteredSkus = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return skus
+    return skus.filter((s) => s.sku.toLowerCase().includes(q) || s.title.toLowerCase().includes(q))
+  }, [skus, search])
+
   function startEdit(s: Sku) {
     setEditingId(s.id)
-    setEditValue(s.product_type ?? '')
+    setEditForm(toFormValues(s))
   }
 
-  async function saveProductType(s: Sku) {
-    const { error } = await supabase.from('skus').update({ product_type: editValue || null }).eq('id', s.id)
+  async function saveEdit(s: Sku) {
+    if (!editForm.title.trim()) {
+      showError('Title is required.')
+      return
+    }
+    setSavingEdit(true)
+    const { error } = await supabase
+      .from('skus')
+      .update({
+        title: editForm.title.trim(),
+        gst_rate: Number(editForm.gst_rate) || 0,
+        buffer_stock: Number(editForm.buffer_stock) || 0,
+        product_type: editForm.product_type.trim() || null,
+      })
+      .eq('id', s.id)
+    setSavingEdit(false)
     if (error) {
-      reportError(showError, 'Save product type', error, orgId, profile?.id)
+      reportError(showError, 'Save SKU', error, orgId, profile?.id)
       return
     }
     setEditingId(null)
+    load()
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    const { error } = await supabase.from('skus').delete().eq('id', deleteTarget.id)
+    setDeleting(false)
+    setDeleteTarget(null)
+    if (error) {
+      reportError(showError, 'Delete SKU', error, orgId, profile?.id)
+      return
+    }
+    showSuccess(`SKU ${deleteTarget.sku} deleted.`)
     load()
   }
 
@@ -188,67 +244,125 @@ export default function Inventory() {
       )}
       <p className="text-xs text-slate-400 mb-6">
         One central ledger per SKU. Stock = sum of every movement (order deduction, restock, return, manual adjustment) — never edited directly.
-        Amazon needs each SKU's product type before quantity can push — set it below.
+        Amazon needs each SKU's product type before quantity can push.
       </p>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        {skus.length === 0 ? (
-          <p className="px-4 py-6 text-center text-sm text-slate-400">No SKUs yet.</p>
+        <div className="px-4 py-3 border-b border-slate-100">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search SKU or title…"
+            className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 w-56"
+          />
+        </div>
+        {loading ? (
+          <Skeleton />
+        ) : filteredSkus.length === 0 ? (
+          <EmptyState icon="📋" title={search ? 'No SKUs match this search.' : 'No SKUs yet.'} />
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
-                <th className="px-4 py-2 font-medium">SKU</th>
-                <th className="px-4 py-2 font-medium">Title</th>
-                <th className="px-4 py-2 font-medium">Product type</th>
-                <th className="px-4 py-2 font-medium text-right">Buffer</th>
-                <th className="px-4 py-2 font-medium text-right">In stock</th>
-                <th className="px-4 py-2 font-medium text-right">Available to sell</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {skus.map((s) => {
-                const stock = stockBySku[s.id] ?? 0
-                const available = Math.max(stock - s.buffer_stock, 0)
-                const low = stock <= s.buffer_stock
-                return (
-                  <tr key={s.id}>
-                    <td className="px-4 py-2.5 font-medium text-slate-700">{s.sku}</td>
-                    <td className="px-4 py-2.5 text-slate-500">{s.title}</td>
-                    <td className="px-4 py-2.5 text-slate-500">
-                      {editingId === s.id ? (
-                        <div className="flex items-center gap-1.5">
-                          <input
-                            type="text"
-                            autoFocus
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            placeholder="e.g. LUGGAGE"
-                            className="w-32 text-sm rounded-lg border border-slate-300 px-2 py-1"
-                          />
-                          <button onClick={() => saveProductType(s)} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">
-                            Save
-                          </button>
-                          <button onClick={() => setEditingId(null)} className="text-xs text-slate-400 hover:text-slate-600">
-                            Cancel
-                          </button>
-                        </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                  <th className="px-4 py-2 font-medium">SKU</th>
+                  <th className="px-4 py-2 font-medium">Title</th>
+                  <th className="px-4 py-2 font-medium">Product type</th>
+                  <th className="px-4 py-2 font-medium text-right">Buffer</th>
+                  <th className="px-4 py-2 font-medium text-right">In stock</th>
+                  <th className="px-4 py-2 font-medium text-right">Available</th>
+                  <th className="px-4 py-2 font-medium text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {filteredSkus.map((s) => {
+                  const stock = stockBySku[s.id] ?? 0
+                  const available = Math.max(stock - s.buffer_stock, 0)
+                  const low = stock <= s.buffer_stock
+                  const isEditing = editingId === s.id
+                  return (
+                    <tr key={s.id}>
+                      <td className="px-4 py-2.5 font-medium text-slate-700">{s.sku}</td>
+                      {isEditing ? (
+                        <>
+                          <td className="px-4 py-2.5">
+                            <input
+                              type="text"
+                              value={editForm.title}
+                              onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
+                              className="w-full text-sm rounded-lg border border-slate-300 px-2 py-1"
+                            />
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <input
+                              type="text"
+                              value={editForm.product_type}
+                              onChange={(e) => setEditForm((f) => ({ ...f, product_type: e.target.value }))}
+                              placeholder="e.g. LUGGAGE"
+                              className="w-28 text-sm rounded-lg border border-slate-300 px-2 py-1"
+                            />
+                          </td>
+                          <td className="px-4 py-2.5 text-right">
+                            <input
+                              type="number"
+                              value={editForm.buffer_stock}
+                              onChange={(e) => setEditForm((f) => ({ ...f, buffer_stock: e.target.value }))}
+                              className="w-16 text-sm text-right rounded-lg border border-slate-300 px-2 py-1"
+                            />
+                          </td>
+                          <td className="px-4 py-2.5 text-right text-slate-400">{stock}</td>
+                          <td className="px-4 py-2.5 text-right text-slate-400">{available}</td>
+                          <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                            <button onClick={() => saveEdit(s)} disabled={savingEdit} className="text-xs font-medium text-indigo-600 hover:text-indigo-700 mr-2 disabled:opacity-50">
+                              {savingEdit ? '…' : 'Save'}
+                            </button>
+                            <button onClick={() => setEditingId(null)} className="text-xs text-slate-400 hover:text-slate-600">
+                              Cancel
+                            </button>
+                          </td>
+                        </>
                       ) : (
-                        <button onClick={() => canEdit && startEdit(s)} disabled={!canEdit} className={canEdit ? 'hover:underline' : ''}>
-                          {s.product_type ?? (canEdit ? 'Set…' : '—')}
-                        </button>
+                        <>
+                          <td className="px-4 py-2.5 text-slate-500">{s.title}</td>
+                          <td className="px-4 py-2.5 text-slate-500">{s.product_type ?? '—'}</td>
+                          <td className="px-4 py-2.5 text-right text-slate-500">{s.buffer_stock}</td>
+                          <td className={`px-4 py-2.5 text-right font-medium ${low ? 'text-red-600' : 'text-slate-700'}`}>{stock}</td>
+                          <td className="px-4 py-2.5 text-right text-slate-500">{available}</td>
+                          <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                            {canEdit && (
+                              <button onClick={() => startEdit(s)} className="text-xs font-medium text-indigo-600 hover:text-indigo-700 mr-3">
+                                Edit
+                              </button>
+                            )}
+                            {canDelete && (
+                              <button onClick={() => setDeleteTarget(s)} className="text-xs text-slate-400 hover:text-red-600">
+                                Delete
+                              </button>
+                            )}
+                          </td>
+                        </>
                       )}
-                    </td>
-                    <td className="px-4 py-2.5 text-right text-slate-500">{s.buffer_stock}</td>
-                    <td className={`px-4 py-2.5 text-right font-medium ${low ? 'text-red-600' : 'text-slate-700'}`}>{stock}</td>
-                    <td className="px-4 py-2.5 text-right text-slate-500">{available}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
+
+      {deleteTarget && (
+        <ConfirmDialog
+          title="Delete SKU?"
+          message={`Delete ${deleteTarget.sku} (${deleteTarget.title})? Fails if it's used on any order — this doesn't touch order history.`}
+          confirmLabel="Delete"
+          danger
+          busy={deleting}
+          onConfirm={confirmDelete}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
     </div>
   )
 }

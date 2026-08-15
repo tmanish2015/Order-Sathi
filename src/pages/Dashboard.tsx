@@ -8,7 +8,11 @@ import { reportError } from '../lib/errors'
 import { formatINR } from '../lib/format'
 import { calculateInvoice } from '../lib/gstInvoice'
 import { buildInvoicePdf } from '../lib/invoicePdf'
-import type { Tables } from '../lib/database.types'
+import ConfirmDialog from '../components/ConfirmDialog'
+import Skeleton from '../components/Skeleton'
+import EmptyState from '../components/EmptyState'
+import Pagination from '../components/Pagination'
+import type { Tables, Enums } from '../lib/database.types'
 
 type Order = Tables<'orders'> & { channels: Tables<'channels'> | null }
 type Channel = Tables<'channels'>
@@ -22,6 +26,8 @@ interface LineItemDraft {
 }
 
 const BLANK_LINE_ITEM: LineItemDraft = { sku_id: '', quantity: '1', unit_price: '' }
+const PAGE_SIZE = 20
+const STATUSES: Enums<'order_status'>[] = ['pending', 'shipped', 'delivered', 'cancelled', 'returned']
 
 const STATUS_COLOR: Record<Order['order_status'], string> = {
   pending: 'bg-amber-100 text-amber-700',
@@ -35,11 +41,17 @@ export default function Dashboard() {
   const { profile } = useAuth()
   const { showError, showSuccess } = useToast()
   const [orders, setOrders] = useState<Order[]>([])
+  const [totalOrders, setTotalOrders] = useState(0)
+  const [page, setPage] = useState(0)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<Enums<'order_status'> | ''>('')
+  const [stats, setStats] = useState({ gross: 0, pending: 0, shipped: 0 })
   const [channels, setChannels] = useState<Channel[]>([])
   const [org, setOrg] = useState<Organization | null>(null)
   const [invoicedOrderIds, setInvoicedOrderIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [generatingId, setGeneratingId] = useState<string | null>(null)
+  const [confirmInvoiceFor, setConfirmInvoiceFor] = useState<Order | null>(null)
   const [skus, setSkus] = useState<Sku[]>([])
   const [showNewOrder, setShowNewOrder] = useState(false)
   const [creatingChannel, setCreatingChannel] = useState(false)
@@ -49,27 +61,58 @@ export default function Dashboard() {
   const orgId = profile?.organization_id
   const canEdit = profile?.role === 'admin' || profile?.role === 'ops'
 
-  async function load() {
+  async function loadOrders() {
+    setLoading(true)
+    let query = supabase.from('orders').select('*, channels(*)', { count: 'exact' }).order('order_date', { ascending: false })
+    if (search.trim()) query = query.ilike('amazon_order_id', `%${search.trim()}%`)
+    if (statusFilter) query = query.eq('order_status', statusFilter)
+    const { data, count } = await query.range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1)
+    setOrders((data as unknown as Order[]) ?? [])
+    setTotalOrders(count ?? 0)
+    setLoading(false)
+  }
+
+  async function loadStats() {
+    const { data } = await supabase.from('orders').select('gross_amount, order_status')
+    const rows = data ?? []
+    setStats({
+      gross: rows.reduce((sum, r) => sum + Number(r.gross_amount), 0),
+      pending: rows.filter((r) => r.order_status === 'pending').length,
+      shipped: rows.filter((r) => r.order_status === 'shipped').length,
+    })
+  }
+
+  async function loadSupportingData() {
     if (!orgId) return
-    const [{ data: o }, { data: c }, { data: org }, { data: inv }, { data: s }] = await Promise.all([
-      supabase.from('orders').select('*, channels(*)').order('order_date', { ascending: false }).limit(50),
+    const [{ data: c }, { data: orgRow }, { data: inv }, { data: s }] = await Promise.all([
       supabase.from('channels').select('*'),
       supabase.from('organizations').select('*').eq('id', orgId).single(),
       supabase.from('gst_invoices').select('order_id'),
       supabase.from('skus').select('*').eq('active', true).order('sku'),
     ])
-    setOrders((o as unknown as Order[]) ?? [])
     setChannels(c ?? [])
-    setOrg(org ?? null)
+    setOrg(orgRow ?? null)
     setInvoicedOrderIds(new Set((inv ?? []).map((i) => i.order_id)))
     setSkus(s ?? [])
-    setLoading(false)
     if (c && c.length > 0 && !orderForm.channel_id) setOrderForm((f) => ({ ...f, channel_id: c[0].id }))
   }
 
   useEffect(() => {
-    load()
+    if (!orgId) return
+    loadSupportingData()
+    loadStats()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId])
+
+  useEffect(() => {
+    if (!orgId) return
+    loadOrders()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgId, page, search, statusFilter])
+
+  useEffect(() => {
+    setPage(0)
+  }, [search, statusFilter])
 
   async function createTestChannel() {
     if (!orgId) return
@@ -89,7 +132,7 @@ export default function Dashboard() {
       return
     }
     showSuccess('Test channel created — manual orders can now be entered against it.')
-    load()
+    loadSupportingData()
   }
 
   function updateLineItem(index: number, patch: Partial<LineItemDraft>) {
@@ -154,7 +197,8 @@ export default function Dashboard() {
       setOrderForm((f) => ({ ...f, amazon_order_id: '', buyer_state: '', ship_state: '' }))
       setLineItems([{ ...BLANK_LINE_ITEM }])
       setShowNewOrder(false)
-      load()
+      loadOrders()
+      loadStats()
     } catch (err) {
       reportError(showError, 'Create manual order', err as { message: string }, orgId, profile?.id)
     } finally {
@@ -207,13 +251,11 @@ export default function Dashboard() {
       reportError(showError, 'Generate invoice', err as { message: string }, orgId, profile?.id)
     } finally {
       setGeneratingId(null)
+      setConfirmInvoiceFor(null)
     }
   }
 
   const connectedChannels = channels.filter((c) => c.status === 'connected')
-  const gross = orders.reduce((sum, o) => sum + Number(o.gross_amount), 0)
-  const pending = orders.filter((o) => o.order_status === 'pending').length
-  const shipped = orders.filter((o) => o.order_status === 'shipped').length
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
@@ -359,20 +401,41 @@ export default function Dashboard() {
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-        <Stat label="Gross sales (last 50 orders)" value={formatINR(gross)} accent="indigo" />
-        <Stat label="Pending" value={String(pending)} accent="amber" />
-        <Stat label="Shipped" value={String(shipped)} accent="purple" />
+        <Stat label="Gross sales (all orders)" value={formatINR(stats.gross)} accent="indigo" />
+        <Stat label="Pending" value={String(stats.pending)} accent="amber" />
+        <Stat label="Shipped" value={String(stats.shipped)} accent="purple" />
         <Stat label="Channels connected" value={String(connectedChannels.length)} />
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-100 text-xs font-semibold uppercase text-slate-500">
-          Recent orders
+        <div className="px-4 py-3 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <span className="text-xs font-semibold uppercase text-slate-500">Orders</span>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search order ID…"
+              className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 w-40"
+            />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as Enums<'order_status'> | '')}
+              className="text-sm rounded-lg border border-slate-300 px-2 py-1.5"
+            >
+              <option value="">All statuses</option>
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
         {loading ? (
-          <p className="px-4 py-6 text-center text-sm text-slate-400">Loading…</p>
+          <Skeleton />
         ) : orders.length === 0 ? (
-          <p className="px-4 py-6 text-center text-sm text-slate-400">No orders yet.</p>
+          <EmptyState icon="📦" title={search || statusFilter ? 'No orders match this filter.' : 'No orders yet.'} />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -407,7 +470,7 @@ export default function Dashboard() {
                           </Link>
                         ) : (
                           <button
-                            onClick={() => generateInvoice(o)}
+                            onClick={() => setConfirmInvoiceFor(o)}
                             disabled={generatingId === o.id}
                             className="text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50"
                           >
@@ -422,7 +485,19 @@ export default function Dashboard() {
             </table>
           </div>
         )}
+        {!loading && orders.length > 0 && <Pagination page={page} pageSize={PAGE_SIZE} total={totalOrders} onPageChange={setPage} />}
       </div>
+
+      {confirmInvoiceFor && (
+        <ConfirmDialog
+          title="Generate GST invoice?"
+          message={`This permanently consumes the next invoice number for order ${confirmInvoiceFor.amazon_order_id}. Cannot be undone.`}
+          confirmLabel="Generate"
+          busy={generatingId === confirmInvoiceFor.id}
+          onConfirm={() => generateInvoice(confirmInvoiceFor)}
+          onCancel={() => setConfirmInvoiceFor(null)}
+        />
+      )}
     </div>
   )
 }

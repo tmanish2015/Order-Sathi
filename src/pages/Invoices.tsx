@@ -5,24 +5,44 @@ import { useAuth } from '../lib/AuthContext'
 import { useToast } from '../lib/Toast'
 import { reportError } from '../lib/errors'
 import { formatINR } from '../lib/format'
+import Skeleton from '../components/Skeleton'
+import EmptyState from '../components/EmptyState'
+import Pagination from '../components/Pagination'
 import type { Tables } from '../lib/database.types'
 
 type Invoice = Tables<'gst_invoices'> & { orders: Tables<'orders'> | null }
+const PAGE_SIZE = 20
 
 export default function Invoices() {
   const { profile } = useAuth()
   const { showError } = useToast()
   const [invoices, setInvoices] = useState<Invoice[]>([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(0)
+  const [search, setSearch] = useState('')
+  const [loading, setLoading] = useState(true)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
   const orgId = profile?.organization_id
 
-  useEffect(() => {
+  async function load() {
     if (!orgId) return
-    ;(async () => {
-      const { data } = await supabase.from('gst_invoices').select('*, orders(*)').order('issued_at', { ascending: false })
-      setInvoices((data as unknown as Invoice[]) ?? [])
-    })()
-  }, [orgId])
+    setLoading(true)
+    let query = supabase.from('gst_invoices').select('*, orders(*)', { count: 'exact' }).order('issued_at', { ascending: false })
+    if (search.trim()) query = query.ilike('invoice_number', `%${search.trim()}%`)
+    const { data, count } = await query.range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1)
+    setInvoices((data as unknown as Invoice[]) ?? [])
+    setTotal(count ?? 0)
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgId, page, search])
+
+  useEffect(() => {
+    setPage(0)
+  }, [search])
 
   async function download(inv: Invoice) {
     if (!inv.pdf_url) return
@@ -42,10 +62,22 @@ export default function Invoices() {
       <p className="text-xs text-slate-400 mb-6">One invoice generated per order, split CGST/SGST for intra-state or IGST for inter-state.</p>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        {invoices.length === 0 ? (
-          <p className="px-4 py-6 text-center text-sm text-slate-400">
-            No invoices generated yet — generate one from the Orders page.
-          </p>
+        <div className="px-4 py-3 border-b border-slate-100">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search invoice #…"
+            className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 w-56"
+          />
+        </div>
+        {loading ? (
+          <Skeleton />
+        ) : invoices.length === 0 ? (
+          <EmptyState
+            icon="🧾"
+            title={search ? 'No invoices match this search.' : 'No invoices generated yet — generate one from the Orders page.'}
+          />
         ) : (
           <table className="w-full text-sm">
             <thead>
@@ -80,6 +112,7 @@ export default function Invoices() {
             </tbody>
           </table>
         )}
+        {!loading && invoices.length > 0 && <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />}
       </div>
     </div>
   )

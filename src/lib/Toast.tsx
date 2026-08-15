@@ -16,11 +16,16 @@ const ToastContext = createContext<ToastContextValue>({ showError: () => {}, sho
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([])
 
-  const push = useCallback((message: string, kind: ToastItem['kind']) => {
-    const id = Date.now() + Math.random()
-    setToasts((t) => [...t, { id, message, kind }])
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 6000)
-  }, [])
+  const dismiss = useCallback((id: number) => setToasts((t) => t.filter((x) => x.id !== id)), [])
+
+  const push = useCallback(
+    (message: string, kind: ToastItem['kind']) => {
+      const id = Date.now() + Math.random()
+      setToasts((t) => [...t, { id, message, kind }])
+      setTimeout(() => dismiss(id), 6000)
+    },
+    [dismiss]
+  )
 
   const showError = useCallback((m: string) => push(m, 'error'), [push])
   const showSuccess = useCallback((m: string) => push(m, 'success'), [push])
@@ -33,11 +38,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={t.id}
             role="alert"
-            className={`rounded-lg px-4 py-3 text-sm shadow-lg border ${
+            className={`rounded-lg px-4 py-3 pr-3 text-sm shadow-lg border flex items-start gap-2 ${
               t.kind === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'
             }`}
           >
-            {t.message}
+            <span className="flex-1">{t.message}</span>
+            <button onClick={() => dismiss(t.id)} className="opacity-60 hover:opacity-100 leading-none" aria-label="Dismiss">
+              ✕
+            </button>
           </div>
         ))}
       </div>

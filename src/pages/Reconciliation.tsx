@@ -6,6 +6,8 @@ import { reportError } from '../lib/errors'
 import { formatINR } from '../lib/format'
 import { parseMtrCsv } from '../lib/mtrParser'
 import { parseBankStatementCsv } from '../lib/bankStatementParser'
+import Skeleton from '../components/Skeleton'
+import EmptyState from '../components/EmptyState'
 import type { Tables } from '../lib/database.types'
 
 type Entry = Tables<'reconciliation_entries'> & { orders: Tables<'orders'> | null }
@@ -32,6 +34,8 @@ export default function Reconciliation() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
   const [savingId, setSavingId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [statusFilter, setStatusFilter] = useState<Entry['status'] | ''>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const bankFileInputRef = useRef<HTMLInputElement>(null)
   const orgId = profile?.organization_id
@@ -39,6 +43,7 @@ export default function Reconciliation() {
 
   async function load() {
     if (!orgId) return
+    setLoading(true)
     const [{ data: e }, { data: c }] = await Promise.all([
       supabase.from('reconciliation_entries').select('*, orders(*)').order('created_at', { ascending: false }),
       supabase.from('channels').select('*'),
@@ -46,6 +51,7 @@ export default function Reconciliation() {
     setEntries((e as unknown as Entry[]) ?? [])
     setChannels(c ?? [])
     if (c && c.length === 1) setSelectedChannel(c[0].id)
+    setLoading(false)
   }
 
   useEffect(() => {
@@ -211,6 +217,7 @@ export default function Reconciliation() {
   }
 
   const mismatches = entries.filter((e) => e.status === 'mismatch')
+  const visibleEntries = statusFilter ? entries.filter((e) => e.status === statusFilter) : entries
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
@@ -277,8 +284,24 @@ export default function Reconciliation() {
       )}
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        {entries.length === 0 ? (
-          <p className="px-4 py-6 text-center text-sm text-slate-400">No MTR file imported yet.</p>
+        <div className="px-4 py-3 border-b border-slate-100">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as Entry['status'] | '')}
+            className="text-sm rounded-lg border border-slate-300 px-2 py-1.5"
+          >
+            <option value="">All statuses</option>
+            <option value="pending_review">Pending review</option>
+            <option value="matched">Matched</option>
+            <option value="mismatch">Mismatch</option>
+          </select>
+        </div>
+        {loading ? (
+          <Skeleton />
+        ) : entries.length === 0 ? (
+          <EmptyState icon="🔄" title="No MTR file imported yet." />
+        ) : visibleEntries.length === 0 ? (
+          <EmptyState icon="🔄" title="No entries match this filter." />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -295,7 +318,7 @@ export default function Reconciliation() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {entries.map((e) => (
+                {visibleEntries.map((e) => (
                   <tr key={e.id}>
                     <td className="px-4 py-2.5 font-medium text-slate-700">{e.orders?.amazon_order_id ?? '—'}</td>
                     <td className="px-4 py-2.5 text-right text-slate-700">{formatINR(Number(e.gross_sales))}</td>
