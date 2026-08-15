@@ -3,11 +3,11 @@ import { NavLink, Outlet, Navigate } from 'react-router-dom'
 import { useAuth } from '../lib/AuthContext'
 
 const NAV = [
-  { to: '/', label: 'Orders', icon: '📦', roles: ['admin', 'sales', 'marketing', 'finance'] },
-  { to: '/inventory', label: 'Inventory', icon: '📋', roles: ['admin', 'sales', 'finance'] },
+  { to: '/', label: 'Orders', icon: '📦', roles: ['admin', 'ops', 'finance'] },
+  { to: '/inventory', label: 'Inventory', icon: '📋', roles: ['admin', 'ops', 'finance'] },
   { to: '/invoices', label: 'GST Invoices', icon: '🧾', roles: ['admin', 'finance'] },
   { to: '/reconciliation', label: 'Reconciliation', icon: '🔄', roles: ['admin', 'finance'] },
-  { to: '/sync-logs', label: 'Sync Logs', icon: '📡', roles: ['admin', 'sales', 'marketing', 'finance'] },
+  { to: '/sync-logs', label: 'Sync Logs', icon: '📡', roles: ['admin', 'ops', 'finance'] },
   { to: '/integrations', label: 'Integrations', icon: '🔌', roles: ['admin', 'finance'] },
   { to: '/team', label: 'Team', icon: '👥', roles: ['admin'] },
 ]
@@ -39,7 +39,7 @@ export default function Layout() {
     )
   }
 
-  const role = profile?.role ?? 'sales'
+  const role = profile?.role ?? 'ops'
   const visible = NAV.filter((n) => n.roles.includes(role))
 
   const sidebarContent = (

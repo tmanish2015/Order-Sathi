@@ -63,7 +63,7 @@ export default function Team() {
 
   async function approve(userId: string) {
     setBusyId(userId)
-    const role = roleChoice[userId] ?? 'sales'
+    const role = roleChoice[userId] ?? 'ops'
     const { error } = await supabase.rpc('approve_team_member', { p_user_id: userId, p_role: role })
     setBusyId(null)
     if (error) {
