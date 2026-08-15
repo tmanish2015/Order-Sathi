@@ -1,10 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/AuthContext'
+import { useToast } from '../lib/Toast'
+import { reportError } from '../lib/errors'
 import { formatINR } from '../lib/format'
+import { parseMtrCsv } from '../lib/mtrParser'
 import type { Tables } from '../lib/database.types'
 
 type Entry = Tables<'reconciliation_entries'> & { orders: Tables<'orders'> | null }
+type Channel = Tables<'channels'>
 
 const STATUS_COLOR: Record<Entry['status'], string> = {
   matched: 'bg-emerald-100 text-emerald-700',
@@ -14,16 +18,106 @@ const STATUS_COLOR: Record<Entry['status'], string> = {
 
 export default function Reconciliation() {
   const { profile } = useAuth()
+  const { showError, showSuccess } = useToast()
   const [entries, setEntries] = useState<Entry[]>([])
+  const [channels, setChannels] = useState<Channel[]>([])
+  const [selectedChannel, setSelectedChannel] = useState('')
+  const [importing, setImporting] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const orgId = profile?.organization_id
 
-  useEffect(() => {
+  async function load() {
     if (!orgId) return
-    ;(async () => {
-      const { data } = await supabase.from('reconciliation_entries').select('*, orders(*)').order('created_at', { ascending: false })
-      setEntries((data as unknown as Entry[]) ?? [])
-    })()
+    const [{ data: e }, { data: c }] = await Promise.all([
+      supabase.from('reconciliation_entries').select('*, orders(*)').order('created_at', { ascending: false }),
+      supabase.from('channels').select('*'),
+    ])
+    setEntries((e as unknown as Entry[]) ?? [])
+    setChannels(c ?? [])
+    if (c && c.length === 1) setSelectedChannel(c[0].id)
+  }
+
+  useEffect(() => {
+    load()
   }, [orgId])
+
+  async function handleFile(file: File) {
+    if (!orgId || !selectedChannel) return
+    setImporting(true)
+    try {
+      const text = await file.text()
+      const { rows, unmatchedColumns } = parseMtrCsv(text)
+      if (rows.length === 0) throw new Error('No usable rows found in this file.')
+
+      const { data: mtrImport, error: importError } = await supabase
+        .from('mtr_imports')
+        .insert({ organization_id: orgId, channel_id: selectedChannel, filename: file.name, row_count: rows.length, uploaded_by: profile!.id })
+        .select()
+        .single()
+      if (importError || !mtrImport) throw importError ?? new Error('Could not create import record')
+
+      const { data: lineItems, error: liError } = await supabase
+        .from('mtr_line_items')
+        .insert(rows.map((r) => ({ organization_id: orgId, mtr_import_id: mtrImport.id, amazon_order_id: r.amazonOrderId, raw_row: r.raw })))
+        .select()
+      if (liError || !lineItems) throw liError ?? new Error('Could not save MTR rows')
+
+      const orderIds = rows.map((r) => r.amazonOrderId)
+      const { data: orders } = await supabase.from('orders').select('id, amazon_order_id').eq('channel_id', selectedChannel).in('amazon_order_id', orderIds)
+      const orderByAmazonId = new Map((orders ?? []).map((o) => [o.amazon_order_id, o.id]))
+      const lineItemByAmazonId = new Map(lineItems.map((li) => [li.amazon_order_id, li.id]))
+
+      let matched = 0
+      const reconRows = []
+      for (const row of rows) {
+        const orderId = orderByAmazonId.get(row.amazonOrderId)
+        if (!orderId) continue
+        matched++
+        const totalTax = row.tcsCgst + row.tcsSgst + row.tcsIgst
+        reconRows.push({
+          organization_id: orgId,
+          order_id: orderId,
+          mtr_line_item_id: lineItemByAmazonId.get(row.amazonOrderId) ?? null,
+          gross_sales: row.grossAmount,
+          commission: row.commission,
+          tcs_cgst: row.tcsCgst,
+          tcs_sgst: row.tcsSgst,
+          tcs_igst: row.tcsIgst,
+          tds_194o: row.tds,
+          other_fees: row.otherFees,
+          expected_settlement: row.grossAmount - row.commission - totalTax - row.tds - row.otherFees,
+          status: 'pending_review' as const,
+        })
+      }
+
+      if (reconRows.length > 0) {
+        const { error: reconError } = await supabase.from('reconciliation_entries').upsert(reconRows, { onConflict: 'order_id' })
+        if (reconError) throw reconError
+      }
+
+      const unmatched = rows.length - matched
+      const messageParts = [`${matched} of ${rows.length} rows matched to known orders.`]
+      if (unmatched > 0) messageParts.push(`${unmatched} unmatched — order not found for this channel.`)
+      if (unmatchedColumns.length > 0) messageParts.push(`Columns not found in file (defaulted to 0): ${unmatchedColumns.join(', ')}.`)
+
+      await supabase.from('sync_logs').insert({
+        organization_id: orgId,
+        channel_id: selectedChannel,
+        operation: 'mtr_import',
+        status: unmatched > 0 || unmatchedColumns.length > 0 ? 'partial' : 'success',
+        fault: unmatched > 0 ? 'seller_data' : null,
+        message: messageParts.join(' '),
+      })
+
+      showSuccess(`Imported ${file.name}: ${matched} of ${rows.length} orders reconciled.`)
+      load()
+    } catch (err) {
+      reportError(showError, 'MTR import', err as { message: string }, orgId, profile?.id)
+    } finally {
+      setImporting(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
 
   const mismatches = entries.filter((e) => e.status === 'mismatch')
 
@@ -33,6 +127,39 @@ export default function Reconciliation() {
       <p className="text-xs text-slate-400 mb-6">
         Gross sales feed the revenue ledger. Actual settlement is tracked separately — the two never get merged directly. Any mismatch is flagged for manual review, never silently accepted.
       </p>
+
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6">
+        <div className="text-xs font-semibold uppercase text-slate-500 mb-3">Import MTR file</div>
+        {channels.length === 0 ? (
+          <p className="text-sm text-slate-400">No channel connected yet — connect Amazon under Integrations first.</p>
+        ) : (
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            {channels.length > 1 && (
+              <select
+                value={selectedChannel}
+                onChange={(e) => setSelectedChannel(e.target.value)}
+                className="text-sm rounded-lg border border-slate-300 px-2 py-1.5"
+              >
+                <option value="">Select channel…</option>
+                {channels.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.display_name}
+                  </option>
+                ))}
+              </select>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              disabled={!selectedChannel || importing}
+              onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+              className="text-sm text-slate-500 disabled:opacity-50"
+            />
+            {importing && <span className="text-xs text-slate-400">Importing…</span>}
+          </div>
+        )}
+      </div>
 
       {mismatches.length > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 text-sm text-red-800">
