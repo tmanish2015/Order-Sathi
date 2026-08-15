@@ -3,11 +3,16 @@ import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/AuthContext'
+import { useToast } from '../lib/Toast'
+import { reportError } from '../lib/errors'
 import { formatINR } from '../lib/format'
+import { calculateInvoice } from '../lib/gstInvoice'
+import { buildInvoicePdf } from '../lib/invoicePdf'
 import type { Tables } from '../lib/database.types'
 
 type Order = Tables<'orders'> & { channels: Tables<'channels'> | null }
 type Channel = Tables<'channels'>
+type Organization = Tables<'organizations'>
 
 const STATUS_COLOR: Record<Order['order_status'], string> = {
   pending: 'bg-amber-100 text-amber-700',
@@ -19,23 +24,81 @@ const STATUS_COLOR: Record<Order['order_status'], string> = {
 
 export default function Dashboard() {
   const { profile } = useAuth()
+  const { showError, showSuccess } = useToast()
   const [orders, setOrders] = useState<Order[]>([])
   const [channels, setChannels] = useState<Channel[]>([])
+  const [org, setOrg] = useState<Organization | null>(null)
+  const [invoicedOrderIds, setInvoicedOrderIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
+  const [generatingId, setGeneratingId] = useState<string | null>(null)
   const orgId = profile?.organization_id
 
-  useEffect(() => {
+  async function load() {
     if (!orgId) return
-    ;(async () => {
-      const [{ data: o }, { data: c }] = await Promise.all([
-        supabase.from('orders').select('*, channels(*)').order('order_date', { ascending: false }).limit(50),
-        supabase.from('channels').select('*'),
-      ])
-      setOrders((o as unknown as Order[]) ?? [])
-      setChannels(c ?? [])
-      setLoading(false)
-    })()
+    const [{ data: o }, { data: c }, { data: org }, { data: inv }] = await Promise.all([
+      supabase.from('orders').select('*, channels(*)').order('order_date', { ascending: false }).limit(50),
+      supabase.from('channels').select('*'),
+      supabase.from('organizations').select('*').eq('id', orgId).single(),
+      supabase.from('gst_invoices').select('order_id'),
+    ])
+    setOrders((o as unknown as Order[]) ?? [])
+    setChannels(c ?? [])
+    setOrg(org ?? null)
+    setInvoicedOrderIds(new Set((inv ?? []).map((i) => i.order_id)))
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    load()
   }, [orgId])
+
+  async function generateInvoice(order: Order) {
+    if (!org || !orgId) return
+    setGeneratingId(order.id)
+    try {
+      const { data: lineItems, error: liError } = await supabase
+        .from('order_line_items')
+        .select('*, skus(*)')
+        .eq('order_id', order.id)
+      if (liError) throw liError
+      if (!lineItems || lineItems.length === 0) {
+        showError('No line items on this order — cannot generate an invoice.')
+        return
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const calc = calculateInvoice(org.state, order.buyer_state, lineItems as any)
+
+      const { data: invoiceNumber, error: numError } = await supabase.rpc('next_invoice_number')
+      if (numError || !invoiceNumber) throw numError ?? new Error('Could not allocate invoice number')
+
+      const pdfBlob = buildInvoicePdf(org, order, invoiceNumber, calc)
+      const path = `${orgId}/${invoiceNumber}.pdf`
+      const { error: uploadError } = await supabase.storage.from('invoices').upload(path, pdfBlob, { contentType: 'application/pdf' })
+      if (uploadError) throw uploadError
+
+      const { error: insertError } = await supabase.from('gst_invoices').insert({
+        organization_id: orgId,
+        order_id: order.id,
+        invoice_number: invoiceNumber,
+        invoice_type: calc.invoiceType,
+        taxable_value: calc.taxableValue,
+        cgst_amount: calc.cgstAmount,
+        sgst_amount: calc.sgstAmount,
+        igst_amount: calc.igstAmount,
+        total_amount: calc.totalAmount,
+        pdf_url: path,
+      })
+      if (insertError) throw insertError
+
+      showSuccess(`Invoice ${invoiceNumber} generated.`)
+      setInvoicedOrderIds((s) => new Set(s).add(order.id))
+    } catch (err) {
+      reportError(showError, 'Generate invoice', err as { message: string }, orgId, profile?.id)
+    } finally {
+      setGeneratingId(null)
+    }
+  }
 
   const connectedChannels = channels.filter((c) => c.status === 'connected')
   const gross = orders.reduce((sum, o) => sum + Number(o.gross_amount), 0)
@@ -58,6 +121,13 @@ export default function Dashboard() {
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-sm text-amber-800">
           No Amazon channel connected yet. Orders won't sync until SP-API credentials are added —{' '}
           <Link to="/integrations" className="underline font-medium">connect one here</Link>.
+        </div>
+      )}
+
+      {org && !org.state && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-sm text-amber-800">
+          Your organization's state isn't set — GST invoices can't tell CGST/SGST from IGST without it. Set it under{' '}
+          <Link to="/team" className="underline font-medium">Team → Organization</Link>.
         </div>
       )}
 
@@ -86,22 +156,41 @@ export default function Dashboard() {
                   <th className="px-4 py-2 font-medium">Date</th>
                   <th className="px-4 py-2 font-medium">Status</th>
                   <th className="px-4 py-2 font-medium text-right">Amount</th>
+                  <th className="px-4 py-2 font-medium text-right">Invoice</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {orders.map((o) => (
-                  <tr key={o.id}>
-                    <td className="px-4 py-2.5 font-medium text-slate-700">{o.amazon_order_id}</td>
-                    <td className="px-4 py-2.5 text-slate-500">{o.channels?.display_name ?? '—'}</td>
-                    <td className="px-4 py-2.5 text-slate-500">{format(new Date(o.order_date), 'dd MMM yyyy')}</td>
-                    <td className="px-4 py-2.5">
-                      <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${STATUS_COLOR[o.order_status]}`}>
-                        {o.order_status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2.5 text-right text-slate-700">{formatINR(Number(o.gross_amount))}</td>
-                  </tr>
-                ))}
+                {orders.map((o) => {
+                  const invoiced = invoicedOrderIds.has(o.id)
+                  return (
+                    <tr key={o.id}>
+                      <td className="px-4 py-2.5 font-medium text-slate-700">{o.amazon_order_id}</td>
+                      <td className="px-4 py-2.5 text-slate-500">{o.channels?.display_name ?? '—'}</td>
+                      <td className="px-4 py-2.5 text-slate-500">{format(new Date(o.order_date), 'dd MMM yyyy')}</td>
+                      <td className="px-4 py-2.5">
+                        <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${STATUS_COLOR[o.order_status]}`}>
+                          {o.order_status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-slate-700">{formatINR(Number(o.gross_amount))}</td>
+                      <td className="px-4 py-2.5 text-right">
+                        {invoiced ? (
+                          <Link to="/invoices" className="text-xs text-emerald-600 font-medium hover:underline">
+                            Generated
+                          </Link>
+                        ) : (
+                          <button
+                            onClick={() => generateInvoice(o)}
+                            disabled={generatingId === o.id}
+                            className="text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50"
+                          >
+                            {generatingId === o.id ? 'Generating…' : 'Generate invoice'}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>

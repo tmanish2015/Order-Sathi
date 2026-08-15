@@ -13,9 +13,33 @@ export type Database = {
   public: {
     Tables: {
       organizations: {
-        Row: { id: string; name: string; gst_number: string | null; created_at: string }
-        Insert: { id?: string; name: string; gst_number?: string | null; created_at?: string }
-        Update: { id?: string; name?: string; gst_number?: string | null; created_at?: string }
+        Row: {
+          id: string
+          name: string
+          gst_number: string | null
+          state: string | null
+          address: string | null
+          invoice_seq: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          gst_number?: string | null
+          state?: string | null
+          address?: string | null
+          invoice_seq?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          gst_number?: string | null
+          state?: string | null
+          address?: string | null
+          invoice_seq?: number
+          created_at?: string
+        }
         Relationships: []
       }
       profiles: {
@@ -367,6 +391,7 @@ export type Database = {
         Args: { p_user_id: string; p_role: Database["public"]["Enums"]["user_role"] }
         Returns: undefined
       }
+      next_invoice_number: { Args: Record<PropertyKey, never>; Returns: string }
     }
     Enums: {
       user_role: "admin" | "ops" | "finance"
