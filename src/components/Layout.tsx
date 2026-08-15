@@ -3,18 +3,12 @@ import { NavLink, Outlet, Navigate } from 'react-router-dom'
 import { useAuth } from '../lib/AuthContext'
 
 const NAV = [
-  { to: '/', label: 'Dashboard', icon: '📊', roles: ['admin', 'sales', 'marketing', 'finance'] },
-  { to: '/attention', label: 'Attention', icon: '⚡', roles: ['admin', 'sales', 'marketing', 'finance'] },
-  { to: '/customers', label: 'Customers', icon: '🏢', roles: ['admin', 'sales', 'finance'] },
-  { to: '/renewals', label: 'Renewals', icon: '🔄', roles: ['admin', 'sales', 'finance'] },
-  { to: '/billing', label: 'Billing', icon: '💳', roles: ['admin', 'finance'] },
-  { to: '/opportunities', label: 'Opportunities', icon: '📈', roles: ['admin', 'sales', 'marketing'] },
-  { to: '/tasks', label: 'Tasks', icon: '✅', roles: ['admin', 'sales', 'marketing', 'finance'] },
-  { to: '/leads', label: 'Leads', icon: '🎯', roles: ['admin', 'sales', 'marketing'] },
-  { to: '/campaigns', label: 'Campaigns', icon: '📣', roles: ['admin', 'marketing'] },
-  { to: '/studio', label: 'Creative Studio', icon: '🎨', roles: ['admin', 'sales', 'marketing'] },
-  { to: '/video-maker', label: 'Video Maker', icon: '🎬', roles: ['admin', 'sales', 'marketing'] },
-  { to: '/integrations', label: 'Integrations', icon: '🔌', roles: ['admin', 'sales', 'marketing', 'finance'] },
+  { to: '/', label: 'Orders', icon: '📦', roles: ['admin', 'sales', 'marketing', 'finance'] },
+  { to: '/inventory', label: 'Inventory', icon: '📋', roles: ['admin', 'sales', 'finance'] },
+  { to: '/invoices', label: 'GST Invoices', icon: '🧾', roles: ['admin', 'finance'] },
+  { to: '/reconciliation', label: 'Reconciliation', icon: '🔄', roles: ['admin', 'finance'] },
+  { to: '/sync-logs', label: 'Sync Logs', icon: '📡', roles: ['admin', 'sales', 'marketing', 'finance'] },
+  { to: '/integrations', label: 'Integrations', icon: '🔌', roles: ['admin', 'finance'] },
   { to: '/team', label: 'Team', icon: '👥', roles: ['admin'] },
 ]
 
@@ -56,8 +50,8 @@ export default function Layout() {
             I
           </div>
           <div>
-            <h1 className="text-sm font-semibold text-white tracking-wide">INSIGNIA</h1>
-            <p className="text-[10px] text-indigo-200/70 -mt-0.5">Control Centre</p>
+            <h1 className="text-sm font-semibold text-white tracking-wide">Order Sathi</h1>
+            <p className="text-[10px] text-indigo-200/70 -mt-0.5">Amazon OMS</p>
           </div>
         </div>
         <p className="text-xs text-slate-300 mt-3 truncate">{profile?.full_name || profile?.email}</p>
@@ -123,7 +117,7 @@ export default function Layout() {
               <path d="M3 6h18M3 12h18M3 18h18" strokeLinecap="round" />
             </svg>
           </button>
-          <span className="text-sm font-semibold text-slate-900">INSIGNIA</span>
+          <span className="text-sm font-semibold text-slate-900">Order Sathi</span>
         </div>
 
         <main className="flex-1 overflow-y-auto">

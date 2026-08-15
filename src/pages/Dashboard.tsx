@@ -1,163 +1,110 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { addDays, isWithinInterval, startOfWeek, endOfWeek, isBefore, format } from 'date-fns'
-import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts'
+import { format } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/AuthContext'
 import { formatINR } from '../lib/format'
-import { computeHealth } from '../lib/health'
 import type { Tables } from '../lib/database.types'
 
-type Subscription = Tables<'subscriptions'> & { plans: Tables<'plans'> | null; customers: Tables<'customers'> | null }
-type CampaignPost = Tables<'campaign_posts'>
-type Lead = Tables<'leads'>
-type Invoice = Tables<'invoices'>
+type Order = Tables<'orders'> & { channels: Tables<'channels'> | null }
+type Channel = Tables<'channels'>
 
-function monthlyAmount(plan: Tables<'plans'> | null) {
-  if (!plan) return 0
-  if (plan.billing_cycle === 'monthly') return plan.amount
-  if (plan.billing_cycle === 'quarterly') return plan.amount / 3
-  return plan.amount / 12
+const STATUS_COLOR: Record<Order['order_status'], string> = {
+  pending: 'bg-amber-100 text-amber-700',
+  shipped: 'bg-blue-100 text-blue-700',
+  delivered: 'bg-emerald-100 text-emerald-700',
+  cancelled: 'bg-slate-100 text-slate-500',
+  returned: 'bg-red-100 text-red-700',
 }
 
 export default function Dashboard() {
   const { profile } = useAuth()
-  const [subs, setSubs] = useState<Subscription[]>([])
-  const [posts, setPosts] = useState<CampaignPost[]>([])
-  const [leads, setLeads] = useState<Lead[]>([])
-  const [invoices, setInvoices] = useState<Invoice[]>([])
+  const [orders, setOrders] = useState<Order[]>([])
+  const [channels, setChannels] = useState<Channel[]>([])
+  const [loading, setLoading] = useState(true)
   const orgId = profile?.organization_id
 
   useEffect(() => {
     if (!orgId) return
     ;(async () => {
-      const [{ data: s }, { data: p }, { data: l }, { data: inv }] = await Promise.all([
-        supabase.from('subscriptions').select('*, plans(*), customers(*)'),
-        supabase.from('campaign_posts').select('*'),
-        supabase.from('leads').select('*'),
-        supabase.from('invoices').select('*').eq('status', 'paid'),
+      const [{ data: o }, { data: c }] = await Promise.all([
+        supabase.from('orders').select('*, channels(*)').order('order_date', { ascending: false }).limit(50),
+        supabase.from('channels').select('*'),
       ])
-      setSubs((s as unknown as Subscription[]) ?? [])
-      setPosts(p ?? [])
-      setLeads(l ?? [])
-      setInvoices(inv ?? [])
+      setOrders((o as unknown as Order[]) ?? [])
+      setChannels(c ?? [])
+      setLoading(false)
     })()
   }, [orgId])
 
-  const active = subs.filter((s) => s.status === 'active')
-  const erpActive = active.filter((s) => s.plans?.category === 'erp')
-  const mktActive = active.filter((s) => s.plans?.category === 'marketing')
-  const erpMrr = erpActive.reduce((sum, s) => sum + monthlyAmount(s.plans), 0)
-  const mktMrr = mktActive.reduce((sum, s) => sum + monthlyAmount(s.plans), 0)
-  const mrr = erpMrr + mktMrr
-  const arr = mrr * 12
-
-  const now = new Date()
-  const overdue = subs.filter((s) => s.status === 'past_due')
-  const dueSoon7 = active.filter((s) => s.next_due_date && isWithinInterval(new Date(s.next_due_date), { start: now, end: addDays(now, 7) }))
-  const dueSoon30 = active.filter((s) => s.next_due_date && isWithinInterval(new Date(s.next_due_date), { start: now, end: addDays(now, 30) }))
-  const churnedThisMonth = subs.filter((s) => s.status === 'cancelled')
-
-  const weekStart = startOfWeek(now)
-  const weekEnd = endOfWeek(now)
-  const campaignsThisWeek = posts.filter((p) => isWithinInterval(new Date(p.scheduled_at), { start: weekStart, end: weekEnd }))
-  const newLeadsThisWeek = leads.filter((l) => isWithinInterval(new Date(l.created_at), { start: weekStart, end: weekEnd }))
-  const wonLeads = leads.filter((l) => l.status === 'won')
-  const conversionRate = leads.length ? Math.round((wonLeads.length / leads.length) * 100) : 0
-  const staleLeads = leads.filter(
-    (l) => !['won', 'lost'].includes(l.status) && isBefore(new Date(l.created_at), addDays(now, -2))
-  )
-
-  const byCustomer = new Map<string, Subscription[]>()
-  for (const s of subs) {
-    if (!byCustomer.has(s.customer_id)) byCustomer.set(s.customer_id, [])
-    byCustomer.get(s.customer_id)!.push(s)
-  }
-  const healthCounts = { healthy: 0, watch: 0, at_risk: 0, no_subscription: 0 }
-  for (const custSubs of byCustomer.values()) {
-    healthCounts[computeHealth(custSubs)]++
-  }
-
-  const revenueByMonth = new Map<string, number>()
-  for (const inv of invoices) {
-    const key = format(new Date(inv.issued_at), 'MMM yyyy')
-    revenueByMonth.set(key, (revenueByMonth.get(key) ?? 0) + inv.amount)
-  }
-  const revenueTrend = Array.from(revenueByMonth.entries())
-    .map(([month, amount]) => ({ month, amount }))
-    .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime())
+  const connectedChannels = channels.filter((c) => c.status === 'connected')
+  const gross = orders.reduce((sum, o) => sum + Number(o.gross_amount), 0)
+  const pending = orders.filter((o) => o.order_status === 'pending').length
+  const shipped = orders.filter((o) => o.order_status === 'shipped').length
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6">
         <div>
-          <h2 className="text-xl font-semibold text-slate-900">Executive Command Dashboard</h2>
-          <p className="text-xs text-slate-400 mt-0.5">{format(now, 'EEEE, dd MMMM yyyy')}</p>
+          <h2 className="text-xl font-semibold text-slate-900">Orders</h2>
+          <p className="text-xs text-slate-400 mt-0.5">{format(new Date(), 'EEEE, dd MMMM yyyy')}</p>
         </div>
-        <Link
-          to="/attention"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700"
-        >
-          ⚡ What needs my attention
+        <Link to="/integrations" className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700">
+          🔌 Connect Amazon
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
-        <Stat label="MRR" value={formatINR(mrr)} sub={`ERP ${formatINR(erpMrr)} · Marketing ${formatINR(mktMrr)}`} accent="indigo" />
-        <Stat label="ARR" value={formatINR(arr)} accent="purple" />
-        <Stat label="Renewals (7d)" value={String(dueSoon7.length)} accent="amber" />
-        <Stat label="Overdue accounts" value={String(overdue.length)} tone={overdue.length ? 'red' : undefined} accent="red" />
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-        <Stat label="Renewals (30d)" value={String(dueSoon30.length)} />
-        <Stat label="Churn this month" value={String(churnedThisMonth.length)} />
-        <Stat label="Campaigns this week" value={String(campaignsThisWeek.length)} />
-        <Stat label="New leads this week" value={String(newLeadsThisWeek.length)} />
-      </div>
-
-      {revenueTrend.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6">
-          <div className="text-xs font-semibold uppercase text-slate-500 mb-3">Collected revenue trend</div>
-          <div className="h-56 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={revenueTrend}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v) => formatINR(Number(v))} cursor={{ fill: '#f8fafc' }} />
-                <Bar dataKey="amount" fill="#6366f1" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+      {channels.length === 0 && !loading && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-sm text-amber-800">
+          No Amazon channel connected yet. Orders won't sync until SP-API credentials are added —{' '}
+          <Link to="/integrations" className="underline font-medium">connect one here</Link>.
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-8">
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-          <div className="text-xs text-slate-400 mb-2">Customer health</div>
-          <div className="flex flex-wrap gap-3 sm:gap-4 text-sm">
-            <span className="text-emerald-600 font-medium">🟢 {healthCounts.healthy} healthy</span>
-            <span className="text-amber-600 font-medium">🟡 {healthCounts.watch} watch</span>
-            <span className="text-red-600 font-medium">🔴 {healthCounts.at_risk} at risk</span>
-          </div>
-        </div>
-        <Stat label="Lead → customer conversion" value={`${conversionRate}%`} />
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        <Stat label="Gross sales (last 50 orders)" value={formatINR(gross)} accent="indigo" />
+        <Stat label="Pending" value={String(pending)} accent="amber" />
+        <Stat label="Shipped" value={String(shipped)} accent="purple" />
+        <Stat label="Channels connected" value={String(connectedChannels.length)} />
       </div>
 
-      <h3 className="text-sm font-semibold text-slate-700 mb-3">Needs attention</h3>
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm divide-y divide-slate-100">
-        {overdue.map((s) => (
-          <Action key={s.id} priority="P0" text={`Overdue payment — ${s.customers?.company_name ?? 'Unknown'}`} />
-        ))}
-        {dueSoon7.map((s) => (
-          <Action key={s.id} priority="P1" text={`Renewal due within 7 days — ${s.customers?.company_name ?? 'Unknown'}`} />
-        ))}
-        {staleLeads.map((l) => (
-          <Action key={l.id} priority="P2" text={`Lead uncontacted > 48h — ${l.name} (${l.company ?? 'no company'})`} />
-        ))}
-        {overdue.length + dueSoon7.length + staleLeads.length === 0 && (
-          <p className="px-4 py-6 text-center text-sm text-slate-400">Nothing needs attention right now.</p>
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-100 text-xs font-semibold uppercase text-slate-500">
+          Recent orders
+        </div>
+        {loading ? (
+          <p className="px-4 py-6 text-center text-sm text-slate-400">Loading…</p>
+        ) : orders.length === 0 ? (
+          <p className="px-4 py-6 text-center text-sm text-slate-400">No orders yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                  <th className="px-4 py-2 font-medium">Order ID</th>
+                  <th className="px-4 py-2 font-medium">Channel</th>
+                  <th className="px-4 py-2 font-medium">Date</th>
+                  <th className="px-4 py-2 font-medium">Status</th>
+                  <th className="px-4 py-2 font-medium text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {orders.map((o) => (
+                  <tr key={o.id}>
+                    <td className="px-4 py-2.5 font-medium text-slate-700">{o.amazon_order_id}</td>
+                    <td className="px-4 py-2.5 text-slate-500">{o.channels?.display_name ?? '—'}</td>
+                    <td className="px-4 py-2.5 text-slate-500">{format(new Date(o.order_date), 'dd MMM yyyy')}</td>
+                    <td className="px-4 py-2.5">
+                      <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${STATUS_COLOR[o.order_status]}`}>
+                        {o.order_status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5 text-right text-slate-700">{formatINR(Number(o.gross_amount))}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
@@ -168,38 +115,14 @@ const ACCENTS = {
   indigo: 'from-indigo-500 to-indigo-600',
   purple: 'from-purple-500 to-purple-600',
   amber: 'from-amber-500 to-amber-600',
-  red: 'from-red-500 to-red-600',
 } as const
 
-function Stat({
-  label,
-  value,
-  sub,
-  tone,
-  accent,
-}: {
-  label: string
-  value: string
-  sub?: string
-  tone?: 'red'
-  accent?: keyof typeof ACCENTS
-}) {
+function Stat({ label, value, accent }: { label: string; value: string; accent?: keyof typeof ACCENTS }) {
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3.5 sm:p-4 relative overflow-hidden">
       {accent && <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${ACCENTS[accent]}`} />}
       <div className="text-xs text-slate-400">{label}</div>
-      <div className={`text-lg sm:text-xl font-semibold mt-1 ${tone === 'red' ? 'text-red-600' : 'text-slate-900'}`}>{value}</div>
-      {sub && <div className="text-[10px] text-slate-400 mt-0.5 truncate">{sub}</div>}
-    </div>
-  )
-}
-
-function Action({ priority, text }: { priority: 'P0' | 'P1' | 'P2'; text: string }) {
-  const color = priority === 'P0' ? 'bg-red-100 text-red-700' : priority === 'P1' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'
-  return (
-    <div className="px-4 py-2.5 flex items-center gap-3 text-sm">
-      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${color}`}>{priority}</span>
-      <span className="text-slate-700">{text}</span>
+      <div className="text-lg sm:text-xl font-semibold mt-1 text-slate-900">{value}</div>
     </div>
   )
 }

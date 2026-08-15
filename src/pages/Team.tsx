@@ -8,7 +8,7 @@ import type { Tables, Enums } from '../lib/database.types'
 
 type Profile = Tables<'profiles'>
 
-const ROLES: Enums<'user_role'>[] = ['admin', 'sales', 'marketing', 'finance']
+const ROLES: Enums<'user_role'>[] = ['admin', 'ops', 'finance']
 
 export default function Team() {
   const { profile: me } = useAuth()
@@ -63,7 +63,7 @@ export default function Team() {
                 </div>
                 <div className="flex items-center gap-2">
                   <select
-                    value={roleChoice[p.id] ?? 'sales'}
+                    value={roleChoice[p.id] ?? 'ops'}
                     onChange={(e) => setRoleChoice((r) => ({ ...r, [p.id]: e.target.value as Enums<'user_role'> }))}
                     className="text-sm rounded-lg border border-slate-300 px-2 py-1.5"
                   >

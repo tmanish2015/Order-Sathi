@@ -5,7 +5,7 @@ interface ReportableError {
 }
 
 // Every failed mutation goes through here: shown to the user via toast,
-// logged to the console, and best-effort persisted to client_error_log so
+// logged to the console, and best-effort persisted to sync_logs so
 // failures survive the tab closing. Never let a logging failure mask the
 // original error — the DB insert is fire-and-forget.
 export function reportError(
@@ -13,7 +13,7 @@ export function reportError(
   context: string,
   error: ReportableError,
   organizationId?: string | null,
-  userId?: string | null
+  _userId?: string | null
 ) {
   const message = error.message || 'Unknown error'
   console.error(`[${context}]`, message)
@@ -21,10 +21,10 @@ export function reportError(
 
   if (organizationId) {
     supabase
-      .from('client_error_log')
-      .insert({ organization_id: organizationId, user_id: userId ?? null, context, message })
+      .from('sync_logs')
+      .insert({ organization_id: organizationId, operation: context, status: 'failed', fault: 'order_sathi', message })
       .then(({ error: logError }) => {
-        if (logError) console.error('[client_error_log]', logError.message)
+        if (logError) console.error('[sync_logs]', logError.message)
       })
   }
 }

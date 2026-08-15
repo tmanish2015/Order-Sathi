@@ -12,751 +12,348 @@ export type Database = {
   }
   public: {
     Tables: {
-      audit_log: {
-        Row: {
-          action: string
-          changed_at: string
-          changed_by: string | null
-          id: string
-          new_value: Json | null
-          old_value: Json | null
-          organization_id: string
-          record_id: string
-          table_name: string
-        }
-        Insert: {
-          action: string
-          changed_at?: string
-          changed_by?: string | null
-          id?: string
-          new_value?: Json | null
-          old_value?: Json | null
-          organization_id: string
-          record_id: string
-          table_name: string
-        }
-        Update: {
-          action?: string
-          changed_at?: string
-          changed_by?: string | null
-          id?: string
-          new_value?: Json | null
-          old_value?: Json | null
-          organization_id?: string
-          record_id?: string
-          table_name?: string
-        }
-        Relationships: []
-      }
-      campaign_posts: {
-        Row: {
-          campaign_id: string
-          content: string | null
-          created_at: string
-          created_by: string | null
-          creative_id: string | null
-          external_post_id: string | null
-          id: string
-          is_demo: boolean
-          media_urls: string[]
-          mode: Database["public"]["Enums"]["post_mode"]
-          organization_id: string
-          platform: Database["public"]["Enums"]["social_platform"]
-          posted_at: string | null
-          scheduled_at: string
-          social_account_id: string | null
-          status: Database["public"]["Enums"]["post_status"]
-        }
-        Insert: {
-          campaign_id: string
-          content?: string | null
-          created_at?: string
-          created_by?: string | null
-          creative_id?: string | null
-          external_post_id?: string | null
-          id?: string
-          is_demo?: boolean
-          media_urls?: string[]
-          mode?: Database["public"]["Enums"]["post_mode"]
-          organization_id: string
-          platform: Database["public"]["Enums"]["social_platform"]
-          posted_at?: string | null
-          scheduled_at: string
-          social_account_id?: string | null
-          status?: Database["public"]["Enums"]["post_status"]
-        }
-        Update: {
-          campaign_id?: string
-          content?: string | null
-          created_at?: string
-          created_by?: string | null
-          creative_id?: string | null
-          external_post_id?: string | null
-          id?: string
-          is_demo?: boolean
-          media_urls?: string[]
-          mode?: Database["public"]["Enums"]["post_mode"]
-          organization_id?: string
-          platform?: Database["public"]["Enums"]["social_platform"]
-          posted_at?: string | null
-          scheduled_at?: string
-          social_account_id?: string | null
-          status?: Database["public"]["Enums"]["post_status"]
-        }
-        Relationships: []
-      }
-      creatives: {
-        Row: {
-          canvas_data: Json
-          created_at: string
-          created_by: string | null
-          customer_id: string | null
-          height: number
-          id: string
-          is_demo: boolean
-          name: string
-          organization_id: string
-          thumbnail_url: string | null
-          updated_at: string
-          width: number
-        }
-        Insert: {
-          canvas_data?: Json
-          created_at?: string
-          created_by?: string | null
-          customer_id?: string | null
-          height?: number
-          id?: string
-          is_demo?: boolean
-          name: string
-          organization_id: string
-          thumbnail_url?: string | null
-          updated_at?: string
-          width?: number
-        }
-        Update: {
-          canvas_data?: Json
-          created_at?: string
-          created_by?: string | null
-          customer_id?: string | null
-          height?: number
-          id?: string
-          is_demo?: boolean
-          name?: string
-          organization_id?: string
-          thumbnail_url?: string | null
-          updated_at?: string
-          width?: number
-        }
-        Relationships: []
-      }
-      campaigns: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          customer_id: string | null
-          id: string
-          is_demo: boolean
-          name: string
-          objective: string | null
-          organization_id: string
-          platforms: Database["public"]["Enums"]["social_platform"][]
-          status: string
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          customer_id?: string | null
-          id?: string
-          is_demo?: boolean
-          name: string
-          objective?: string | null
-          organization_id: string
-          platforms?: Database["public"]["Enums"]["social_platform"][]
-          status?: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          customer_id?: string | null
-          id?: string
-          is_demo?: boolean
-          name?: string
-          objective?: string | null
-          organization_id?: string
-          platforms?: Database["public"]["Enums"]["social_platform"][]
-          status?: string
-        }
-        Relationships: []
-      }
-      client_error_log: {
-        Row: {
-          context: string
-          created_at: string
-          id: string
-          message: string
-          organization_id: string
-          user_id: string | null
-        }
-        Insert: {
-          context: string
-          created_at?: string
-          id?: string
-          message: string
-          organization_id: string
-          user_id?: string | null
-        }
-        Update: {
-          context?: string
-          created_at?: string
-          id?: string
-          message?: string
-          organization_id?: string
-          user_id?: string | null
-        }
-        Relationships: []
-      }
-      customers: {
-        Row: {
-          address: string | null
-          company_name: string
-          contact_person: string | null
-          created_at: string
-          created_by: string | null
-          customer_type: Database["public"]["Enums"]["customer_type"]
-          email: string | null
-          gst_number: string | null
-          has_lut: boolean
-          id: string
-          is_demo: boolean
-          organization_id: string
-          phone: string | null
-        }
-        Insert: {
-          address?: string | null
-          company_name: string
-          contact_person?: string | null
-          created_at?: string
-          created_by?: string | null
-          customer_type?: Database["public"]["Enums"]["customer_type"]
-          email?: string | null
-          gst_number?: string | null
-          has_lut?: boolean
-          id?: string
-          is_demo?: boolean
-          organization_id: string
-          phone?: string | null
-        }
-        Update: {
-          address?: string | null
-          company_name?: string
-          contact_person?: string | null
-          created_at?: string
-          created_by?: string | null
-          customer_type?: Database["public"]["Enums"]["customer_type"]
-          email?: string | null
-          gst_number?: string | null
-          has_lut?: boolean
-          id?: string
-          is_demo?: boolean
-          organization_id?: string
-          phone?: string | null
-        }
-        Relationships: []
-      }
-      invoices: {
-        Row: {
-          amount: number
-          customer_id: string
-          id: string
-          is_demo: boolean
-          issued_at: string
-          organization_id: string
-          paid_at: string | null
-          razorpay_invoice_id: string | null
-          razorpay_payment_id: string | null
-          status: Database["public"]["Enums"]["invoice_status"]
-          subscription_id: string
-        }
-        Insert: {
-          amount: number
-          customer_id: string
-          id?: string
-          is_demo?: boolean
-          issued_at?: string
-          organization_id: string
-          paid_at?: string | null
-          razorpay_invoice_id?: string | null
-          razorpay_payment_id?: string | null
-          status?: Database["public"]["Enums"]["invoice_status"]
-          subscription_id: string
-        }
-        Update: {
-          amount?: number
-          customer_id?: string
-          id?: string
-          is_demo?: boolean
-          issued_at?: string
-          organization_id?: string
-          paid_at?: string | null
-          razorpay_invoice_id?: string | null
-          razorpay_payment_id?: string | null
-          status?: Database["public"]["Enums"]["invoice_status"]
-          subscription_id?: string
-        }
-        Relationships: []
-      }
-      lead_activities: {
-        Row: {
-          activity_type: string
-          created_at: string
-          created_by: string | null
-          id: string
-          lead_id: string
-          notes: string | null
-          organization_id: string
-        }
-        Insert: {
-          activity_type: string
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          lead_id: string
-          notes?: string | null
-          organization_id: string
-        }
-        Update: {
-          activity_type?: string
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          lead_id?: string
-          notes?: string | null
-          organization_id?: string
-        }
-        Relationships: []
-      }
-      leads: {
-        Row: {
-          assigned_to: string | null
-          campaign_id: string | null
-          company: string | null
-          converted_customer_id: string | null
-          created_at: string
-          email: string | null
-          id: string
-          is_demo: boolean
-          name: string
-          organization_id: string
-          phone: string | null
-          raw_payload: Json | null
-          score: number
-          source: Database["public"]["Enums"]["lead_source"]
-          status: Database["public"]["Enums"]["lead_status"]
-        }
-        Insert: {
-          assigned_to?: string | null
-          campaign_id?: string | null
-          company?: string | null
-          converted_customer_id?: string | null
-          created_at?: string
-          email?: string | null
-          id?: string
-          is_demo?: boolean
-          name: string
-          organization_id: string
-          phone?: string | null
-          raw_payload?: Json | null
-          score?: number
-          source?: Database["public"]["Enums"]["lead_source"]
-          status?: Database["public"]["Enums"]["lead_status"]
-        }
-        Update: {
-          assigned_to?: string | null
-          campaign_id?: string | null
-          company?: string | null
-          converted_customer_id?: string | null
-          created_at?: string
-          email?: string | null
-          id?: string
-          is_demo?: boolean
-          name?: string
-          organization_id?: string
-          phone?: string | null
-          raw_payload?: Json | null
-          score?: number
-          source?: Database["public"]["Enums"]["lead_source"]
-          status?: Database["public"]["Enums"]["lead_status"]
-        }
-        Relationships: []
-      }
-      opportunities: {
-        Row: {
-          assigned_to: string | null
-          created_at: string
-          created_by: string | null
-          customer_id: string
-          id: string
-          is_demo: boolean
-          notes: string | null
-          organization_id: string
-          status: Database["public"]["Enums"]["opportunity_status"]
-          suggested_plan_id: string | null
-          type: Database["public"]["Enums"]["opportunity_type"]
-        }
-        Insert: {
-          assigned_to?: string | null
-          created_at?: string
-          created_by?: string | null
-          customer_id: string
-          id?: string
-          is_demo?: boolean
-          notes?: string | null
-          organization_id: string
-          status?: Database["public"]["Enums"]["opportunity_status"]
-          suggested_plan_id?: string | null
-          type: Database["public"]["Enums"]["opportunity_type"]
-        }
-        Update: {
-          assigned_to?: string | null
-          created_at?: string
-          created_by?: string | null
-          customer_id?: string
-          id?: string
-          is_demo?: boolean
-          notes?: string | null
-          organization_id?: string
-          status?: Database["public"]["Enums"]["opportunity_status"]
-          suggested_plan_id?: string | null
-          type?: Database["public"]["Enums"]["opportunity_type"]
-        }
-        Relationships: []
-      }
       organizations: {
-        Row: {
-          created_at: string
-          id: string
-          name: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          name: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          name?: string
-        }
-        Relationships: []
-      }
-      payment_events: {
-        Row: {
-          event_type: string
-          id: string
-          organization_id: string
-          payload: Json
-          received_at: string
-          subscription_id: string | null
-        }
-        Insert: {
-          event_type: string
-          id?: string
-          organization_id: string
-          payload: Json
-          received_at?: string
-          subscription_id?: string | null
-        }
-        Update: {
-          event_type?: string
-          id?: string
-          organization_id?: string
-          payload?: Json
-          received_at?: string
-          subscription_id?: string | null
-        }
-        Relationships: []
-      }
-      plans: {
-        Row: {
-          active: boolean
-          amount: number
-          billing_cycle: Database["public"]["Enums"]["billing_cycle"]
-          category: Database["public"]["Enums"]["plan_category"]
-          created_at: string
-          deliverable_qty: number | null
-          deliverable_unit: string | null
-          id: string
-          is_demo: boolean
-          name: string
-          organization_id: string
-          razorpay_plan_id: string | null
-        }
-        Insert: {
-          active?: boolean
-          amount: number
-          billing_cycle: Database["public"]["Enums"]["billing_cycle"]
-          category?: Database["public"]["Enums"]["plan_category"]
-          created_at?: string
-          deliverable_qty?: number | null
-          deliverable_unit?: string | null
-          id?: string
-          is_demo?: boolean
-          name: string
-          organization_id: string
-          razorpay_plan_id?: string | null
-        }
-        Update: {
-          active?: boolean
-          amount?: number
-          billing_cycle?: Database["public"]["Enums"]["billing_cycle"]
-          category?: Database["public"]["Enums"]["plan_category"]
-          created_at?: string
-          deliverable_qty?: number | null
-          deliverable_unit?: string | null
-          id?: string
-          is_demo?: boolean
-          name?: string
-          organization_id?: string
-          razorpay_plan_id?: string | null
-        }
-        Relationships: []
-      }
-      post_metrics: {
-        Row: {
-          campaign_post_id: string
-          clicks: number
-          engagement: number
-          fetched_at: string
-          id: string
-          organization_id: string
-          reach: number
-        }
-        Insert: {
-          campaign_post_id: string
-          clicks?: number
-          engagement?: number
-          fetched_at?: string
-          id?: string
-          organization_id: string
-          reach?: number
-        }
-        Update: {
-          campaign_post_id?: string
-          clicks?: number
-          engagement?: number
-          fetched_at?: string
-          id?: string
-          organization_id?: string
-          reach?: number
-        }
+        Row: { id: string; name: string; gst_number: string | null; created_at: string }
+        Insert: { id?: string; name: string; gst_number?: string | null; created_at?: string }
+        Update: { id?: string; name?: string; gst_number?: string | null; created_at?: string }
         Relationships: []
       }
       profiles: {
         Row: {
-          created_at: string
-          email: string
-          full_name: string | null
           id: string
           organization_id: string
+          full_name: string | null
+          email: string
           role: Database["public"]["Enums"]["user_role"]
           status: Database["public"]["Enums"]["user_status"]
+          created_at: string
         }
         Insert: {
-          created_at?: string
+          id: string
+          organization_id: string
+          full_name?: string | null
           email: string
-          full_name?: string | null
-          id: string
-          organization_id: string
           role?: Database["public"]["Enums"]["user_role"]
           status?: Database["public"]["Enums"]["user_status"]
+          created_at?: string
         }
         Update: {
-          created_at?: string
+          id?: string
+          organization_id?: string
+          full_name?: string | null
           email?: string
-          full_name?: string | null
-          id?: string
-          organization_id?: string
           role?: Database["public"]["Enums"]["user_role"]
           status?: Database["public"]["Enums"]["user_status"]
+          created_at?: string
         }
         Relationships: []
       }
-      social_accounts: {
+      channels: {
         Row: {
-          access_token_secret_id: string | null
-          account_name: string
-          connected_at: string
+          id: string
+          organization_id: string
+          marketplace_id: string
+          seller_id: string
+          display_name: string
+          sp_api_refresh_token_secret_id: string | null
           connected_by: string | null
-          expires_at: string | null
-          id: string
-          organization_id: string
-          platform: Database["public"]["Enums"]["social_platform"]
+          connected_at: string | null
           status: string
+          created_at: string
         }
         Insert: {
-          access_token_secret_id?: string | null
-          account_name: string
-          connected_at?: string
+          id?: string
+          organization_id: string
+          marketplace_id: string
+          seller_id: string
+          display_name: string
+          sp_api_refresh_token_secret_id?: string | null
           connected_by?: string | null
-          expires_at?: string | null
-          id?: string
-          organization_id: string
-          platform: Database["public"]["Enums"]["social_platform"]
+          connected_at?: string | null
           status?: string
+          created_at?: string
         }
-        Update: {
-          access_token_secret_id?: string | null
-          account_name?: string
-          connected_at?: string
-          connected_by?: string | null
-          expires_at?: string | null
-          id?: string
-          organization_id?: string
-          platform?: Database["public"]["Enums"]["social_platform"]
-          status?: string
-        }
+        Update: Partial<Database["public"]["Tables"]["channels"]["Insert"]>
         Relationships: []
       }
-      subscriptions: {
+      skus: {
         Row: {
-          created_at: string
-          customer_id: string
-          failed_charge_count: number
           id: string
-          is_demo: boolean
-          next_due_date: string | null
           organization_id: string
-          plan_id: string
-          razorpay_customer_id: string | null
-          razorpay_subscription_id: string | null
-          start_date: string
-          status: Database["public"]["Enums"]["subscription_status"]
-        }
-        Insert: {
-          created_at?: string
-          customer_id: string
-          failed_charge_count?: number
-          id?: string
-          is_demo?: boolean
-          next_due_date?: string | null
-          organization_id: string
-          plan_id: string
-          razorpay_customer_id?: string | null
-          razorpay_subscription_id?: string | null
-          start_date?: string
-          status?: Database["public"]["Enums"]["subscription_status"]
-        }
-        Update: {
-          created_at?: string
-          customer_id?: string
-          failed_charge_count?: number
-          id?: string
-          is_demo?: boolean
-          next_due_date?: string | null
-          organization_id?: string
-          plan_id?: string
-          razorpay_customer_id?: string | null
-          razorpay_subscription_id?: string | null
-          start_date?: string
-          status?: Database["public"]["Enums"]["subscription_status"]
-        }
-        Relationships: []
-      }
-      tasks: {
-        Row: {
-          assigned_to: string | null
-          completed_at: string | null
-          created_at: string
-          created_by: string | null
-          customer_id: string | null
-          description: string | null
-          due_date: string | null
-          id: string
-          is_demo: boolean
-          organization_id: string
-          priority: Database["public"]["Enums"]["task_priority"]
-          status: Database["public"]["Enums"]["task_status"]
+          sku: string
+          asin: string | null
           title: string
+          hsn_code: string | null
+          gst_rate: number
+          buffer_stock: number
+          active: boolean
+          created_at: string
         }
         Insert: {
-          assigned_to?: string | null
-          completed_at?: string | null
-          created_at?: string
-          created_by?: string | null
-          customer_id?: string | null
-          description?: string | null
-          due_date?: string | null
           id?: string
-          is_demo?: boolean
           organization_id: string
-          priority?: Database["public"]["Enums"]["task_priority"]
-          status?: Database["public"]["Enums"]["task_status"]
+          sku: string
+          asin?: string | null
           title: string
-        }
-        Update: {
-          assigned_to?: string | null
-          completed_at?: string | null
+          hsn_code?: string | null
+          gst_rate?: number
+          buffer_stock?: number
+          active?: boolean
           created_at?: string
-          created_by?: string | null
-          customer_id?: string | null
-          description?: string | null
-          due_date?: string | null
-          id?: string
-          is_demo?: boolean
-          organization_id?: string
-          priority?: Database["public"]["Enums"]["task_priority"]
-          status?: Database["public"]["Enums"]["task_status"]
-          title?: string
         }
+        Update: Partial<Database["public"]["Tables"]["skus"]["Insert"]>
         Relationships: []
       }
-      videos: {
+      inventory_ledger: {
         Row: {
-          created_at: string
-          created_by: string | null
-          customer_id: string | null
-          error_message: string | null
           id: string
-          inputs: Json
-          is_demo: boolean
-          name: string
           organization_id: string
-          output_url: string | null
-          status: Database["public"]["Enums"]["video_status"]
-          template: string
-          updated_at: string
+          sku_id: string
+          movement_type: Database["public"]["Enums"]["inventory_movement_type"]
+          quantity_delta: number
+          order_id: string | null
+          note: string | null
+          created_by: string | null
+          created_at: string
         }
         Insert: {
-          created_at?: string
-          created_by?: string | null
-          customer_id?: string | null
-          error_message?: string | null
           id?: string
-          inputs?: Json
-          is_demo?: boolean
-          name: string
           organization_id: string
-          output_url?: string | null
-          status?: Database["public"]["Enums"]["video_status"]
-          template: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
+          sku_id: string
+          movement_type: Database["public"]["Enums"]["inventory_movement_type"]
+          quantity_delta: number
+          order_id?: string | null
+          note?: string | null
           created_by?: string | null
-          customer_id?: string | null
-          error_message?: string | null
-          id?: string
-          inputs?: Json
-          is_demo?: boolean
-          name?: string
-          organization_id?: string
-          output_url?: string | null
-          status?: Database["public"]["Enums"]["video_status"]
-          template?: string
-          updated_at?: string
+          created_at?: string
         }
+        Update: Partial<Database["public"]["Tables"]["inventory_ledger"]["Insert"]>
+        Relationships: []
+      }
+      orders: {
+        Row: {
+          id: string
+          organization_id: string
+          channel_id: string
+          amazon_order_id: string
+          order_status: Database["public"]["Enums"]["order_status"]
+          order_date: string
+          buyer_state: string | null
+          ship_state: string | null
+          gross_amount: number
+          raw_payload: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          channel_id: string
+          amazon_order_id: string
+          order_status?: Database["public"]["Enums"]["order_status"]
+          order_date: string
+          buyer_state?: string | null
+          ship_state?: string | null
+          gross_amount: number
+          raw_payload?: Json | null
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["orders"]["Insert"]>
+        Relationships: []
+      }
+      order_line_items: {
+        Row: {
+          id: string
+          organization_id: string
+          order_id: string
+          sku_id: string
+          quantity: number
+          unit_price: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          order_id: string
+          sku_id: string
+          quantity: number
+          unit_price: number
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["order_line_items"]["Insert"]>
+        Relationships: []
+      }
+      gst_invoices: {
+        Row: {
+          id: string
+          organization_id: string
+          order_id: string
+          invoice_number: string
+          invoice_type: Database["public"]["Enums"]["gst_invoice_type"]
+          taxable_value: number
+          cgst_amount: number
+          sgst_amount: number
+          igst_amount: number
+          total_amount: number
+          pdf_url: string | null
+          issued_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          order_id: string
+          invoice_number: string
+          invoice_type: Database["public"]["Enums"]["gst_invoice_type"]
+          taxable_value: number
+          cgst_amount?: number
+          sgst_amount?: number
+          igst_amount?: number
+          total_amount: number
+          pdf_url?: string | null
+          issued_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["gst_invoices"]["Insert"]>
+        Relationships: []
+      }
+      mtr_imports: {
+        Row: {
+          id: string
+          organization_id: string
+          channel_id: string
+          filename: string
+          period_start: string | null
+          period_end: string | null
+          row_count: number
+          uploaded_by: string | null
+          uploaded_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          channel_id: string
+          filename: string
+          period_start?: string | null
+          period_end?: string | null
+          row_count?: number
+          uploaded_by?: string | null
+          uploaded_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["mtr_imports"]["Insert"]>
+        Relationships: []
+      }
+      mtr_line_items: {
+        Row: {
+          id: string
+          organization_id: string
+          mtr_import_id: string
+          amazon_order_id: string
+          raw_row: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          mtr_import_id: string
+          amazon_order_id: string
+          raw_row: Json
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["mtr_line_items"]["Insert"]>
+        Relationships: []
+      }
+      reconciliation_entries: {
+        Row: {
+          id: string
+          organization_id: string
+          order_id: string
+          mtr_line_item_id: string | null
+          gross_sales: number
+          commission: number
+          tcs_cgst: number
+          tcs_sgst: number
+          tcs_igst: number
+          tds_194o: number
+          other_fees: number
+          expected_settlement: number
+          actual_settlement: number | null
+          status: Database["public"]["Enums"]["reconciliation_status"]
+          reviewed_by: string | null
+          reviewed_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          order_id: string
+          mtr_line_item_id?: string | null
+          gross_sales: number
+          commission?: number
+          tcs_cgst?: number
+          tcs_sgst?: number
+          tcs_igst?: number
+          tds_194o?: number
+          other_fees?: number
+          expected_settlement: number
+          actual_settlement?: number | null
+          status?: Database["public"]["Enums"]["reconciliation_status"]
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["reconciliation_entries"]["Insert"]>
+        Relationships: []
+      }
+      sync_logs: {
+        Row: {
+          id: string
+          organization_id: string
+          channel_id: string | null
+          operation: string
+          status: Database["public"]["Enums"]["log_status"]
+          fault: Database["public"]["Enums"]["log_fault"] | null
+          message: string
+          detail: Json | null
+          started_at: string
+          finished_at: string | null
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          channel_id?: string | null
+          operation: string
+          status: Database["public"]["Enums"]["log_status"]
+          fault?: Database["public"]["Enums"]["log_fault"] | null
+          message: string
+          detail?: Json | null
+          started_at?: string
+          finished_at?: string | null
+        }
+        Update: Partial<Database["public"]["Tables"]["sync_logs"]["Insert"]>
+        Relationships: []
+      }
+      audit_log: {
+        Row: {
+          id: string
+          organization_id: string
+          table_name: string
+          record_id: string
+          action: string
+          old_value: Json | null
+          new_value: Json | null
+          changed_by: string | null
+          changed_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          table_name: string
+          record_id: string
+          action: string
+          old_value?: Json | null
+          new_value?: Json | null
+          changed_by?: string | null
+          changed_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["audit_log"]["Insert"]>
         Relationships: []
       }
     }
@@ -764,50 +361,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      auth_org_id: { Args: never; Returns: string }
-      auth_role: {
-        Args: never
-        Returns: Database["public"]["Enums"]["user_role"]
-      }
+      auth_org_id: { Args: Record<PropertyKey, never>; Returns: string }
+      auth_role: { Args: Record<PropertyKey, never>; Returns: Database["public"]["Enums"]["user_role"] }
       approve_team_member: {
         Args: { p_user_id: string; p_role: Database["public"]["Enums"]["user_role"] }
         Returns: undefined
       }
     }
     Enums: {
-      billing_cycle: "monthly" | "quarterly" | "annual"
-      customer_type:
-        | "education"
-        | "healthcare"
-        | "government"
-        | "corporate"
-        | "other"
-      invoice_status: "paid" | "pending" | "failed"
-      lead_source: "website" | "meta" | "linkedin" | "referral" | "other"
-      lead_status:
-        | "new"
-        | "contacted"
-        | "qualified"
-        | "proposal"
-        | "won"
-        | "lost"
-      opportunity_status:
-        | "identified"
-        | "contacted"
-        | "proposed"
-        | "won"
-        | "dismissed"
-      opportunity_type: "upsell" | "cross_sell"
-      plan_category: "erp" | "marketing"
-      post_mode: "auto" | "plan_only"
-      post_status: "draft" | "scheduled" | "posted" | "failed"
-      social_platform: "facebook" | "instagram" | "linkedin" | "twitter"
-      subscription_status: "active" | "paused" | "cancelled" | "past_due"
-      task_priority: "P0" | "P1" | "P2"
-      task_status: "todo" | "in_progress" | "done"
-      user_role: "admin" | "sales" | "marketing" | "finance"
+      user_role: "admin" | "ops" | "finance"
       user_status: "pending" | "active"
-      video_status: "draft" | "pending" | "rendering" | "rendered" | "failed"
+      inventory_movement_type: "order_deduction" | "manual_adjustment" | "restock" | "return"
+      order_status: "pending" | "shipped" | "delivered" | "cancelled" | "returned"
+      gst_invoice_type: "intra_state" | "inter_state"
+      reconciliation_status: "matched" | "mismatch" | "pending_review"
+      log_fault: "amazon" | "order_sathi" | "seller_data" | "unknown"
+      log_status: "success" | "failed" | "partial"
     }
     CompositeTypes: {
       [_ in never]: never
