@@ -5,6 +5,7 @@ import { useToast } from '../lib/Toast'
 import { reportError } from '../lib/errors'
 import { formatINR } from '../lib/format'
 import { parseMtrCsv } from '../lib/mtrParser'
+import { parseBankStatementCsv } from '../lib/bankStatementParser'
 import type { Tables } from '../lib/database.types'
 
 type Entry = Tables<'reconciliation_entries'> & { orders: Tables<'orders'> | null }
@@ -27,10 +28,12 @@ export default function Reconciliation() {
   const [channels, setChannels] = useState<Channel[]>([])
   const [selectedChannel, setSelectedChannel] = useState('')
   const [importing, setImporting] = useState(false)
+  const [importingBank, setImportingBank] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
   const [savingId, setSavingId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const bankFileInputRef = useRef<HTMLInputElement>(null)
   const orgId = profile?.organization_id
   const canEdit = profile?.role === 'admin' || profile?.role === 'finance'
 
@@ -127,6 +130,60 @@ export default function Reconciliation() {
     }
   }
 
+  async function handleBankFile(file: File) {
+    if (!orgId) return
+    setImportingBank(true)
+    try {
+      const text = await file.text()
+      const rows = parseBankStatementCsv(text)
+      if (rows.length === 0) throw new Error('No usable rows found in this file.')
+
+      const orderIds = rows.map((r) => r.amazonOrderId)
+      const { data: orders } = await supabase.from('orders').select('id, amazon_order_id').in('amazon_order_id', orderIds)
+      const orderIdByAmazonId = new Map((orders ?? []).map((o) => [o.amazon_order_id, o.id]))
+
+      const matchedOrderIds = rows.map((r) => orderIdByAmazonId.get(r.amazonOrderId)).filter((id): id is string => !!id)
+      const { data: existingEntries } = await supabase.from('reconciliation_entries').select('*').in('order_id', matchedOrderIds)
+      const entryByOrderId = new Map((existingEntries ?? []).map((e) => [e.order_id, e]))
+
+      let updated = 0
+      const updateRows = []
+      for (const row of rows) {
+        const orderId = orderIdByAmazonId.get(row.amazonOrderId)
+        const entry = orderId ? entryByOrderId.get(orderId) : undefined
+        if (!entry) continue
+        updated++
+        const status: Entry['status'] = Math.abs(row.actualSettlement - Number(entry.expected_settlement)) <= MISMATCH_THRESHOLD ? 'matched' : 'mismatch'
+        updateRows.push({ ...entry, actual_settlement: row.actualSettlement, status, reviewed_by: profile!.id, reviewed_at: new Date().toISOString() })
+      }
+
+      if (updateRows.length > 0) {
+        const { error } = await supabase.from('reconciliation_entries').upsert(updateRows, { onConflict: 'order_id' })
+        if (error) throw error
+      }
+
+      const unmatched = rows.length - updated
+      const messageParts = [`${updated} of ${rows.length} rows matched an existing reconciliation entry.`]
+      if (unmatched > 0) messageParts.push(`${unmatched} unmatched — no order, or MTR not yet imported for it.`)
+
+      await supabase.from('sync_logs').insert({
+        organization_id: orgId,
+        operation: 'bank_settlement_import',
+        status: unmatched > 0 ? 'partial' : 'success',
+        fault: unmatched > 0 ? 'seller_data' : null,
+        message: messageParts.join(' '),
+      })
+
+      showSuccess(`Imported ${file.name}: ${updated} of ${rows.length} orders matched.`)
+      load()
+    } catch (err) {
+      reportError(showError, 'Bank statement import', err as { message: string }, orgId, profile?.id)
+    } finally {
+      setImportingBank(false)
+      if (bankFileInputRef.current) bankFileInputRef.current.value = ''
+    }
+  }
+
   function startEdit(e: Entry) {
     setEditingId(e.id)
     setEditValue(e.actual_settlement != null ? String(e.actual_settlement) : '')
@@ -193,6 +250,24 @@ export default function Reconciliation() {
             {importing && <span className="text-xs text-slate-400">Importing…</span>}
           </div>
         )}
+      </div>
+
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6">
+        <div className="text-xs font-semibold uppercase text-slate-500 mb-1">Import bank settlement statement</div>
+        <p className="text-xs text-slate-400 mb-3">
+          Bulk-fills actual settlement for every order in the file, matched by Order ID. Requires MTR already imported for those orders.
+        </p>
+        <div className="flex items-center gap-3">
+          <input
+            ref={bankFileInputRef}
+            type="file"
+            accept=".csv"
+            disabled={importingBank}
+            onChange={(e) => e.target.files?.[0] && handleBankFile(e.target.files[0])}
+            className="text-sm text-slate-500 disabled:opacity-50"
+          />
+          {importingBank && <span className="text-xs text-slate-400">Importing…</span>}
+        </div>
       </div>
 
       {mismatches.length > 0 && (
