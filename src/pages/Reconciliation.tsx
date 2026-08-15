@@ -16,6 +16,10 @@ const STATUS_COLOR: Record<Entry['status'], string> = {
   pending_review: 'bg-amber-100 text-amber-700',
 }
 
+// Bank credits round differently than the paise-precise settlement math -
+// anything within ₹2 counts as matched rather than flagging every order.
+const MISMATCH_THRESHOLD = 2
+
 export default function Reconciliation() {
   const { profile } = useAuth()
   const { showError, showSuccess } = useToast()
@@ -23,8 +27,12 @@ export default function Reconciliation() {
   const [channels, setChannels] = useState<Channel[]>([])
   const [selectedChannel, setSelectedChannel] = useState('')
   const [importing, setImporting] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editValue, setEditValue] = useState('')
+  const [savingId, setSavingId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const orgId = profile?.organization_id
+  const canEdit = profile?.role === 'admin' || profile?.role === 'finance'
 
   async function load() {
     if (!orgId) return
@@ -119,6 +127,32 @@ export default function Reconciliation() {
     }
   }
 
+  function startEdit(e: Entry) {
+    setEditingId(e.id)
+    setEditValue(e.actual_settlement != null ? String(e.actual_settlement) : '')
+  }
+
+  async function saveActualSettlement(e: Entry) {
+    const actual = Number(editValue)
+    if (!Number.isFinite(actual)) {
+      showError('Enter a valid number.')
+      return
+    }
+    setSavingId(e.id)
+    const status = Math.abs(actual - Number(e.expected_settlement)) <= MISMATCH_THRESHOLD ? 'matched' : 'mismatch'
+    const { error } = await supabase
+      .from('reconciliation_entries')
+      .update({ actual_settlement: actual, status, reviewed_by: profile!.id, reviewed_at: new Date().toISOString() })
+      .eq('id', e.id)
+    setSavingId(null)
+    if (error) {
+      reportError(showError, 'Save settlement', error, orgId, profile?.id)
+      return
+    }
+    setEditingId(null)
+    load()
+  }
+
   const mismatches = entries.filter((e) => e.status === 'mismatch')
 
   return (
@@ -197,7 +231,35 @@ export default function Reconciliation() {
                     <td className="px-4 py-2.5 text-right text-slate-500">{formatINR(Number(e.tds_194o))}</td>
                     <td className="px-4 py-2.5 text-right text-slate-500">{formatINR(Number(e.expected_settlement))}</td>
                     <td className="px-4 py-2.5 text-right text-slate-500">
-                      {e.actual_settlement != null ? formatINR(Number(e.actual_settlement)) : '—'}
+                      {editingId === e.id ? (
+                        <div className="flex items-center justify-end gap-1.5">
+                          <input
+                            type="number"
+                            autoFocus
+                            value={editValue}
+                            onChange={(ev) => setEditValue(ev.target.value)}
+                            className="w-24 text-right text-sm rounded-lg border border-slate-300 px-2 py-1"
+                          />
+                          <button
+                            onClick={() => saveActualSettlement(e)}
+                            disabled={savingId === e.id}
+                            className="text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50"
+                          >
+                            {savingId === e.id ? '…' : 'Save'}
+                          </button>
+                          <button onClick={() => setEditingId(null)} className="text-xs text-slate-400 hover:text-slate-600">
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => canEdit && startEdit(e)}
+                          disabled={!canEdit}
+                          className={canEdit ? 'hover:underline' : ''}
+                        >
+                          {e.actual_settlement != null ? formatINR(Number(e.actual_settlement)) : canEdit ? 'Enter…' : '—'}
+                        </button>
+                      )}
                     </td>
                     <td className="px-4 py-2.5">
                       <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${STATUS_COLOR[e.status]}`}>
