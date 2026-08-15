@@ -150,6 +150,7 @@ Deno.serve(async (req) => {
             order_date: ao.PurchaseDate,
             buyer_state: ao.ShippingAddress?.StateOrRegion ?? null,
             ship_state: ao.ShippingAddress?.StateOrRegion ?? null,
+            ship_address: formatShippingAddress(ao.ShippingAddress),
             gross_amount: Number(ao.OrderTotal?.Amount ?? 0),
             raw_payload: ao,
           },
@@ -199,6 +200,16 @@ Deno.serve(async (req) => {
     return finish('failed')
   }
 })
+
+// Full name/address lines require a Restricted Data Token (PII grant) most
+// sellers don't have by default - falls back to whatever SP-API actually
+// returns (usually just city/state/postal/country without one).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function formatShippingAddress(addr: any): string | null {
+  if (!addr) return null
+  const lines = [addr.Name, addr.AddressLine1, addr.AddressLine2, addr.AddressLine3, [addr.City, addr.StateOrRegion, addr.PostalCode].filter(Boolean).join(', '), addr.CountryCode].filter(Boolean)
+  return lines.length > 0 ? lines.join('\n') : null
+}
 
 function mapOrderStatus(amazonStatus: string): 'pending' | 'shipped' | 'delivered' | 'cancelled' | 'returned' {
   switch (amazonStatus) {

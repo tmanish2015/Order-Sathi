@@ -166,6 +166,7 @@ export type Database = {
           order_date: string
           buyer_state: string | null
           ship_state: string | null
+          ship_address: string | null
           gross_amount: number
           raw_payload: Json | null
           created_at: string
@@ -179,6 +180,7 @@ export type Database = {
           order_date: string
           buyer_state?: string | null
           ship_state?: string | null
+          ship_address?: string | null
           gross_amount: number
           raw_payload?: Json | null
           created_at?: string

@@ -25,8 +25,14 @@ export function buildInvoicePdf(org: Organization, order: Order, invoiceNumber: 
   doc.text(`Date: ${format(new Date(order.order_date), 'dd MMM yyyy')}`, 140, 38)
   doc.text(`Place of supply: ${order.buyer_state ?? '—'}`, 140, 43)
 
+  doc.setFontSize(9)
+  doc.text('Ship to:', 14, 55)
+  doc.setFontSize(10)
+  const addressLines = doc.splitTextToSize(order.ship_address ?? order.buyer_state ?? 'Address not provided', 90)
+  doc.text(addressLines, 14, 60)
+
   autoTable(doc, {
-    startY: 52,
+    startY: 60 + addressLines.length * 5 + 6,
     head: [['SKU', 'Item', 'Qty', 'Unit Price', 'GST %', 'Taxable', 'Tax']],
     body: calc.lines.map((l) => [
       l.sku,

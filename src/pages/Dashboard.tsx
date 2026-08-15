@@ -56,7 +56,7 @@ export default function Dashboard() {
   const [showNewOrder, setShowNewOrder] = useState(false)
   const [creatingChannel, setCreatingChannel] = useState(false)
   const [savingOrder, setSavingOrder] = useState(false)
-  const [orderForm, setOrderForm] = useState({ amazon_order_id: '', order_date: format(new Date(), 'yyyy-MM-dd'), buyer_state: '', ship_state: '', channel_id: '' })
+  const [orderForm, setOrderForm] = useState({ amazon_order_id: '', order_date: format(new Date(), 'yyyy-MM-dd'), buyer_state: '', ship_state: '', ship_address: '', channel_id: '' })
   const [lineItems, setLineItems] = useState<LineItemDraft[]>([{ ...BLANK_LINE_ITEM }])
   const orgId = profile?.organization_id
   const canEdit = profile?.role === 'admin' || profile?.role === 'ops'
@@ -164,6 +164,7 @@ export default function Dashboard() {
           order_date: new Date(orderForm.order_date).toISOString(),
           buyer_state: orderForm.buyer_state || null,
           ship_state: orderForm.ship_state || orderForm.buyer_state || null,
+          ship_address: orderForm.ship_address || null,
           gross_amount: grossAmount,
         })
         .select()
@@ -194,7 +195,7 @@ export default function Dashboard() {
       if (ledgerError) throw ledgerError
 
       showSuccess(`Order ${orderForm.amazon_order_id} created.`)
-      setOrderForm((f) => ({ ...f, amazon_order_id: '', buyer_state: '', ship_state: '' }))
+      setOrderForm((f) => ({ ...f, amazon_order_id: '', buyer_state: '', ship_state: '', ship_address: '' }))
       setLineItems([{ ...BLANK_LINE_ITEM }])
       setShowNewOrder(false)
       loadOrders()
@@ -330,6 +331,16 @@ export default function Dashboard() {
             ) : (
               <Field label="Ship state" value={orderForm.ship_state} onChange={(v) => setOrderForm((f) => ({ ...f, ship_state: v }))} placeholder="defaults to buyer state" />
             )}
+            <label className="block sm:col-span-4">
+              <span className="text-xs text-slate-500">Shipping address</span>
+              <textarea
+                value={orderForm.ship_address}
+                onChange={(e) => setOrderForm((f) => ({ ...f, ship_address: e.target.value }))}
+                placeholder="Full address as it should appear on the invoice"
+                rows={2}
+                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+              />
+            </label>
           </div>
 
           <div className="text-xs text-slate-500 mb-2">Line items</div>
