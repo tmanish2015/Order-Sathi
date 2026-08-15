@@ -19,6 +19,9 @@ export default function Inventory() {
   const [pushing, setPushing] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
+  const [showAddSku, setShowAddSku] = useState(false)
+  const [newSku, setNewSku] = useState({ sku: '', title: '', gst_rate: '18', buffer_stock: '0' })
+  const [savingSku, setSavingSku] = useState(false)
   const orgId = profile?.organization_id
   const canEdit = profile?.role === 'admin' || profile?.role === 'ops'
 
@@ -58,6 +61,30 @@ export default function Inventory() {
     load()
   }
 
+  async function addSku() {
+    if (!orgId || !newSku.sku.trim() || !newSku.title.trim()) {
+      showError('SKU and title are required.')
+      return
+    }
+    setSavingSku(true)
+    const { error } = await supabase.from('skus').insert({
+      organization_id: orgId,
+      sku: newSku.sku.trim(),
+      title: newSku.title.trim(),
+      gst_rate: Number(newSku.gst_rate) || 0,
+      buffer_stock: Number(newSku.buffer_stock) || 0,
+    })
+    setSavingSku(false)
+    if (error) {
+      reportError(showError, 'Add SKU', error, orgId, profile?.id)
+      return
+    }
+    showSuccess(`SKU ${newSku.sku} added.`)
+    setNewSku({ sku: '', title: '', gst_rate: '18', buffer_stock: '0' })
+    setShowAddSku(false)
+    load()
+  }
+
   async function pushToAmazon() {
     if (!selectedChannel) return
     setPushing(true)
@@ -74,32 +101,91 @@ export default function Inventory() {
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-1">
         <h2 className="text-lg font-semibold text-slate-900">Inventory</h2>
-        {canEdit && channels.length > 0 && (
-          <div className="flex items-center gap-2">
-            {channels.length > 1 && (
-              <select
-                value={selectedChannel}
-                onChange={(e) => setSelectedChannel(e.target.value)}
-                className="text-sm rounded-lg border border-slate-300 px-2 py-1.5"
-              >
-                <option value="">Select channel…</option>
-                {channels.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.display_name}
-                  </option>
-                ))}
-              </select>
-            )}
-            <button
-              onClick={pushToAmazon}
-              disabled={!selectedChannel || pushing}
-              className="text-sm rounded-lg bg-indigo-600 text-white px-3 py-1.5 hover:bg-indigo-700 disabled:opacity-50"
-            >
-              {pushing ? 'Pushing…' : 'Push to Amazon'}
-            </button>
-          </div>
+        {canEdit && (
+          <button
+            onClick={() => setShowAddSku((v) => !v)}
+            className="text-sm rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50"
+          >
+            {showAddSku ? 'Cancel' : '+ Add SKU'}
+          </button>
         )}
       </div>
+
+      {showAddSku && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6 grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+          <label className="block">
+            <span className="text-xs text-slate-500">SKU code</span>
+            <input
+              type="text"
+              value={newSku.sku}
+              onChange={(e) => setNewSku((f) => ({ ...f, sku: e.target.value }))}
+              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs text-slate-500">Title</span>
+            <input
+              type="text"
+              value={newSku.title}
+              onChange={(e) => setNewSku((f) => ({ ...f, title: e.target.value }))}
+              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs text-slate-500">GST rate %</span>
+            <input
+              type="number"
+              value={newSku.gst_rate}
+              onChange={(e) => setNewSku((f) => ({ ...f, gst_rate: e.target.value }))}
+              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs text-slate-500">Buffer stock</span>
+            <input
+              type="number"
+              value={newSku.buffer_stock}
+              onChange={(e) => setNewSku((f) => ({ ...f, buffer_stock: e.target.value }))}
+              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+            />
+          </label>
+          <div className="sm:col-span-4">
+            <button
+              onClick={addSku}
+              disabled={savingSku}
+              className="text-sm rounded-lg bg-indigo-600 text-white px-3 py-1.5 hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {savingSku ? 'Saving…' : 'Add SKU'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {canEdit && channels.length > 0 && (
+        <div className="flex items-center gap-2 mb-1">
+          {channels.length > 1 && (
+            <select
+              value={selectedChannel}
+              onChange={(e) => setSelectedChannel(e.target.value)}
+              className="text-sm rounded-lg border border-slate-300 px-2 py-1.5"
+            >
+              <option value="">Select channel…</option>
+              {channels.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.display_name}
+                </option>
+              ))}
+            </select>
+          )}
+          <button
+            onClick={pushToAmazon}
+            disabled={!selectedChannel || pushing}
+            className="text-sm rounded-lg bg-indigo-600 text-white px-3 py-1.5 hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {pushing ? 'Pushing…' : 'Push to Amazon'}
+          </button>
+        </div>
+      )}
       <p className="text-xs text-slate-400 mb-6">
         One central ledger per SKU. Stock = sum of every movement (order deduction, restock, return, manual adjustment) — never edited directly.
         Amazon needs each SKU's product type before quantity can push — set it below.

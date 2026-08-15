@@ -13,6 +13,15 @@ import type { Tables } from '../lib/database.types'
 type Order = Tables<'orders'> & { channels: Tables<'channels'> | null }
 type Channel = Tables<'channels'>
 type Organization = Tables<'organizations'>
+type Sku = Tables<'skus'>
+
+interface LineItemDraft {
+  sku_id: string
+  quantity: string
+  unit_price: string
+}
+
+const BLANK_LINE_ITEM: LineItemDraft = { sku_id: '', quantity: '1', unit_price: '' }
 
 const STATUS_COLOR: Record<Order['order_status'], string> = {
   pending: 'bg-amber-100 text-amber-700',
@@ -31,26 +40,127 @@ export default function Dashboard() {
   const [invoicedOrderIds, setInvoicedOrderIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [generatingId, setGeneratingId] = useState<string | null>(null)
+  const [skus, setSkus] = useState<Sku[]>([])
+  const [showNewOrder, setShowNewOrder] = useState(false)
+  const [creatingChannel, setCreatingChannel] = useState(false)
+  const [savingOrder, setSavingOrder] = useState(false)
+  const [orderForm, setOrderForm] = useState({ amazon_order_id: '', order_date: format(new Date(), 'yyyy-MM-dd'), buyer_state: '', ship_state: '', channel_id: '' })
+  const [lineItems, setLineItems] = useState<LineItemDraft[]>([{ ...BLANK_LINE_ITEM }])
   const orgId = profile?.organization_id
+  const canEdit = profile?.role === 'admin' || profile?.role === 'ops'
 
   async function load() {
     if (!orgId) return
-    const [{ data: o }, { data: c }, { data: org }, { data: inv }] = await Promise.all([
+    const [{ data: o }, { data: c }, { data: org }, { data: inv }, { data: s }] = await Promise.all([
       supabase.from('orders').select('*, channels(*)').order('order_date', { ascending: false }).limit(50),
       supabase.from('channels').select('*'),
       supabase.from('organizations').select('*').eq('id', orgId).single(),
       supabase.from('gst_invoices').select('order_id'),
+      supabase.from('skus').select('*').eq('active', true).order('sku'),
     ])
     setOrders((o as unknown as Order[]) ?? [])
     setChannels(c ?? [])
     setOrg(org ?? null)
     setInvoicedOrderIds(new Set((inv ?? []).map((i) => i.order_id)))
+    setSkus(s ?? [])
     setLoading(false)
+    if (c && c.length > 0 && !orderForm.channel_id) setOrderForm((f) => ({ ...f, channel_id: c[0].id }))
   }
 
   useEffect(() => {
     load()
   }, [orgId])
+
+  async function createTestChannel() {
+    if (!orgId) return
+    setCreatingChannel(true)
+    const { error } = await supabase.from('channels').insert({
+      organization_id: orgId,
+      marketplace_id: 'A21TJRUUN4KGV',
+      seller_id: 'MANUAL-TEST',
+      display_name: 'Manual Test Channel',
+      status: 'manual',
+      connected_by: profile!.id,
+      connected_at: new Date().toISOString(),
+    })
+    setCreatingChannel(false)
+    if (error) {
+      reportError(showError, 'Create test channel', error, orgId, profile?.id)
+      return
+    }
+    showSuccess('Test channel created — manual orders can now be entered against it.')
+    load()
+  }
+
+  function updateLineItem(index: number, patch: Partial<LineItemDraft>) {
+    setLineItems((items) => items.map((it, i) => (i === index ? { ...it, ...patch } : it)))
+  }
+
+  async function submitOrder() {
+    if (!orgId) return
+    if (!orderForm.amazon_order_id.trim() || !orderForm.channel_id) {
+      showError('Order ID and channel are required.')
+      return
+    }
+    const validLines = lineItems.filter((li) => li.sku_id && Number(li.quantity) > 0 && li.unit_price !== '')
+    if (validLines.length === 0) {
+      showError('Add at least one line item with a SKU, quantity, and price.')
+      return
+    }
+
+    setSavingOrder(true)
+    try {
+      const grossAmount = validLines.reduce((sum, li) => sum + Number(li.quantity) * Number(li.unit_price), 0)
+
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          organization_id: orgId,
+          channel_id: orderForm.channel_id,
+          amazon_order_id: orderForm.amazon_order_id.trim(),
+          order_date: new Date(orderForm.order_date).toISOString(),
+          buyer_state: orderForm.buyer_state || null,
+          ship_state: orderForm.ship_state || orderForm.buyer_state || null,
+          gross_amount: grossAmount,
+        })
+        .select()
+        .single()
+      if (orderError || !order) throw orderError ?? new Error('Could not create order')
+
+      const { error: liError } = await supabase.from('order_line_items').insert(
+        validLines.map((li) => ({
+          organization_id: orgId,
+          order_id: order.id,
+          sku_id: li.sku_id,
+          quantity: Number(li.quantity),
+          unit_price: Number(li.unit_price),
+        }))
+      )
+      if (liError) throw liError
+
+      const { error: ledgerError } = await supabase.from('inventory_ledger').insert(
+        validLines.map((li) => ({
+          organization_id: orgId,
+          sku_id: li.sku_id,
+          movement_type: 'order_deduction' as const,
+          quantity_delta: -Number(li.quantity),
+          order_id: order.id,
+          note: `Manual order ${orderForm.amazon_order_id.trim()}`,
+        }))
+      )
+      if (ledgerError) throw ledgerError
+
+      showSuccess(`Order ${orderForm.amazon_order_id} created.`)
+      setOrderForm((f) => ({ ...f, amazon_order_id: '', buyer_state: '', ship_state: '' }))
+      setLineItems([{ ...BLANK_LINE_ITEM }])
+      setShowNewOrder(false)
+      load()
+    } catch (err) {
+      reportError(showError, 'Create manual order', err as { message: string }, orgId, profile?.id)
+    } finally {
+      setSavingOrder(false)
+    }
+  }
 
   async function generateInvoice(order: Order) {
     if (!org || !orgId) return
@@ -112,15 +222,132 @@ export default function Dashboard() {
           <h2 className="text-xl font-semibold text-slate-900">Orders</h2>
           <p className="text-xs text-slate-400 mt-0.5">{format(new Date(), 'EEEE, dd MMMM yyyy')}</p>
         </div>
-        <Link to="/integrations" className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700">
-          🔌 Connect Amazon
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link to="/integrations" className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700">
+            🔌 Connect Amazon
+          </Link>
+          {canEdit && channels.length > 0 && (
+            <button
+              onClick={() => setShowNewOrder((v) => !v)}
+              className="text-sm rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50"
+            >
+              {showNewOrder ? 'Cancel' : '+ New order'}
+            </button>
+          )}
+        </div>
       </div>
 
       {channels.length === 0 && !loading && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-sm text-amber-800">
-          No Amazon channel connected yet. Orders won't sync until SP-API credentials are added —{' '}
-          <Link to="/integrations" className="underline font-medium">connect one here</Link>.
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-sm text-amber-800 flex items-center justify-between gap-3 flex-wrap">
+          <span>
+            No Amazon channel connected yet. Orders won't sync until SP-API credentials are added —{' '}
+            <Link to="/integrations" className="underline font-medium">connect one here</Link>.
+          </span>
+          {profile?.role === 'admin' && (
+            <button
+              onClick={createTestChannel}
+              disabled={creatingChannel}
+              className="text-xs font-medium rounded-lg border border-amber-300 bg-white px-3 py-1.5 hover:bg-amber-100 disabled:opacity-50 whitespace-nowrap"
+            >
+              {creatingChannel ? 'Creating…' : 'Create test channel for a dry run'}
+            </button>
+          )}
+        </div>
+      )}
+
+      {showNewOrder && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6">
+          <div className="text-xs font-semibold uppercase text-slate-500 mb-3">New manual order</div>
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-3">
+            <Field label="Order ID" value={orderForm.amazon_order_id} onChange={(v) => setOrderForm((f) => ({ ...f, amazon_order_id: v }))} placeholder="TEST-001" />
+            <label className="block">
+              <span className="text-xs text-slate-500">Order date</span>
+              <input
+                type="date"
+                value={orderForm.order_date}
+                onChange={(e) => setOrderForm((f) => ({ ...f, order_date: e.target.value }))}
+                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+              />
+            </label>
+            <Field label="Buyer state" value={orderForm.buyer_state} onChange={(v) => setOrderForm((f) => ({ ...f, buyer_state: v }))} placeholder="e.g. Rajasthan" />
+            {channels.length > 1 ? (
+              <label className="block">
+                <span className="text-xs text-slate-500">Channel</span>
+                <select
+                  value={orderForm.channel_id}
+                  onChange={(e) => setOrderForm((f) => ({ ...f, channel_id: e.target.value }))}
+                  className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                >
+                  {channels.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.display_name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <Field label="Ship state" value={orderForm.ship_state} onChange={(v) => setOrderForm((f) => ({ ...f, ship_state: v }))} placeholder="defaults to buyer state" />
+            )}
+          </div>
+
+          <div className="text-xs text-slate-500 mb-2">Line items</div>
+          {skus.length === 0 ? (
+            <p className="text-sm text-slate-400 mb-3">
+              No SKUs yet — <Link to="/inventory" className="underline font-medium">add one under Inventory</Link> first.
+            </p>
+          ) : (
+            <div className="space-y-2 mb-3">
+              {lineItems.map((li, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <select
+                    value={li.sku_id}
+                    onChange={(e) => updateLineItem(i, { sku_id: e.target.value })}
+                    className="flex-1 text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                  >
+                    <option value="">Select SKU…</option>
+                    {skus.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.sku} — {s.title}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    min="1"
+                    value={li.quantity}
+                    onChange={(e) => updateLineItem(i, { quantity: e.target.value })}
+                    placeholder="Qty"
+                    className="w-20 text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                  />
+                  <input
+                    type="number"
+                    value={li.unit_price}
+                    onChange={(e) => updateLineItem(i, { unit_price: e.target.value })}
+                    placeholder="Unit price"
+                    className="w-28 text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                  />
+                  <button
+                    onClick={() => setLineItems((items) => items.filter((_, idx) => idx !== i))}
+                    disabled={lineItems.length === 1}
+                    className="text-xs text-slate-400 hover:text-red-600 disabled:opacity-30"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button onClick={() => setLineItems((items) => [...items, { ...BLANK_LINE_ITEM }])} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">
+                + Add line item
+              </button>
+            </div>
+          )}
+
+          <button
+            onClick={submitOrder}
+            disabled={savingOrder || skus.length === 0}
+            className="text-sm rounded-lg bg-indigo-600 text-white px-3 py-1.5 hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {savingOrder ? 'Creating…' : 'Create order'}
+          </button>
         </div>
       )}
 
@@ -213,5 +440,20 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
       <div className="text-xs text-slate-400">{label}</div>
       <div className="text-lg sm:text-xl font-semibold mt-1 text-slate-900">{value}</div>
     </div>
+  )
+}
+
+function Field({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+  return (
+    <label className="block">
+      <span className="text-xs text-slate-500">{label}</span>
+      <input
+        type="text"
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+      />
+    </label>
   )
 }
