@@ -111,6 +111,7 @@ export type Database = {
           gst_rate: number
           buffer_stock: number
           active: boolean
+          product_type: string | null
           created_at: string
         }
         Insert: {
@@ -123,6 +124,7 @@ export type Database = {
           gst_rate?: number
           buffer_stock?: number
           active?: boolean
+          product_type?: string | null
           created_at?: string
         }
         Update: Partial<Database["public"]["Tables"]["skus"]["Insert"]>
