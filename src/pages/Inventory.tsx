@@ -13,6 +13,9 @@ type Sku = Tables<'skus'>
 type Ledger = Tables<'inventory_ledger'>
 type Channel = Tables<'channels'>
 
+const SELL_THROUGH_WINDOW_DAYS = 14
+const REORDER_ALERT_DAYS = 7
+
 interface SkuFormValues {
   title: string
   gst_rate: string
@@ -36,6 +39,7 @@ export default function Inventory() {
   const { showError, showSuccess } = useToast()
   const [skus, setSkus] = useState<Sku[]>([])
   const [stockBySku, setStockBySku] = useState<Record<string, number>>({})
+  const [dailyRateBySku, setDailyRateBySku] = useState<Record<string, number>>({})
   const [channels, setChannels] = useState<Channel[]>([])
   const [selectedChannel, setSelectedChannel] = useState('')
   const [pushing, setPushing] = useState(false)
@@ -67,6 +71,23 @@ export default function Inventory() {
       totals[row.sku_id] = (totals[row.sku_id] ?? 0) + row.quantity_delta
     }
     setStockBySku(totals)
+
+    // Recent sell-through: units sold per day over the last 14 days, from
+    // order_deduction movements only (restocks/returns/adjustments don't
+    // represent demand).
+    const cutoff = Date.now() - SELL_THROUGH_WINDOW_DAYS * 24 * 60 * 60 * 1000
+    const soldRecent: Record<string, number> = {}
+    for (const row of (l ?? []) as Ledger[]) {
+      if (row.movement_type !== 'order_deduction') continue
+      if (new Date(row.created_at).getTime() < cutoff) continue
+      soldRecent[row.sku_id] = (soldRecent[row.sku_id] ?? 0) + -row.quantity_delta
+    }
+    const rates: Record<string, number> = {}
+    for (const [skuId, units] of Object.entries(soldRecent)) {
+      rates[skuId] = units / SELL_THROUGH_WINDOW_DAYS
+    }
+    setDailyRateBySku(rates)
+
     setChannels(c ?? [])
     if (c && c.length === 1) setSelectedChannel(c[0].id)
     setLoading(false)
@@ -81,6 +102,21 @@ export default function Inventory() {
     if (!q) return skus
     return skus.filter((s) => s.sku.toLowerCase().includes(q) || s.title.toLowerCase().includes(q))
   }, [skus, search])
+
+  function daysToBuffer(s: Sku): number | null {
+    const stock = stockBySku[s.id] ?? 0
+    const rate = dailyRateBySku[s.id] ?? 0
+    if (rate <= 0) return null // no recent sales, can't estimate
+    return Math.max((stock - s.buffer_stock) / rate, 0)
+  }
+
+  const reorderAlerts = useMemo(() => {
+    return skus
+      .map((s) => ({ sku: s, days: daysToBuffer(s), rate: dailyRateBySku[s.id] ?? 0 }))
+      .filter((r) => r.days != null && r.days <= REORDER_ALERT_DAYS)
+      .sort((a, b) => (a.days ?? 0) - (b.days ?? 0))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [skus, stockBySku, dailyRateBySku])
 
   function startEdit(s: Sku) {
     setEditingId(s.id)
@@ -266,6 +302,22 @@ export default function Inventory() {
         Amazon needs each SKU's product type before quantity can push.
       </p>
 
+      {reorderAlerts.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+          <div className="text-sm font-medium text-amber-800 mb-1.5">
+            {reorderAlerts.length} SKU{reorderAlerts.length > 1 ? 's' : ''} hitting buffer stock soon
+          </div>
+          <ul className="text-sm text-amber-700 space-y-0.5">
+            {reorderAlerts.map((r) => (
+              <li key={r.sku.id}>
+                <strong>{r.sku.sku}</strong> — hits buffer stock in ~{Math.round(r.days ?? 0)} day{Math.round(r.days ?? 0) === 1 ? '' : 's'} at current
+                sell-through ({r.rate.toFixed(1)} units/day)
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-100">
           <input
@@ -292,6 +344,7 @@ export default function Inventory() {
                   <th className="px-4 py-2 font-medium text-right">Buffer</th>
                   <th className="px-4 py-2 font-medium text-right">In stock</th>
                   <th className="px-4 py-2 font-medium text-right">Available</th>
+                  <th className="px-4 py-2 font-medium text-right">Days to buffer</th>
                   <th className="px-4 py-2 font-medium text-right">Actions</th>
                 </tr>
               </thead>
@@ -341,6 +394,7 @@ export default function Inventory() {
                           </td>
                           <td className="px-4 py-2.5 text-right text-slate-400">{stock}</td>
                           <td className="px-4 py-2.5 text-right text-slate-400">{available}</td>
+                          <td className="px-4 py-2.5 text-right text-slate-400">—</td>
                           <td className="px-4 py-2.5 text-right whitespace-nowrap">
                             <button onClick={() => saveEdit(s)} disabled={savingEdit} className="text-xs font-medium text-indigo-600 hover:text-indigo-700 mr-2 disabled:opacity-50">
                               {savingEdit ? '…' : 'Save'}
@@ -358,6 +412,12 @@ export default function Inventory() {
                           <td className="px-4 py-2.5 text-right text-slate-500">{s.buffer_stock}</td>
                           <td className={`px-4 py-2.5 text-right font-medium ${low ? 'text-red-600' : 'text-slate-700'}`}>{stock}</td>
                           <td className="px-4 py-2.5 text-right text-slate-500">{available}</td>
+                          <td className={`px-4 py-2.5 text-right ${(daysToBuffer(s) ?? Infinity) <= REORDER_ALERT_DAYS ? 'text-amber-600 font-medium' : 'text-slate-500'}`}>
+                            {(() => {
+                              const days = daysToBuffer(s)
+                              return days != null ? `~${Math.round(days)}d` : '—'
+                            })()}
+                          </td>
                           <td className="px-4 py-2.5 text-right whitespace-nowrap">
                             {canEdit && (
                               <button onClick={() => startEdit(s)} className="text-xs font-medium text-indigo-600 hover:text-indigo-700 mr-3">
