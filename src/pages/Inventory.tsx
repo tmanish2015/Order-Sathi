@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/AuthContext'
 import { useToast } from '../lib/Toast'
 import { reportError } from '../lib/errors'
+import { formatINR } from '../lib/format'
 import ConfirmDialog from '../components/ConfirmDialog'
 import Skeleton from '../components/Skeleton'
 import EmptyState from '../components/EmptyState'
@@ -17,10 +18,17 @@ interface SkuFormValues {
   gst_rate: string
   buffer_stock: string
   product_type: string
+  cost_price: string
 }
 
 function toFormValues(s: Sku): SkuFormValues {
-  return { title: s.title, gst_rate: String(s.gst_rate), buffer_stock: String(s.buffer_stock), product_type: s.product_type ?? '' }
+  return {
+    title: s.title,
+    gst_rate: String(s.gst_rate),
+    buffer_stock: String(s.buffer_stock),
+    product_type: s.product_type ?? '',
+    cost_price: String(s.cost_price),
+  }
 }
 
 export default function Inventory() {
@@ -34,12 +42,12 @@ export default function Inventory() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [editForm, setEditForm] = useState<SkuFormValues>({ title: '', gst_rate: '', buffer_stock: '', product_type: '' })
+  const [editForm, setEditForm] = useState<SkuFormValues>({ title: '', gst_rate: '', buffer_stock: '', product_type: '', cost_price: '' })
   const [savingEdit, setSavingEdit] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Sku | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [showAddSku, setShowAddSku] = useState(false)
-  const [newSku, setNewSku] = useState({ sku: '', title: '', gst_rate: '18', buffer_stock: '0' })
+  const [newSku, setNewSku] = useState({ sku: '', title: '', gst_rate: '18', buffer_stock: '0', cost_price: '0' })
   const [savingSku, setSavingSku] = useState(false)
   const orgId = profile?.organization_id
   const canEdit = profile?.role === 'admin' || profile?.role === 'ops'
@@ -92,6 +100,7 @@ export default function Inventory() {
         gst_rate: Number(editForm.gst_rate) || 0,
         buffer_stock: Number(editForm.buffer_stock) || 0,
         product_type: editForm.product_type.trim() || null,
+        cost_price: Number(editForm.cost_price) || 0,
       })
       .eq('id', s.id)
     setSavingEdit(false)
@@ -129,6 +138,7 @@ export default function Inventory() {
       title: newSku.title.trim(),
       gst_rate: Number(newSku.gst_rate) || 0,
       buffer_stock: Number(newSku.buffer_stock) || 0,
+      cost_price: Number(newSku.cost_price) || 0,
     })
     setSavingSku(false)
     if (error) {
@@ -136,7 +146,7 @@ export default function Inventory() {
       return
     }
     showSuccess(`SKU ${newSku.sku} added.`)
-    setNewSku({ sku: '', title: '', gst_rate: '18', buffer_stock: '0' })
+    setNewSku({ sku: '', title: '', gst_rate: '18', buffer_stock: '0', cost_price: '0' })
     setShowAddSku(false)
     load()
   }
@@ -168,7 +178,7 @@ export default function Inventory() {
       </div>
 
       {showAddSku && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6 grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6 grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
           <label className="block">
             <span className="text-xs text-slate-500">SKU code</span>
             <input
@@ -205,7 +215,16 @@ export default function Inventory() {
               className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
             />
           </label>
-          <div className="sm:col-span-4">
+          <label className="block">
+            <span className="text-xs text-slate-500">Cost price (₹/unit)</span>
+            <input
+              type="number"
+              value={newSku.cost_price}
+              onChange={(e) => setNewSku((f) => ({ ...f, cost_price: e.target.value }))}
+              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+            />
+          </label>
+          <div className="sm:col-span-5">
             <button
               onClick={addSku}
               disabled={savingSku}
@@ -269,6 +288,7 @@ export default function Inventory() {
                   <th className="px-4 py-2 font-medium">SKU</th>
                   <th className="px-4 py-2 font-medium">Title</th>
                   <th className="px-4 py-2 font-medium">Product type</th>
+                  <th className="px-4 py-2 font-medium text-right">Cost price</th>
                   <th className="px-4 py-2 font-medium text-right">Buffer</th>
                   <th className="px-4 py-2 font-medium text-right">In stock</th>
                   <th className="px-4 py-2 font-medium text-right">Available</th>
@@ -306,6 +326,14 @@ export default function Inventory() {
                           <td className="px-4 py-2.5 text-right">
                             <input
                               type="number"
+                              value={editForm.cost_price}
+                              onChange={(e) => setEditForm((f) => ({ ...f, cost_price: e.target.value }))}
+                              className="w-20 text-sm text-right rounded-lg border border-slate-300 px-2 py-1"
+                            />
+                          </td>
+                          <td className="px-4 py-2.5 text-right">
+                            <input
+                              type="number"
                               value={editForm.buffer_stock}
                               onChange={(e) => setEditForm((f) => ({ ...f, buffer_stock: e.target.value }))}
                               className="w-16 text-sm text-right rounded-lg border border-slate-300 px-2 py-1"
@@ -326,6 +354,7 @@ export default function Inventory() {
                         <>
                           <td className="px-4 py-2.5 text-slate-500">{s.title}</td>
                           <td className="px-4 py-2.5 text-slate-500">{s.product_type ?? '—'}</td>
+                          <td className="px-4 py-2.5 text-right text-slate-500">{formatINR(s.cost_price)}</td>
                           <td className="px-4 py-2.5 text-right text-slate-500">{s.buffer_stock}</td>
                           <td className={`px-4 py-2.5 text-right font-medium ${low ? 'text-red-600' : 'text-slate-700'}`}>{stock}</td>
                           <td className="px-4 py-2.5 text-right text-slate-500">{available}</td>

@@ -1,0 +1,199 @@
+import { useEffect, useMemo, useState } from 'react'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../lib/AuthContext'
+import { formatINR } from '../lib/format'
+import Skeleton from '../components/Skeleton'
+import EmptyState from '../components/EmptyState'
+import type { Tables } from '../lib/database.types'
+
+type Order = Tables<'orders'>
+type LineItem = Tables<'order_line_items'> & { skus: Tables<'skus'> | null }
+type ReconEntry = Tables<'reconciliation_entries'>
+
+interface OrderRow {
+  order: Order
+  cogs: number
+  fees: number | null // null = no MTR reconciliation yet, fees unknown
+  netProfit: number | null
+  grossMargin: number
+}
+
+interface SkuRollup {
+  sku: string
+  title: string
+  units: number
+  revenue: number
+  cogs: number
+  grossMargin: number
+}
+
+export default function Profit() {
+  const { profile } = useAuth()
+  const [orderRows, setOrderRows] = useState<OrderRow[]>([])
+  const [skuRollups, setSkuRollups] = useState<SkuRollup[]>([])
+  const [loading, setLoading] = useState(true)
+  const orgId = profile?.organization_id
+
+  useEffect(() => {
+    if (!orgId) return
+    ;(async () => {
+      setLoading(true)
+      const [{ data: orders }, { data: lineItems }, { data: entries }] = await Promise.all([
+        supabase.from('orders').select('*').order('order_date', { ascending: false }),
+        supabase.from('order_line_items').select('*, skus(*)'),
+        supabase.from('reconciliation_entries').select('*'),
+      ])
+
+      const entryByOrderId = new Map((entries as ReconEntry[] ?? []).map((e) => [e.order_id, e]))
+      const lineItemsByOrderId = new Map<string, LineItem[]>()
+      for (const li of (lineItems as unknown as LineItem[]) ?? []) {
+        const list = lineItemsByOrderId.get(li.order_id) ?? []
+        list.push(li)
+        lineItemsByOrderId.set(li.order_id, list)
+      }
+
+      const rows: OrderRow[] = ((orders as Order[]) ?? []).map((order) => {
+        const items = lineItemsByOrderId.get(order.id) ?? []
+        const cogs = items.reduce((sum, li) => sum + li.quantity * Number(li.skus?.cost_price ?? 0), 0)
+        const entry = entryByOrderId.get(order.id)
+        const fees = entry ? Number(entry.commission) + Number(entry.tcs_cgst) + Number(entry.tcs_sgst) + Number(entry.tcs_igst) + Number(entry.tds_194o) + Number(entry.other_fees) : null
+        const revenue = Number(order.gross_amount)
+        return {
+          order,
+          cogs,
+          fees,
+          netProfit: fees != null ? revenue - fees - cogs : null,
+          grossMargin: revenue - cogs,
+        }
+      })
+      setOrderRows(rows)
+
+      const rollupBySku = new Map<string, SkuRollup>()
+      for (const li of (lineItems as unknown as LineItem[]) ?? []) {
+        if (!li.skus) continue
+        const key = li.skus.id
+        const existing = rollupBySku.get(key) ?? { sku: li.skus.sku, title: li.skus.title, units: 0, revenue: 0, cogs: 0, grossMargin: 0 }
+        existing.units += li.quantity
+        existing.revenue += li.quantity * Number(li.unit_price)
+        existing.cogs += li.quantity * Number(li.skus.cost_price)
+        existing.grossMargin = existing.revenue - existing.cogs
+        rollupBySku.set(key, existing)
+      }
+      setSkuRollups(Array.from(rollupBySku.values()).sort((a, b) => b.grossMargin - a.grossMargin))
+      setLoading(false)
+    })()
+  }, [orgId])
+
+  const totals = useMemo(() => {
+    const revenue = orderRows.reduce((sum, r) => sum + Number(r.order.gross_amount), 0)
+    const cogs = orderRows.reduce((sum, r) => sum + r.cogs, 0)
+    const knownFees = orderRows.filter((r) => r.fees != null)
+    const fees = knownFees.reduce((sum, r) => sum + (r.fees ?? 0), 0)
+    const netProfit = knownFees.reduce((sum, r) => sum + (r.netProfit ?? 0), 0)
+    return { revenue, cogs, fees, netProfit, ordersWithFees: knownFees.length, ordersTotal: orderRows.length }
+  }, [orderRows])
+
+  return (
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
+      <h2 className="text-lg font-semibold text-slate-900 mb-1">Profit &amp; Loss</h2>
+      <p className="text-xs text-slate-400 mb-6">
+        Gross margin (revenue − cost price) is always shown. Net profit (after Amazon fees) only shows once an order has been through MTR
+        reconciliation — until then those orders are counted at gross margin only, not silently assumed to be full profit.
+      </p>
+
+      {loading ? (
+        <Skeleton rows={3} />
+      ) : orderRows.length === 0 ? (
+        <EmptyState icon="📊" title="No orders yet." />
+      ) : (
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+            <Stat label="Revenue (all orders)" value={formatINR(totals.revenue)} />
+            <Stat label="COGS" value={formatINR(totals.cogs)} />
+            <Stat label="Amazon fees (reconciled orders)" value={formatINR(totals.fees)} sub={`${totals.ordersWithFees} of ${totals.ordersTotal} orders`} />
+            <Stat label="Net profit (reconciled orders)" value={formatINR(totals.netProfit)} accent />
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+            <div className="px-4 py-3 border-b border-slate-100 text-xs font-semibold uppercase text-slate-500">Profit by SKU</div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                    <th className="px-4 py-2 font-medium">SKU</th>
+                    <th className="px-4 py-2 font-medium">Title</th>
+                    <th className="px-4 py-2 font-medium text-right">Units sold</th>
+                    <th className="px-4 py-2 font-medium text-right">Revenue</th>
+                    <th className="px-4 py-2 font-medium text-right">COGS</th>
+                    <th className="px-4 py-2 font-medium text-right">Gross margin</th>
+                    <th className="px-4 py-2 font-medium text-right">Margin %</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {skuRollups.map((r) => (
+                    <tr key={r.sku}>
+                      <td className="px-4 py-2.5 font-medium text-slate-700">{r.sku}</td>
+                      <td className="px-4 py-2.5 text-slate-500">{r.title}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-500">{r.units}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-700">{formatINR(r.revenue)}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-500">{formatINR(r.cogs)}</td>
+                      <td className={`px-4 py-2.5 text-right font-medium ${r.grossMargin < 0 ? 'text-red-600' : 'text-emerald-600'}`}>{formatINR(r.grossMargin)}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-500">{r.revenue > 0 ? `${((r.grossMargin / r.revenue) * 100).toFixed(1)}%` : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-100 text-xs font-semibold uppercase text-slate-500">Profit by order</div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                    <th className="px-4 py-2 font-medium">Order</th>
+                    <th className="px-4 py-2 font-medium text-right">Revenue</th>
+                    <th className="px-4 py-2 font-medium text-right">COGS</th>
+                    <th className="px-4 py-2 font-medium text-right">Amazon fees</th>
+                    <th className="px-4 py-2 font-medium text-right">Net profit</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {orderRows.map((r) => (
+                    <tr key={r.order.id}>
+                      <td className="px-4 py-2.5 font-medium text-slate-700">{r.order.amazon_order_id}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-700">{formatINR(Number(r.order.gross_amount))}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-500">{formatINR(r.cogs)}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-500">{r.fees != null ? formatINR(r.fees) : '—'}</td>
+                      <td className="px-4 py-2.5 text-right">
+                        {r.netProfit != null ? (
+                          <span className={r.netProfit < 0 ? 'text-red-600 font-medium' : 'text-emerald-600 font-medium'}>{formatINR(r.netProfit)}</span>
+                        ) : (
+                          <span className="text-slate-400" title="Fees unknown until this order's MTR is imported">
+                            {formatINR(r.grossMargin)} (est.)
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+function Stat({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: boolean }) {
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3.5 sm:p-4 relative overflow-hidden">
+      {accent && <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-emerald-600" />}
+      <div className="text-xs text-slate-400">{label}</div>
+      <div className="text-lg sm:text-xl font-semibold mt-1 text-slate-900">{value}</div>
+      {sub && <div className="text-[10px] text-slate-400 mt-0.5">{sub}</div>}
+    </div>
+  )
+}

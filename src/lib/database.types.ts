@@ -112,6 +112,7 @@ export type Database = {
           buffer_stock: number
           active: boolean
           product_type: string | null
+          cost_price: number
           created_at: string
         }
         Insert: {
@@ -125,6 +126,7 @@ export type Database = {
           buffer_stock?: number
           active?: boolean
           product_type?: string | null
+          cost_price?: number
           created_at?: string
         }
         Update: Partial<Database["public"]["Tables"]["skus"]["Insert"]>

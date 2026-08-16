@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard'
 import Inventory from './pages/Inventory'
 import Invoices from './pages/Invoices'
 import Reconciliation from './pages/Reconciliation'
+import Profit from './pages/Profit'
 import SyncLogs from './pages/SyncLogs'
 import Integrations from './pages/Integrations'
 import Team from './pages/Team'
@@ -23,6 +24,7 @@ export default function App() {
             <Route path="/inventory" element={<Inventory />} />
             <Route path="/invoices" element={<Invoices />} />
             <Route path="/reconciliation" element={<Reconciliation />} />
+            <Route path="/profit" element={<Profit />} />
             <Route path="/sync-logs" element={<SyncLogs />} />
             <Route path="/integrations" element={<Integrations />} />
             <Route path="/team" element={<Team />} />
