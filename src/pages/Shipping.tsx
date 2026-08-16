@@ -6,10 +6,12 @@ import { useToast } from '../lib/Toast'
 import { reportError } from '../lib/errors'
 import Skeleton from '../components/Skeleton'
 import EmptyState from '../components/EmptyState'
+import { buildManifestPdf } from '../lib/manifestPdf'
 import type { Tables, Enums } from '../lib/database.types'
 
 type Order = Tables<'orders'>
 type Shipment = Tables<'shipments'> & { orders: Tables<'orders'> | null }
+type Organization = Tables<'organizations'>
 
 const COURIERS = ['Delhivery', 'Shiprocket', 'Bluedart', 'DTDC', 'Ekart', 'XpressBees', 'Other']
 
@@ -26,6 +28,9 @@ export default function Shipping() {
   const { showError, showSuccess } = useToast()
   const [shipments, setShipments] = useState<Shipment[]>([])
   const [loading, setLoading] = useState(true)
+  const [org, setOrg] = useState<Organization | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [generatingManifest, setGeneratingManifest] = useState(false)
 
   const [orderIdInput, setOrderIdInput] = useState('')
   const [finding, setFinding] = useState(false)
@@ -40,8 +45,12 @@ export default function Shipping() {
   async function load() {
     if (!orgId) return
     setLoading(true)
-    const { data } = await supabase.from('shipments').select('*, orders(*)').order('created_at', { ascending: false })
+    const [{ data }, { data: orgRow }] = await Promise.all([
+      supabase.from('shipments').select('*, orders(*)').order('created_at', { ascending: false }),
+      supabase.from('organizations').select('*').eq('id', orgId).single(),
+    ])
     setShipments((data as unknown as Shipment[]) ?? [])
+    setOrg(orgRow ?? null)
     setLoading(false)
   }
 
@@ -96,6 +105,52 @@ export default function Shipping() {
     setOrderIdInput('')
     setFoundOrder(null)
     setForm({ courier_name: COURIERS[0], awb_number: '', tracking_url: '' })
+    load()
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds((s) => {
+      const next = new Set(s)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  async function generateManifest() {
+    if (!orgId || !org) return
+    const targets = shipments.filter((s) => selectedIds.has(s.id))
+    if (targets.length === 0) return
+    const couriers = new Set(targets.map((s) => s.courier_name))
+    if (couriers.size > 1) {
+      showError('Select shipments from one courier at a time.')
+      return
+    }
+    setGeneratingManifest(true)
+    const courierName = targets[0].courier_name
+    const { data: manifest, error } = await supabase
+      .from('manifests')
+      .insert({ organization_id: orgId, courier_name: courierName, shipment_count: targets.length, created_by: profile!.id })
+      .select()
+      .single()
+    if (error || !manifest) {
+      setGeneratingManifest(false)
+      reportError(showError, 'Generate manifest', error ?? new Error('Insert failed'), orgId, profile?.id)
+      return
+    }
+    const { error: updateError } = await supabase
+      .from('shipments')
+      .update({ manifest_id: manifest.id })
+      .in('id', targets.map((s) => s.id))
+    setGeneratingManifest(false)
+    if (updateError) {
+      reportError(showError, 'Link shipments to manifest', updateError, orgId, profile?.id)
+      return
+    }
+    const blob = buildManifestPdf(org, courierName, targets)
+    window.open(URL.createObjectURL(blob), '_blank')
+    showSuccess(`Manifest generated for ${targets.length} shipment(s).`)
+    setSelectedIds(new Set())
     load()
   }
 
@@ -189,6 +244,17 @@ export default function Shipping() {
       )}
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        {canEdit && selectedIds.size > 0 && (
+          <div className="px-4 py-2.5 border-b border-slate-100 bg-indigo-50 flex items-center gap-3 flex-wrap">
+            <span className="text-xs font-medium text-indigo-700">{selectedIds.size} selected</span>
+            <button onClick={generateManifest} disabled={generatingManifest} className="text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50">
+              {generatingManifest ? 'Generating…' : '📋 Generate manifest'}
+            </button>
+            <button onClick={() => setSelectedIds(new Set())} className="text-xs text-slate-400 hover:text-slate-600">
+              Clear
+            </button>
+          </div>
+        )}
         {loading ? (
           <Skeleton />
         ) : shipments.length === 0 ? (
@@ -198,16 +264,23 @@ export default function Shipping() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                  {canEdit && <th className="px-4 py-2 font-medium w-8"></th>}
                   <th className="px-4 py-2 font-medium">Order</th>
                   <th className="px-4 py-2 font-medium">Courier</th>
                   <th className="px-4 py-2 font-medium">AWB</th>
                   <th className="px-4 py-2 font-medium">Shipped</th>
                   <th className="px-4 py-2 font-medium">Status</th>
+                  <th className="px-4 py-2 font-medium">Manifest</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {shipments.map((s) => (
                   <tr key={s.id}>
+                    {canEdit && (
+                      <td className="px-4 py-2.5">
+                        {!s.manifest_id && <input type="checkbox" checked={selectedIds.has(s.id)} onChange={() => toggleSelected(s.id)} />}
+                      </td>
+                    )}
                     <td className="px-4 py-2.5 font-medium text-slate-700">{s.orders?.amazon_order_id ?? '—'}</td>
                     <td className="px-4 py-2.5 text-slate-500">{s.courier_name}</td>
                     <td className="px-4 py-2.5 text-slate-500">
@@ -238,6 +311,7 @@ export default function Shipping() {
                         <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${STATUS_COLOR[s.status]}`}>{s.status}</span>
                       )}
                     </td>
+                    <td className="px-4 py-2.5 text-xs text-slate-400">{s.manifest_id ? '✓ manifested' : '—'}</td>
                   </tr>
                 ))}
               </tbody>

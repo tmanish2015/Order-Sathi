@@ -288,6 +288,7 @@ export type Database = {
           status: Database["public"]["Enums"]["shipment_status"]
           shipped_at: string
           tracking_url: string | null
+          manifest_id: string | null
           created_by: string | null
           created_at: string
           updated_at: string
@@ -301,11 +302,32 @@ export type Database = {
           status?: Database["public"]["Enums"]["shipment_status"]
           shipped_at?: string
           tracking_url?: string | null
+          manifest_id?: string | null
           created_by?: string | null
           created_at?: string
           updated_at?: string
         }
         Update: Partial<Database["public"]["Tables"]["shipments"]["Insert"]>
+        Relationships: []
+      }
+      manifests: {
+        Row: {
+          id: string
+          organization_id: string
+          courier_name: string
+          shipment_count: number
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          courier_name: string
+          shipment_count?: number
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["manifests"]["Insert"]>
         Relationships: []
       }
       gst_invoices: {
