@@ -170,6 +170,7 @@ export type Database = {
           address: string | null
           is_default: boolean
           active: boolean
+          allocation_priority: number
           created_at: string
         }
         Insert: {
@@ -179,6 +180,7 @@ export type Database = {
           address?: string | null
           is_default?: boolean
           active?: boolean
+          allocation_priority?: number
           created_at?: string
         }
         Update: Partial<Database["public"]["Tables"]["warehouses"]["Insert"]>

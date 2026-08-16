@@ -19,6 +19,7 @@ type Order = Tables<'orders'> & { channels: Tables<'channels'> | null }
 type Channel = Tables<'channels'>
 type Organization = Tables<'organizations'>
 type Sku = Tables<'skus'>
+type Warehouse = Tables<'warehouses'>
 
 interface LineItemDraft {
   sku_id: string
@@ -79,6 +80,7 @@ export default function Dashboard() {
   const [printingInvoices, setPrintingInvoices] = useState(false)
   const [printingLabels, setPrintingLabels] = useState(false)
   const [skus, setSkus] = useState<Sku[]>([])
+  const [warehousesList, setWarehousesList] = useState<Warehouse[]>([])
   const [defaultWarehouseId, setDefaultWarehouseId] = useState<string | null>(null)
   const [showNewOrder, setShowNewOrder] = useState(false)
   const [creatingChannel, setCreatingChannel] = useState(false)
@@ -127,13 +129,14 @@ export default function Dashboard() {
       supabase.from('organizations').select('*').eq('id', orgId).single(),
       supabase.from('gst_invoices').select('order_id'),
       supabase.from('skus').select('*').eq('active', true).order('sku'),
-      supabase.from('warehouses').select('*').eq('is_default', true).limit(1).maybeSingle(),
+      supabase.from('warehouses').select('*').order('allocation_priority'),
     ])
     setChannels(c ?? [])
     setOrg(orgRow ?? null)
     setInvoicedOrderIds(new Set((inv ?? []).map((i) => i.order_id)))
     setSkus(s ?? [])
-    setDefaultWarehouseId(w?.id ?? null)
+    setWarehousesList(w ?? [])
+    setDefaultWarehouseId((w ?? []).find((x) => x.is_default)?.id ?? null)
     if (c && c.length > 0 && !orderForm.channel_id) setOrderForm((f) => ({ ...f, channel_id: c[0].id }))
   }
 
@@ -178,6 +181,18 @@ export default function Dashboard() {
 
   function updateLineItem(index: number, patch: Partial<LineItemDraft>) {
     setLineItems((items) => items.map((it, i) => (i === index ? { ...it, ...patch } : it)))
+  }
+
+  // Picks the lowest-priority-number warehouse that actually has enough
+  // stock for this SKU; falls back to the default warehouse if none do
+  // (never blocks order creation over an allocation preference).
+  async function pickWarehouseForDeduction(skuId: string, qty: number): Promise<string> {
+    for (const w of warehousesList) {
+      const { data: rows } = await supabase.from('inventory_ledger').select('quantity_delta').eq('sku_id', skuId).eq('warehouse_id', w.id)
+      const stock = (rows ?? []).reduce((sum, r) => sum + r.quantity_delta, 0)
+      if (stock >= qty) return w.id
+    }
+    return defaultWarehouseId!
   }
 
   async function submitOrder() {
@@ -229,17 +244,18 @@ export default function Dashboard() {
       )
       if (liError) throw liError
 
-      const { error: ledgerError } = await supabase.from('inventory_ledger').insert(
-        validLines.map((li) => ({
+      const ledgerRows = await Promise.all(
+        validLines.map(async (li) => ({
           organization_id: orgId,
           sku_id: li.sku_id,
-          warehouse_id: defaultWarehouseId,
+          warehouse_id: await pickWarehouseForDeduction(li.sku_id, Number(li.quantity)),
           movement_type: 'order_deduction' as const,
           quantity_delta: -Number(li.quantity),
           order_id: order.id,
           note: `Manual order ${orderForm.amazon_order_id.trim()}`,
         }))
       )
+      const { error: ledgerError } = await supabase.from('inventory_ledger').insert(ledgerRows)
       if (ledgerError) throw ledgerError
 
       showSuccess(`Order ${orderForm.amazon_order_id} created.`)

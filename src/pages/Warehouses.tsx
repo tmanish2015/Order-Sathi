@@ -66,6 +66,15 @@ export default function Warehouses() {
     load()
   }
 
+  async function updatePriority(w: Warehouse, priority: number) {
+    setWarehouses((ws) => ws.map((x) => (x.id === w.id ? { ...x, allocation_priority: priority } : x)))
+    const { error } = await supabase.from('warehouses').update({ allocation_priority: priority }).eq('id', w.id)
+    if (error) {
+      reportError(showError, 'Update allocation priority', error, orgId, profile?.id)
+      load()
+    }
+  }
+
   async function makeDefault(w: Warehouse) {
     await supabase.from('warehouses').update({ is_default: false }).eq('organization_id', orgId!)
     const { error } = await supabase.from('warehouses').update({ is_default: true }).eq('id', w.id)
@@ -197,6 +206,15 @@ export default function Warehouses() {
                   </button>
                   {isAdmin && (
                     <div className="flex items-center gap-3">
+                      <label className="flex items-center gap-1 text-xs text-slate-500" title="Allocation priority: lower number is picked first when a SKU is spread across warehouses">
+                        Priority
+                        <input
+                          type="number"
+                          value={w.allocation_priority}
+                          onChange={(e) => updatePriority(w, Number(e.target.value) || 0)}
+                          className="w-14 text-sm rounded-lg border border-slate-300 px-1.5 py-0.5"
+                        />
+                      </label>
                       {!w.is_default && (
                         <button onClick={() => makeDefault(w)} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">
                           Make default
