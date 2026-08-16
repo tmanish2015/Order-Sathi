@@ -130,6 +130,12 @@ export type Database = {
           cost_price: number
           is_bundle: boolean
           max_listed_stock: number | null
+          reorder_level: number
+          min_stock: number
+          max_stock: number | null
+          safety_stock: number
+          reorder_qty: number
+          lead_time_days: number
           created_at: string
         }
         Insert: {
@@ -146,6 +152,12 @@ export type Database = {
           cost_price?: number
           is_bundle?: boolean
           max_listed_stock?: number | null
+          reorder_level?: number
+          min_stock?: number
+          max_stock?: number | null
+          safety_stock?: number
+          reorder_qty?: number
+          lead_time_days?: number
           created_at?: string
         }
         Update: Partial<Database["public"]["Tables"]["skus"]["Insert"]>

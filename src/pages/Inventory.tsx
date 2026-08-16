@@ -28,6 +28,12 @@ interface SkuFormValues {
   product_type: string
   cost_price: string
   is_bundle: boolean
+  reorder_level: string
+  min_stock: string
+  max_stock: string
+  safety_stock: string
+  reorder_qty: string
+  lead_time_days: string
 }
 
 function toFormValues(s: Sku): SkuFormValues {
@@ -38,8 +44,26 @@ function toFormValues(s: Sku): SkuFormValues {
     product_type: s.product_type ?? '',
     cost_price: String(s.cost_price),
     is_bundle: s.is_bundle,
+    reorder_level: String(s.reorder_level),
+    min_stock: String(s.min_stock),
+    max_stock: s.max_stock != null ? String(s.max_stock) : '',
+    safety_stock: String(s.safety_stock),
+    reorder_qty: String(s.reorder_qty),
+    lead_time_days: String(s.lead_time_days),
   }
 }
+
+// Movement classification thresholds, based on the same 14-day sell-through
+// rate already computed for the reorder alert.
+const FAST_MOVING_RATE = 1
+type MovementClass = 'fast' | 'slow' | 'non'
+function movementClass(rate: number): MovementClass {
+  if (rate >= FAST_MOVING_RATE) return 'fast'
+  if (rate > 0) return 'slow'
+  return 'non'
+}
+
+type AlertKind = 'out_of_stock' | 'low_stock' | 'overstock' | 'fast_moving' | 'slow_moving' | 'non_moving'
 
 export default function Inventory() {
   const { profile } = useAuth()
@@ -59,12 +83,39 @@ export default function Inventory() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [editForm, setEditForm] = useState<SkuFormValues>({ title: '', gst_rate: '', buffer_stock: '', product_type: '', cost_price: '', is_bundle: false })
+  const [editForm, setEditForm] = useState<SkuFormValues>({
+    title: '',
+    gst_rate: '',
+    buffer_stock: '',
+    product_type: '',
+    cost_price: '',
+    is_bundle: false,
+    reorder_level: '',
+    min_stock: '',
+    max_stock: '',
+    safety_stock: '',
+    reorder_qty: '',
+    lead_time_days: '',
+  })
   const [savingEdit, setSavingEdit] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Sku | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [showAddSku, setShowAddSku] = useState(false)
-  const [newSku, setNewSku] = useState({ sku: '', title: '', gst_rate: '18', buffer_stock: '0', cost_price: '0', is_bundle: false })
+  const [newSku, setNewSku] = useState({
+    sku: '',
+    title: '',
+    gst_rate: '18',
+    buffer_stock: '0',
+    cost_price: '0',
+    is_bundle: false,
+    reorder_level: '0',
+    min_stock: '0',
+    max_stock: '',
+    safety_stock: '0',
+    reorder_qty: '0',
+    lead_time_days: '0',
+  })
+  const [alertFilter, setAlertFilter] = useState<AlertKind | ''>('')
   const [savingSku, setSavingSku] = useState(false)
   const [bundleComponents, setBundleComponents] = useState<BundleComponent[]>([])
   const [expandedBundleId, setExpandedBundleId] = useState<string | null>(null)
@@ -140,11 +191,32 @@ export default function Inventory() {
     return Math.min(...components.map((c) => Math.floor((stockBySku[c.component_sku_id] ?? 0) / c.quantity)))
   }
 
+  // Classification used to sort every non-bundle SKU into exactly one
+  // inventory-health bucket for the alert filter chips below.
+  function alertKindFor(s: Sku): AlertKind {
+    const stock = s.is_bundle ? bundleAvailable(s.id) : stockBySku[s.id] ?? 0
+    const available = s.is_bundle ? stock : Math.max(stock - s.buffer_stock, 0)
+    if (available <= 0) return 'out_of_stock'
+    if (available <= s.reorder_level) return 'low_stock'
+    if (s.max_stock != null && stock > s.max_stock) return 'overstock'
+    return movementClass(dailyRateBySku[s.id] ?? 0) === 'fast' ? 'fast_moving' : movementClass(dailyRateBySku[s.id] ?? 0) === 'slow' ? 'slow_moving' : 'non_moving'
+  }
+
+  const alertCounts = useMemo(() => {
+    const counts: Record<AlertKind, number> = { out_of_stock: 0, low_stock: 0, overstock: 0, fast_moving: 0, slow_moving: 0, non_moving: 0 }
+    for (const s of skus) counts[alertKindFor(s)]++
+    return counts
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [skus, stockBySku, dailyRateBySku, bundleComponents])
+
   const filteredSkus = useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return skus
-    return skus.filter((s) => s.sku.toLowerCase().includes(q) || s.title.toLowerCase().includes(q))
-  }, [skus, search])
+    let list = skus
+    if (q) list = list.filter((s) => s.sku.toLowerCase().includes(q) || s.title.toLowerCase().includes(q))
+    if (alertFilter) list = list.filter((s) => alertKindFor(s) === alertFilter)
+    return list
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [skus, search, alertFilter, stockBySku, dailyRateBySku])
 
   function daysToBuffer(s: Sku): number | null {
     const stock = stockBySku[s.id] ?? 0
@@ -181,6 +253,12 @@ export default function Inventory() {
         product_type: editForm.product_type.trim() || null,
         cost_price: Number(editForm.cost_price) || 0,
         is_bundle: editForm.is_bundle,
+        reorder_level: Number(editForm.reorder_level) || 0,
+        min_stock: Number(editForm.min_stock) || 0,
+        max_stock: editForm.max_stock.trim() ? Number(editForm.max_stock) : null,
+        safety_stock: Number(editForm.safety_stock) || 0,
+        reorder_qty: Number(editForm.reorder_qty) || 0,
+        lead_time_days: Number(editForm.lead_time_days) || 0,
       })
       .eq('id', s.id)
     setSavingEdit(false)
@@ -220,6 +298,12 @@ export default function Inventory() {
       buffer_stock: Number(newSku.buffer_stock) || 0,
       cost_price: Number(newSku.cost_price) || 0,
       is_bundle: newSku.is_bundle,
+      reorder_level: Number(newSku.reorder_level) || 0,
+      min_stock: Number(newSku.min_stock) || 0,
+      max_stock: newSku.max_stock.trim() ? Number(newSku.max_stock) : null,
+      safety_stock: Number(newSku.safety_stock) || 0,
+      reorder_qty: Number(newSku.reorder_qty) || 0,
+      lead_time_days: Number(newSku.lead_time_days) || 0,
     })
     setSavingSku(false)
     if (error) {
@@ -227,7 +311,20 @@ export default function Inventory() {
       return
     }
     showSuccess(`SKU ${newSku.sku} added.`)
-    setNewSku({ sku: '', title: '', gst_rate: '18', buffer_stock: '0', cost_price: '0', is_bundle: false })
+    setNewSku({
+      sku: '',
+      title: '',
+      gst_rate: '18',
+      buffer_stock: '0',
+      cost_price: '0',
+      is_bundle: false,
+      reorder_level: '0',
+      min_stock: '0',
+      max_stock: '',
+      safety_stock: '0',
+      reorder_qty: '0',
+      lead_time_days: '0',
+    })
     setShowAddSku(false)
     load()
   }
@@ -493,6 +590,31 @@ export default function Inventory() {
             <input type="checkbox" checked={newSku.is_bundle} onChange={(e) => setNewSku((f) => ({ ...f, is_bundle: e.target.checked }))} />
             Bundle (add components after saving)
           </label>
+          <div className="sm:col-span-5 text-xs font-semibold uppercase text-slate-500 -mb-1">Inventory planning</div>
+          <label className="block">
+            <span className="text-xs text-slate-500">Reorder level</span>
+            <input type="number" value={newSku.reorder_level} onChange={(e) => setNewSku((f) => ({ ...f, reorder_level: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+          </label>
+          <label className="block">
+            <span className="text-xs text-slate-500">Min stock</span>
+            <input type="number" value={newSku.min_stock} onChange={(e) => setNewSku((f) => ({ ...f, min_stock: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+          </label>
+          <label className="block">
+            <span className="text-xs text-slate-500">Max stock</span>
+            <input type="number" value={newSku.max_stock} onChange={(e) => setNewSku((f) => ({ ...f, max_stock: e.target.value }))} placeholder="No cap" className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+          </label>
+          <label className="block">
+            <span className="text-xs text-slate-500">Safety stock</span>
+            <input type="number" value={newSku.safety_stock} onChange={(e) => setNewSku((f) => ({ ...f, safety_stock: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+          </label>
+          <label className="block">
+            <span className="text-xs text-slate-500">Reorder qty</span>
+            <input type="number" value={newSku.reorder_qty} onChange={(e) => setNewSku((f) => ({ ...f, reorder_qty: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+          </label>
+          <label className="block">
+            <span className="text-xs text-slate-500">Lead time (days)</span>
+            <input type="number" value={newSku.lead_time_days} onChange={(e) => setNewSku((f) => ({ ...f, lead_time_days: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+          </label>
           <div className="sm:col-span-5">
             <button
               onClick={addSku}
@@ -534,6 +656,30 @@ export default function Inventory() {
         One central ledger per SKU. Stock = sum of every movement (order deduction, restock, return, manual adjustment) — never edited directly.
         Amazon needs each SKU's product type before quantity can push.
       </p>
+
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-6">
+        {(
+          [
+            ['out_of_stock', 'Out of stock', 'border-red-400 ring-1 ring-red-300'],
+            ['low_stock', 'Low stock', 'border-amber-400 ring-1 ring-amber-300'],
+            ['overstock', 'Overstock', 'border-purple-400 ring-1 ring-purple-300'],
+            ['fast_moving', 'Fast moving', 'border-emerald-400 ring-1 ring-emerald-300'],
+            ['slow_moving', 'Slow moving', 'border-amber-400 ring-1 ring-amber-300'],
+            ['non_moving', 'Non moving', 'border-slate-400 ring-1 ring-slate-300'],
+          ] as [AlertKind, string, string][]
+        ).map(([kind, label, activeClass]) => (
+          <button
+            key={kind}
+            onClick={() => setAlertFilter(alertFilter === kind ? '' : kind)}
+            className={`text-left bg-white rounded-lg border px-3 py-2 transition-colors ${
+              alertFilter === kind ? activeClass : 'border-slate-200 hover:border-slate-300'
+            }`}
+          >
+            <div className="text-[11px] text-slate-500">{label}</div>
+            <div className="text-lg font-semibold text-slate-900 mt-0.5">{alertCounts[kind]}</div>
+          </button>
+        ))}
+      </div>
 
       {reorderAlerts.length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
@@ -736,6 +882,39 @@ export default function Inventory() {
                         </>
                       )}
                     </tr>
+                    {isEditing && (
+                      <tr>
+                        <td colSpan={10} className="px-4 py-3 bg-slate-50">
+                          <div className="text-xs font-semibold uppercase text-slate-500 mb-2">Inventory planning</div>
+                          <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
+                            <label className="block">
+                              <span className="text-xs text-slate-500">Reorder level</span>
+                              <input type="number" value={editForm.reorder_level} onChange={(e) => setEditForm((f) => ({ ...f, reorder_level: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                            </label>
+                            <label className="block">
+                              <span className="text-xs text-slate-500">Min stock</span>
+                              <input type="number" value={editForm.min_stock} onChange={(e) => setEditForm((f) => ({ ...f, min_stock: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                            </label>
+                            <label className="block">
+                              <span className="text-xs text-slate-500">Max stock</span>
+                              <input type="number" value={editForm.max_stock} onChange={(e) => setEditForm((f) => ({ ...f, max_stock: e.target.value }))} placeholder="No cap" className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                            </label>
+                            <label className="block">
+                              <span className="text-xs text-slate-500">Safety stock</span>
+                              <input type="number" value={editForm.safety_stock} onChange={(e) => setEditForm((f) => ({ ...f, safety_stock: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                            </label>
+                            <label className="block">
+                              <span className="text-xs text-slate-500">Reorder qty</span>
+                              <input type="number" value={editForm.reorder_qty} onChange={(e) => setEditForm((f) => ({ ...f, reorder_qty: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                            </label>
+                            <label className="block">
+                              <span className="text-xs text-slate-500">Lead time (days)</span>
+                              <input type="number" value={editForm.lead_time_days} onChange={(e) => setEditForm((f) => ({ ...f, lead_time_days: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                            </label>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                     {s.is_bundle && expandedBundleId === s.id && (
                       <tr>
                         <td colSpan={10} className="px-4 py-3 bg-slate-50">
