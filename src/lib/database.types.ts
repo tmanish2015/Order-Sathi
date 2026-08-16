@@ -235,6 +235,8 @@ export type Database = {
           buyer_state: string | null
           ship_state: string | null
           ship_address: string | null
+          priority: Database["public"]["Enums"]["order_priority"]
+          sla_due_at: string | null
           gross_amount: number
           raw_payload: Json | null
           created_at: string
@@ -249,6 +251,8 @@ export type Database = {
           buyer_state?: string | null
           ship_state?: string | null
           ship_address?: string | null
+          priority?: Database["public"]["Enums"]["order_priority"]
+          sla_due_at?: string | null
           gross_amount: number
           raw_payload?: Json | null
           created_at?: string
@@ -568,6 +572,7 @@ export type Database = {
       return_status: "initiated" | "received" | "refunded"
       picklist_status: "open" | "completed"
       shipment_status: "booked" | "in_transit" | "delivered" | "rto" | "failed"
+      order_priority: "normal" | "high" | "urgent"
     }
     CompositeTypes: {
       [_ in never]: never

@@ -38,6 +38,23 @@ const STATUS_COLOR: Record<Order['order_status'], string> = {
   returned: 'bg-red-100 text-red-700',
 }
 
+const PRIORITY_COLOR: Record<Enums<'order_priority'>, string> = {
+  normal: 'bg-slate-100 text-slate-600',
+  high: 'bg-amber-100 text-amber-700',
+  urgent: 'bg-red-100 text-red-700',
+}
+
+const OPEN_STATUSES: Order['order_status'][] = ['pending', 'shipped']
+
+function slaState(o: Order): 'overdue' | 'due_soon' | 'ok' | null {
+  if (!o.sla_due_at || !OPEN_STATUSES.includes(o.order_status)) return null
+  const due = new Date(o.sla_due_at).getTime()
+  const now = Date.now()
+  if (due < now) return 'overdue'
+  if (due - now < 24 * 60 * 60 * 1000) return 'due_soon'
+  return 'ok'
+}
+
 export default function Dashboard() {
   const { profile } = useAuth()
   const { showError, showSuccess } = useToast()
@@ -46,7 +63,8 @@ export default function Dashboard() {
   const [page, setPage] = useState(0)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<Enums<'order_status'> | ''>('')
-  const [stats, setStats] = useState({ gross: 0, pending: 0, shipped: 0 })
+  const [stats, setStats] = useState({ gross: 0, pending: 0, shipped: 0, overdue: 0 })
+  const [updatingPriorityId, setUpdatingPriorityId] = useState<string | null>(null)
   const [channels, setChannels] = useState<Channel[]>([])
   const [org, setOrg] = useState<Organization | null>(null)
   const [invoicedOrderIds, setInvoicedOrderIds] = useState<Set<string>>(new Set())
@@ -65,7 +83,16 @@ export default function Dashboard() {
   const [showNewOrder, setShowNewOrder] = useState(false)
   const [creatingChannel, setCreatingChannel] = useState(false)
   const [savingOrder, setSavingOrder] = useState(false)
-  const [orderForm, setOrderForm] = useState({ amazon_order_id: '', order_date: format(new Date(), 'yyyy-MM-dd'), buyer_state: '', ship_state: '', ship_address: '', channel_id: '' })
+  const [orderForm, setOrderForm] = useState({
+    amazon_order_id: '',
+    order_date: format(new Date(), 'yyyy-MM-dd'),
+    buyer_state: '',
+    ship_state: '',
+    ship_address: '',
+    channel_id: '',
+    priority: 'normal' as Enums<'order_priority'>,
+    sla_due_at: '',
+  })
   const [lineItems, setLineItems] = useState<LineItemDraft[]>([{ ...BLANK_LINE_ITEM }])
   const orgId = profile?.organization_id
   const canEdit = profile?.role === 'admin' || profile?.role === 'ops'
@@ -82,12 +109,14 @@ export default function Dashboard() {
   }
 
   async function loadStats() {
-    const { data } = await supabase.from('orders').select('gross_amount, order_status')
+    const { data } = await supabase.from('orders').select('gross_amount, order_status, sla_due_at')
     const rows = data ?? []
+    const now = Date.now()
     setStats({
       gross: rows.reduce((sum, r) => sum + Number(r.gross_amount), 0),
       pending: rows.filter((r) => r.order_status === 'pending').length,
       shipped: rows.filter((r) => r.order_status === 'shipped').length,
+      overdue: rows.filter((r) => r.sla_due_at && OPEN_STATUSES.includes(r.order_status) && new Date(r.sla_due_at).getTime() < now).length,
     })
   }
 
@@ -181,6 +210,8 @@ export default function Dashboard() {
           buyer_state: orderForm.buyer_state || null,
           ship_state: orderForm.ship_state || orderForm.buyer_state || null,
           ship_address: orderForm.ship_address || null,
+          priority: orderForm.priority,
+          sla_due_at: orderForm.sla_due_at ? new Date(orderForm.sla_due_at).toISOString() : null,
           gross_amount: grossAmount,
         })
         .select()
@@ -212,7 +243,7 @@ export default function Dashboard() {
       if (ledgerError) throw ledgerError
 
       showSuccess(`Order ${orderForm.amazon_order_id} created.`)
-      setOrderForm((f) => ({ ...f, amazon_order_id: '', buyer_state: '', ship_state: '', ship_address: '' }))
+      setOrderForm((f) => ({ ...f, amazon_order_id: '', buyer_state: '', ship_state: '', ship_address: '', priority: 'normal', sla_due_at: '' }))
       setLineItems([{ ...BLANK_LINE_ITEM }])
       setShowNewOrder(false)
       loadOrders()
@@ -276,6 +307,17 @@ export default function Dashboard() {
       setGeneratingId(null)
       setConfirmInvoiceFor(null)
     }
+  }
+
+  async function updatePriority(order: Order, priority: Enums<'order_priority'>) {
+    setUpdatingPriorityId(order.id)
+    const { error } = await supabase.from('orders').update({ priority }).eq('id', order.id)
+    setUpdatingPriorityId(null)
+    if (error) {
+      reportError(showError, 'Update priority', error, orgId, profile?.id)
+      return
+    }
+    loadOrders()
   }
 
   function toggleSelected(id: string) {
@@ -471,6 +513,27 @@ export default function Dashboard() {
                 className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
               />
             </label>
+            <label className="block">
+              <span className="text-xs text-slate-500">Priority</span>
+              <select
+                value={orderForm.priority}
+                onChange={(e) => setOrderForm((f) => ({ ...f, priority: e.target.value as Enums<'order_priority'> }))}
+                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+              >
+                <option value="normal">Normal</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-xs text-slate-500">SLA due (optional)</span>
+              <input
+                type="datetime-local"
+                value={orderForm.sla_due_at}
+                onChange={(e) => setOrderForm((f) => ({ ...f, sla_due_at: e.target.value }))}
+                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+              />
+            </label>
           </div>
 
           <div className="text-xs text-slate-500 mb-2">Line items</div>
@@ -541,10 +604,11 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-6">
         <Stat label="Gross sales (all orders)" value={formatINR(stats.gross)} accent="indigo" />
         <Stat label="Awaiting shipment" value={String(stats.pending)} accent="amber" />
         <Stat label="Shipped" value={String(stats.shipped)} accent="purple" />
+        <Stat label="SLA overdue" value={String(stats.overdue)} accent={stats.overdue > 0 ? 'red' : undefined} />
         <Stat label="Channels connected" value={String(connectedChannels.length)} />
       </div>
 
@@ -627,6 +691,8 @@ export default function Dashboard() {
                   <th className="px-4 py-2 font-medium">Channel</th>
                   <th className="px-4 py-2 font-medium">Date</th>
                   <th className="px-4 py-2 font-medium">Shipment status</th>
+                  <th className="px-4 py-2 font-medium">Priority</th>
+                  <th className="px-4 py-2 font-medium">SLA</th>
                   <th className="px-4 py-2 font-medium text-right">Amount</th>
                   <th className="px-4 py-2 font-medium text-right">GST invoice</th>
                 </tr>
@@ -648,6 +714,40 @@ export default function Dashboard() {
                         <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${STATUS_COLOR[o.order_status]}`}>
                           {o.order_status}
                         </span>
+                      </td>
+                      <td className="px-4 py-2.5">
+                        {canEdit ? (
+                          <select
+                            value={o.priority}
+                            onChange={(e) => updatePriority(o, e.target.value as Enums<'order_priority'>)}
+                            disabled={updatingPriorityId === o.id}
+                            className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded border-0 ${PRIORITY_COLOR[o.priority]}`}
+                          >
+                            <option value="normal">Normal</option>
+                            <option value="high">High</option>
+                            <option value="urgent">Urgent</option>
+                          </select>
+                        ) : (
+                          <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${PRIORITY_COLOR[o.priority]}`}>{o.priority}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 text-xs">
+                        {o.sla_due_at ? (
+                          <span
+                            className={
+                              slaState(o) === 'overdue'
+                                ? 'text-red-600 font-medium'
+                                : slaState(o) === 'due_soon'
+                                  ? 'text-amber-600 font-medium'
+                                  : 'text-slate-400'
+                            }
+                          >
+                            {format(new Date(o.sla_due_at), 'dd MMM, HH:mm')}
+                            {slaState(o) === 'overdue' && ' (overdue)'}
+                          </span>
+                        ) : (
+                          <span className="text-slate-300">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-2.5 text-right text-slate-700">{formatINR(Number(o.gross_amount))}</td>
                       <td className="px-4 py-2.5 text-right">
@@ -704,6 +804,7 @@ const ACCENTS = {
   indigo: 'from-indigo-500 to-indigo-600',
   purple: 'from-purple-500 to-purple-600',
   amber: 'from-amber-500 to-amber-600',
+  red: 'from-red-500 to-red-600',
 } as const
 
 function Stat({ label, value, accent }: { label: string; value: string; accent?: keyof typeof ACCENTS }) {

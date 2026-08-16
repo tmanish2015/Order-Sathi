@@ -159,6 +159,7 @@ Deno.serve(async (req) => {
             buyer_state: ao.ShippingAddress?.StateOrRegion ?? null,
             ship_state: ao.ShippingAddress?.StateOrRegion ?? null,
             ship_address: formatShippingAddress(ao.ShippingAddress),
+            sla_due_at: ao.LatestShipDate ?? null,
             gross_amount: Number(ao.OrderTotal?.Amount ?? 0),
             raw_payload: ao,
           },
