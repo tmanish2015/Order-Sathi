@@ -8,6 +8,7 @@ import Inventory from './pages/Inventory'
 import Warehouses from './pages/Warehouses'
 import Picklist from './pages/Picklist'
 import Shipping from './pages/Shipping'
+import Putaway from './pages/Putaway'
 import Invoices from './pages/Invoices'
 import Reconciliation from './pages/Reconciliation'
 import Returns from './pages/Returns'
@@ -29,6 +30,7 @@ export default function App() {
             <Route path="/warehouses" element={<Warehouses />} />
             <Route path="/picklist" element={<Picklist />} />
             <Route path="/shipping" element={<Shipping />} />
+            <Route path="/putaway" element={<Putaway />} />
             <Route path="/invoices" element={<Invoices />} />
             <Route path="/reconciliation" element={<Reconciliation />} />
             <Route path="/returns" element={<Returns />} />
