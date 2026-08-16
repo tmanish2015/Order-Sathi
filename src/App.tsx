@@ -6,11 +6,13 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Orders from './pages/Orders'
 import Inventory from './pages/Inventory'
+import SkuMapping from './pages/SkuMapping'
 import Warehouses from './pages/Warehouses'
 import Grn from './pages/Grn'
 import Picklist from './pages/Picklist'
 import Packing from './pages/Packing'
 import Shipping from './pages/Shipping'
+import Ndr from './pages/Ndr'
 import Putaway from './pages/Putaway'
 import Invoices from './pages/Invoices'
 import Reconciliation from './pages/Reconciliation'
@@ -31,11 +33,13 @@ export default function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/orders" element={<Orders />} />
             <Route path="/inventory" element={<Inventory />} />
+            <Route path="/sku-mapping" element={<SkuMapping />} />
             <Route path="/warehouses" element={<Warehouses />} />
             <Route path="/grn" element={<Grn />} />
             <Route path="/picklist" element={<Picklist />} />
             <Route path="/packing" element={<Packing />} />
             <Route path="/shipping" element={<Shipping />} />
+            <Route path="/ndr" element={<Ndr />} />
             <Route path="/putaway" element={<Putaway />} />
             <Route path="/invoices" element={<Invoices />} />
             <Route path="/reconciliation" element={<Reconciliation />} />

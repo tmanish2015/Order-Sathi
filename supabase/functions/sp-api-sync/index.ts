@@ -97,6 +97,7 @@ Deno.serve(async (req) => {
         organization_id: channel.organization_id,
         channel_id: channel.id,
         operation: log.operation,
+        sync_type: 'order_import',
         status: log.status,
         fault: log.fault ?? null,
         message: log.message,
@@ -105,6 +106,11 @@ Deno.serve(async (req) => {
         finished_at: new Date().toISOString(),
       })
     }
+    const now = new Date().toISOString()
+    await supabase
+      .from('channels')
+      .update(status === 'failed' ? { sync_status: 'failed', last_failure_at: now } : { sync_status: status, last_success_at: now })
+      .eq('id', channel.id)
     return new Response(JSON.stringify({ status }), { status: status === 'failed' ? 500 : 200 })
   }
 
@@ -175,9 +181,29 @@ Deno.serve(async (req) => {
 
       const items = await fetchOrderItems(accessToken, ao.AmazonOrderId)
       for (const item of items) {
-        const { data: sku } = await supabase.from('skus').select('id').eq('organization_id', channel.organization_id).eq('sku', item.SellerSKU).maybeSingle()
+        // Prefer an explicit channel SKU mapping; fall back to a direct
+        // internal-SKU match (keeps working for sellers who haven't set up
+        // mappings and just use the same code everywhere).
+        const { data: mapping } = await supabase
+          .from('sku_channel_mappings')
+          .select('sku_id')
+          .eq('channel_id', channel.id)
+          .eq('channel_sku', item.SellerSKU)
+          .eq('active', true)
+          .maybeSingle()
+        const sku = mapping
+          ? { id: mapping.sku_id }
+          : (await supabase.from('skus').select('id').eq('organization_id', channel.organization_id).eq('sku', item.SellerSKU).maybeSingle()).data
+
         if (!sku) {
-          logs.push({ operation: 'order_pull', status: 'partial', fault: 'seller_data', message: `SKU ${item.SellerSKU} on order ${ao.AmazonOrderId} not found in inventory — add it under Inventory first.` })
+          await supabase.from('unmapped_sku_exceptions').insert({
+            organization_id: channel.organization_id,
+            channel_id: channel.id,
+            channel_order_id: ao.AmazonOrderId,
+            channel_sku: item.SellerSKU,
+            raw_payload: item,
+          })
+          logs.push({ operation: 'order_pull', status: 'partial', fault: 'seller_data', message: `SKU ${item.SellerSKU} on order ${ao.AmazonOrderId} has no mapping — added to SKU Mapping exceptions.` })
           continue
         }
 

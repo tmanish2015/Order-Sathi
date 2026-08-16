@@ -86,6 +86,12 @@ export type Database = {
           connected_by: string | null
           connected_at: string | null
           status: string
+          sync_status: string
+          last_success_at: string | null
+          last_failure_at: string | null
+          sync_direction: string
+          enabled: boolean
+          config: Json
           created_at: string
         }
         Insert: {
@@ -98,6 +104,12 @@ export type Database = {
           connected_by?: string | null
           connected_at?: string | null
           status?: string
+          sync_status?: string
+          last_success_at?: string | null
+          last_failure_at?: string | null
+          sync_direction?: string
+          enabled?: boolean
+          config?: Json
           created_at?: string
         }
         Update: Partial<Database["public"]["Tables"]["channels"]["Insert"]>
@@ -117,6 +129,7 @@ export type Database = {
           product_type: string | null
           cost_price: number
           is_bundle: boolean
+          max_listed_stock: number | null
           created_at: string
         }
         Insert: {
@@ -132,6 +145,7 @@ export type Database = {
           product_type?: string | null
           cost_price?: number
           is_bundle?: boolean
+          max_listed_stock?: number | null
           created_at?: string
         }
         Update: Partial<Database["public"]["Tables"]["skus"]["Insert"]>
@@ -523,6 +537,186 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["manifests"]["Insert"]>
         Relationships: []
       }
+      sku_channel_mappings: {
+        Row: {
+          id: string
+          organization_id: string
+          sku_id: string
+          channel_id: string
+          channel_sku: string
+          channel_product_id: string | null
+          active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          sku_id: string
+          channel_id: string
+          channel_sku: string
+          channel_product_id?: string | null
+          active?: boolean
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["sku_channel_mappings"]["Insert"]>
+        Relationships: []
+      }
+      unmapped_sku_exceptions: {
+        Row: {
+          id: string
+          organization_id: string
+          channel_id: string
+          channel_order_id: string
+          channel_sku: string
+          raw_payload: Json | null
+          resolved: boolean
+          resolved_by: string | null
+          resolved_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          channel_id: string
+          channel_order_id: string
+          channel_sku: string
+          raw_payload?: Json | null
+          resolved?: boolean
+          resolved_by?: string | null
+          resolved_at?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["unmapped_sku_exceptions"]["Insert"]>
+        Relationships: []
+      }
+      couriers: {
+        Row: {
+          id: string
+          organization_id: string
+          name: string
+          service_type: string | null
+          cod_support: boolean
+          api_status: string
+          active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          name: string
+          service_type?: string | null
+          cod_support?: boolean
+          api_status?: string
+          active?: boolean
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["couriers"]["Insert"]>
+        Relationships: []
+      }
+      shipment_tracking_events: {
+        Row: {
+          id: string
+          organization_id: string
+          shipment_id: string
+          status: Database["public"]["Enums"]["shipment_status"]
+          event_time: string
+          location: string | null
+          remarks: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          shipment_id: string
+          status: Database["public"]["Enums"]["shipment_status"]
+          event_time?: string
+          location?: string | null
+          remarks?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["shipment_tracking_events"]["Insert"]>
+        Relationships: []
+      }
+      ndr_records: {
+        Row: {
+          id: string
+          organization_id: string
+          order_id: string
+          shipment_id: string | null
+          awb_number: string
+          ndr_date: string
+          reason: string | null
+          attempt_number: number
+          contact_status: string | null
+          action_taken: string | null
+          next_attempt_date: string | null
+          outcome: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          order_id: string
+          shipment_id?: string | null
+          awb_number: string
+          ndr_date?: string
+          reason?: string | null
+          attempt_number?: number
+          contact_status?: string | null
+          action_taken?: string | null
+          next_attempt_date?: string | null
+          outcome?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["ndr_records"]["Insert"]>
+        Relationships: []
+      }
+      settlement_transactions: {
+        Row: {
+          id: string
+          organization_id: string
+          channel_id: string
+          settlement_id: string
+          order_id: string | null
+          channel_order_id: string
+          transaction_id: string | null
+          gross_amount: number
+          fees: number
+          taxes: number
+          refunds: number
+          adjustments: number
+          net_amount: number
+          settlement_date: string | null
+          match_status: Database["public"]["Enums"]["reconciliation_status"]
+          match_note: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          channel_id: string
+          settlement_id: string
+          order_id?: string | null
+          channel_order_id: string
+          transaction_id?: string | null
+          gross_amount?: number
+          fees?: number
+          taxes?: number
+          refunds?: number
+          adjustments?: number
+          net_amount?: number
+          settlement_date?: string | null
+          match_status?: Database["public"]["Enums"]["reconciliation_status"]
+          match_note?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["settlement_transactions"]["Insert"]>
+        Relationships: []
+      }
       gst_invoices: {
         Row: {
           id: string
@@ -658,6 +852,10 @@ export type Database = {
           actual_refund: number | null
           restocked: boolean
           reviewed_by: string | null
+          qc_outcome: Database["public"]["Enums"]["return_qc_outcome"] | null
+          qc_notes: string | null
+          qc_by: string | null
+          qc_at: string | null
           created_at: string
           updated_at: string
         }
@@ -675,6 +873,10 @@ export type Database = {
           actual_refund?: number | null
           restocked?: boolean
           reviewed_by?: string | null
+          qc_outcome?: Database["public"]["Enums"]["return_qc_outcome"] | null
+          qc_notes?: string | null
+          qc_by?: string | null
+          qc_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -691,6 +893,10 @@ export type Database = {
           fault: Database["public"]["Enums"]["log_fault"] | null
           message: string
           detail: Json | null
+          sync_type: string | null
+          records_processed: number
+          records_successful: number
+          records_failed: number
           started_at: string
           finished_at: string | null
         }
@@ -703,6 +909,10 @@ export type Database = {
           fault?: Database["public"]["Enums"]["log_fault"] | null
           message: string
           detail?: Json | null
+          sync_type?: string | null
+          records_processed?: number
+          records_successful?: number
+          records_failed?: number
           started_at?: string
           finished_at?: string | null
         }
@@ -752,7 +962,7 @@ export type Database = {
     Enums: {
       user_role: "admin" | "ops" | "finance"
       user_status: "pending" | "active"
-      inventory_movement_type: "order_deduction" | "manual_adjustment" | "restock" | "return"
+      inventory_movement_type: "order_deduction" | "manual_adjustment" | "restock" | "return" | "damaged"
       order_status:
         | "new"
         | "confirmed"
@@ -769,14 +979,25 @@ export type Database = {
         | "returned"
         | "rto"
       gst_invoice_type: "intra_state" | "inter_state"
-      reconciliation_status: "matched" | "mismatch" | "pending_review"
+      reconciliation_status: "matched" | "mismatch" | "pending_review" | "resolved" | "ignored"
       log_fault: "amazon" | "order_sathi" | "seller_data" | "unknown"
-      log_status: "success" | "failed" | "partial"
+      log_status: "running" | "success" | "failed" | "partial"
       return_type: "customer_return" | "rto"
-      return_status: "initiated" | "received" | "refunded"
+      return_status: "initiated" | "in_transit" | "received" | "qc_pending" | "qc_complete" | "refunded"
+      return_qc_outcome: "resalable" | "damaged" | "missing_item" | "wrong_item" | "partial" | "rejected"
       picklist_status: "created" | "assigned" | "picking" | "picked" | "completed"
       grn_status: "draft" | "confirmed"
-      shipment_status: "booked" | "in_transit" | "delivered" | "rto" | "failed"
+      shipment_status:
+        | "courier_assigned"
+        | "awb_assigned"
+        | "manifested"
+        | "shipped"
+        | "in_transit"
+        | "ndr"
+        | "delivered"
+        | "rto"
+        | "cancelled"
+        | "failed"
       order_priority: "normal" | "high" | "urgent"
     }
     CompositeTypes: {
