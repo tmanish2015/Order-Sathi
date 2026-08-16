@@ -332,6 +332,44 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["reconciliation_entries"]["Insert"]>
         Relationships: []
       }
+      order_returns: {
+        Row: {
+          id: string
+          organization_id: string
+          order_id: string
+          order_line_item_id: string
+          sku_id: string
+          return_type: Database["public"]["Enums"]["return_type"]
+          quantity: number
+          reason: string | null
+          status: Database["public"]["Enums"]["return_status"]
+          expected_refund: number
+          actual_refund: number | null
+          restocked: boolean
+          reviewed_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          order_id: string
+          order_line_item_id: string
+          sku_id: string
+          return_type: Database["public"]["Enums"]["return_type"]
+          quantity: number
+          reason?: string | null
+          status?: Database["public"]["Enums"]["return_status"]
+          expected_refund?: number
+          actual_refund?: number | null
+          restocked?: boolean
+          reviewed_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["order_returns"]["Insert"]>
+        Relationships: []
+      }
       sync_logs: {
         Row: {
           id: string
@@ -408,6 +446,8 @@ export type Database = {
       reconciliation_status: "matched" | "mismatch" | "pending_review"
       log_fault: "amazon" | "order_sathi" | "seller_data" | "unknown"
       log_status: "success" | "failed" | "partial"
+      return_type: "customer_return" | "rto"
+      return_status: "initiated" | "received" | "refunded"
     }
     CompositeTypes: {
       [_ in never]: never

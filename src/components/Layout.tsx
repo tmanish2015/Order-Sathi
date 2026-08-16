@@ -7,6 +7,7 @@ const NAV = [
   { to: '/inventory', label: 'Inventory', icon: '📋', roles: ['admin', 'ops', 'finance'] },
   { to: '/invoices', label: 'GST Invoices', icon: '🧾', roles: ['admin', 'finance'] },
   { to: '/reconciliation', label: 'Reconciliation', icon: '🔄', roles: ['admin', 'finance'] },
+  { to: '/returns', label: 'Returns & RTO', icon: '↩️', roles: ['admin', 'ops', 'finance'] },
   { to: '/profit', label: 'Profit & Loss', icon: '📊', roles: ['admin', 'finance'] },
   { to: '/sync-logs', label: 'Sync Logs', icon: '📡', roles: ['admin', 'ops', 'finance'] },
   { to: '/integrations', label: 'Integrations', icon: '🔌', roles: ['admin', 'finance'] },
