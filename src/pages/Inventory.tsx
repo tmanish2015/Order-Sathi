@@ -7,6 +7,7 @@ import { formatINR } from '../lib/format'
 import ConfirmDialog from '../components/ConfirmDialog'
 import Skeleton from '../components/Skeleton'
 import EmptyState from '../components/EmptyState'
+import { buildLabelSheetPdf } from '../lib/labelPdf'
 import type { Tables } from '../lib/database.types'
 
 type Sku = Tables<'skus'>
@@ -59,6 +60,9 @@ export default function Inventory() {
   const [showAddSku, setShowAddSku] = useState(false)
   const [newSku, setNewSku] = useState({ sku: '', title: '', gst_rate: '18', buffer_stock: '0', cost_price: '0' })
   const [savingSku, setSavingSku] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [labelCopies, setLabelCopies] = useState('1')
+  const [showLabelPanel, setShowLabelPanel] = useState(false)
   const orgId = profile?.organization_id
   const canEdit = profile?.role === 'admin' || profile?.role === 'ops'
   const canDelete = canEdit
@@ -230,6 +234,28 @@ export default function Inventory() {
     setAdjustForm((f) => ({ ...f, quantity: '', note: '' }))
     setShowAdjust(false)
     load()
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds((s) => {
+      const next = new Set(s)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function printLabels() {
+    const copies = Math.max(1, Number(labelCopies) || 1)
+    const specs = filteredSkus.filter((s) => selectedIds.has(s.id)).map((s) => ({ sku: s, copies }))
+    if (specs.length === 0) {
+      showError('Select at least one SKU.')
+      return
+    }
+    const blob = buildLabelSheetPdf(specs)
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank')
+    setShowLabelPanel(false)
   }
 
   async function pushToAmazon() {
@@ -470,6 +496,38 @@ export default function Inventory() {
             </select>
           )}
         </div>
+        {selectedIds.size > 0 && (
+          <div className="px-4 py-2.5 border-b border-slate-100 bg-indigo-50 flex items-center gap-3 flex-wrap">
+            <span className="text-xs font-medium text-indigo-700">{selectedIds.size} selected</span>
+            {showLabelPanel ? (
+              <>
+                <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                  Copies per SKU
+                  <input
+                    type="number"
+                    min="1"
+                    value={labelCopies}
+                    onChange={(e) => setLabelCopies(e.target.value)}
+                    className="w-16 text-sm rounded-lg border border-slate-300 px-2 py-1"
+                  />
+                </label>
+                <button onClick={printLabels} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">
+                  Generate PDF
+                </button>
+                <button onClick={() => setShowLabelPanel(false)} className="text-xs text-slate-400 hover:text-slate-600">
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <button onClick={() => setShowLabelPanel(true)} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">
+                🏷 Print labels
+              </button>
+            )}
+            <button onClick={() => setSelectedIds(new Set())} className="text-xs text-slate-400 hover:text-slate-600">
+              Clear
+            </button>
+          </div>
+        )}
         {loading ? (
           <Skeleton />
         ) : filteredSkus.length === 0 ? (
@@ -479,6 +537,13 @@ export default function Inventory() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                  <th className="px-4 py-2 font-medium w-8">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.size === filteredSkus.length && filteredSkus.length > 0}
+                      onChange={() => setSelectedIds((s) => (s.size === filteredSkus.length ? new Set() : new Set(filteredSkus.map((sk) => sk.id))))}
+                    />
+                  </th>
                   <th className="px-4 py-2 font-medium">SKU</th>
                   <th className="px-4 py-2 font-medium">Title</th>
                   <th className="px-4 py-2 font-medium">Product type</th>
@@ -498,6 +563,9 @@ export default function Inventory() {
                   const isEditing = editingId === s.id
                   return (
                     <tr key={s.id}>
+                      <td className="px-4 py-2.5">
+                        <input type="checkbox" checked={selectedIds.has(s.id)} onChange={() => toggleSelected(s.id)} />
+                      </td>
                       <td className="px-4 py-2.5 font-medium text-slate-700">{s.sku}</td>
                       {isEditing ? (
                         <>
