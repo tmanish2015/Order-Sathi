@@ -14,6 +14,7 @@ type Sku = Tables<'skus'>
 type Ledger = Tables<'inventory_ledger'>
 type Channel = Tables<'channels'>
 type Warehouse = Tables<'warehouses'>
+type Bin = Tables<'bins'>
 
 const SELL_THROUGH_WINDOW_DAYS = 14
 const REORDER_ALERT_DAYS = 7
@@ -46,8 +47,9 @@ export default function Inventory() {
   const [selectedChannel, setSelectedChannel] = useState('')
   const [warehouses, setWarehouses] = useState<Warehouse[]>([])
   const [warehouseFilter, setWarehouseFilter] = useState('')
+  const [bins, setBins] = useState<Bin[]>([])
   const [showAdjust, setShowAdjust] = useState(false)
-  const [adjustForm, setAdjustForm] = useState({ sku_id: '', warehouse_id: '', movement_type: 'restock' as 'restock' | 'manual_adjustment', quantity: '', note: '' })
+  const [adjustForm, setAdjustForm] = useState({ sku_id: '', warehouse_id: '', bin_id: '', movement_type: 'restock' as 'restock' | 'manual_adjustment', quantity: '', note: '' })
   const [savingAdjust, setSavingAdjust] = useState(false)
   const [pushing, setPushing] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -70,12 +72,14 @@ export default function Inventory() {
   async function load() {
     if (!orgId) return
     setLoading(true)
-    const [{ data: s }, { data: l }, { data: c }, { data: w }] = await Promise.all([
+    const [{ data: s }, { data: l }, { data: c }, { data: w }, { data: b }] = await Promise.all([
       supabase.from('skus').select('*').order('sku'),
       supabase.from('inventory_ledger').select('*'),
       supabase.from('channels').select('*'),
       supabase.from('warehouses').select('*').order('name'),
+      supabase.from('bins').select('*').order('code'),
     ])
+    setBins(b ?? [])
     setSkus(s ?? [])
     setLedger((l as Ledger[]) ?? [])
 
@@ -220,6 +224,7 @@ export default function Inventory() {
       organization_id: orgId,
       sku_id: adjustForm.sku_id,
       warehouse_id: adjustForm.warehouse_id,
+      bin_id: adjustForm.bin_id || null,
       movement_type: adjustForm.movement_type,
       quantity_delta: qty,
       note: adjustForm.note || null,
@@ -231,7 +236,7 @@ export default function Inventory() {
       return
     }
     showSuccess('Stock adjusted.')
-    setAdjustForm((f) => ({ ...f, quantity: '', note: '' }))
+    setAdjustForm((f) => ({ ...f, quantity: '', note: '', bin_id: '' }))
     setShowAdjust(false)
     load()
   }
@@ -293,7 +298,7 @@ export default function Inventory() {
       </div>
 
       {showAdjust && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6 grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6 grid grid-cols-1 sm:grid-cols-6 gap-3 items-end">
           <label className="block sm:col-span-2">
             <span className="text-xs text-slate-500">SKU</span>
             <select
@@ -313,13 +318,28 @@ export default function Inventory() {
             <span className="text-xs text-slate-500">Warehouse</span>
             <select
               value={adjustForm.warehouse_id}
-              onChange={(e) => setAdjustForm((f) => ({ ...f, warehouse_id: e.target.value }))}
+              onChange={(e) => setAdjustForm((f) => ({ ...f, warehouse_id: e.target.value, bin_id: '' }))}
               className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
             >
               {warehouses.length === 0 && <option value="">No warehouses yet</option>}
               {warehouses.map((w) => (
                 <option key={w.id} value={w.id}>
                   {w.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-xs text-slate-500">Bin (optional)</span>
+            <select
+              value={adjustForm.bin_id}
+              onChange={(e) => setAdjustForm((f) => ({ ...f, bin_id: e.target.value }))}
+              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+            >
+              <option value="">No bin</option>
+              {bins.filter((b) => b.warehouse_id === adjustForm.warehouse_id).map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.code}
                 </option>
               ))}
             </select>

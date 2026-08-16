@@ -9,6 +9,7 @@ import EmptyState from '../components/EmptyState'
 import type { Tables } from '../lib/database.types'
 
 type Warehouse = Tables<'warehouses'>
+type Bin = Tables<'bins'>
 
 export default function Warehouses() {
   const { profile } = useAuth()
@@ -20,6 +21,14 @@ export default function Warehouses() {
   const [saving, setSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Warehouse | null>(null)
   const [deleting, setDeleting] = useState(false)
+
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [binsByWarehouse, setBinsByWarehouse] = useState<Record<string, Bin[]>>({})
+  const [newBinCode, setNewBinCode] = useState('')
+  const [savingBin, setSavingBin] = useState(false)
+  const [deleteBinTarget, setDeleteBinTarget] = useState<Bin | null>(null)
+  const [deletingBin, setDeletingBin] = useState(false)
+
   const orgId = profile?.organization_id
   const isAdmin = profile?.role === 'admin'
 
@@ -81,6 +90,50 @@ export default function Warehouses() {
     load()
   }
 
+  async function toggleExpand(w: Warehouse) {
+    if (expandedId === w.id) {
+      setExpandedId(null)
+      return
+    }
+    setExpandedId(w.id)
+    if (!binsByWarehouse[w.id]) {
+      const { data } = await supabase.from('bins').select('*').eq('warehouse_id', w.id).order('code')
+      setBinsByWarehouse((m) => ({ ...m, [w.id]: data ?? [] }))
+    }
+  }
+
+  async function addBin(warehouseId: string) {
+    if (!orgId || !newBinCode.trim()) {
+      showError('Bin code is required.')
+      return
+    }
+    setSavingBin(true)
+    const { error } = await supabase.from('bins').insert({ organization_id: orgId, warehouse_id: warehouseId, code: newBinCode.trim() })
+    setSavingBin(false)
+    if (error) {
+      reportError(showError, 'Add bin', error, orgId, profile?.id)
+      return
+    }
+    setNewBinCode('')
+    const { data } = await supabase.from('bins').select('*').eq('warehouse_id', warehouseId).order('code')
+    setBinsByWarehouse((m) => ({ ...m, [warehouseId]: data ?? [] }))
+  }
+
+  async function confirmDeleteBin() {
+    if (!deleteBinTarget) return
+    setDeletingBin(true)
+    const { error } = await supabase.from('bins').delete().eq('id', deleteBinTarget.id)
+    setDeletingBin(false)
+    const warehouseId = deleteBinTarget.warehouse_id
+    setDeleteBinTarget(null)
+    if (error) {
+      reportError(showError, 'Delete bin', error, orgId, profile?.id)
+      return
+    }
+    const { data } = await supabase.from('bins').select('*').eq('warehouse_id', warehouseId).order('code')
+    setBinsByWarehouse((m) => ({ ...m, [warehouseId]: data ?? [] }))
+  }
+
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-1">
@@ -93,6 +146,7 @@ export default function Warehouses() {
       </div>
       <p className="text-xs text-slate-400 mb-6">
         Every stock movement belongs to one warehouse. The default warehouse is used whenever an order or adjustment doesn't specify one.
+        Click a warehouse to manage its bins/racks.
       </p>
 
       {showAdd && (
@@ -132,24 +186,61 @@ export default function Warehouses() {
         ) : (
           <div className="divide-y divide-slate-50">
             {warehouses.map((w) => (
-              <div key={w.id} className="px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
-                <div>
-                  <div className="font-medium text-sm text-slate-900 flex items-center gap-2">
-                    {w.name}
-                    {w.is_default && <span className="text-[10px] uppercase tracking-wide bg-indigo-50 text-indigo-600 rounded px-1.5 py-0.5">Default</span>}
-                  </div>
-                  {w.address && <div className="text-xs text-slate-400">{w.address}</div>}
-                </div>
-                {isAdmin && (
-                  <div className="flex items-center gap-3">
-                    {!w.is_default && (
-                      <button onClick={() => makeDefault(w)} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">
-                        Make default
+              <div key={w.id}>
+                <div className="px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+                  <button onClick={() => toggleExpand(w)} className="text-left flex-1">
+                    <div className="font-medium text-sm text-slate-900 flex items-center gap-2">
+                      {w.name}
+                      {w.is_default && <span className="text-[10px] uppercase tracking-wide bg-indigo-50 text-indigo-600 rounded px-1.5 py-0.5">Default</span>}
+                    </div>
+                    {w.address && <div className="text-xs text-slate-400">{w.address}</div>}
+                  </button>
+                  {isAdmin && (
+                    <div className="flex items-center gap-3">
+                      {!w.is_default && (
+                        <button onClick={() => makeDefault(w)} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">
+                          Make default
+                        </button>
+                      )}
+                      <button onClick={() => setDeleteTarget(w)} className="text-xs text-slate-400 hover:text-red-600">
+                        Delete
                       </button>
+                    </div>
+                  )}
+                </div>
+                {expandedId === w.id && (
+                  <div className="px-4 pb-4 bg-slate-50">
+                    <div className="text-xs font-semibold uppercase text-slate-500 mb-2">Bins / racks</div>
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {(binsByWarehouse[w.id] ?? []).length === 0 ? (
+                        <span className="text-xs text-slate-400">No bins yet.</span>
+                      ) : (
+                        (binsByWarehouse[w.id] ?? []).map((b) => (
+                          <span key={b.id} className="inline-flex items-center gap-1 text-xs bg-white border border-slate-200 rounded px-2 py-1">
+                            {b.code}
+                            {isAdmin && (
+                              <button onClick={() => setDeleteBinTarget(b)} className="text-slate-300 hover:text-red-600">
+                                ✕
+                              </button>
+                            )}
+                          </span>
+                        ))
+                      )}
+                    </div>
+                    {isAdmin && (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={newBinCode}
+                          onChange={(e) => setNewBinCode(e.target.value)}
+                          placeholder="e.g. A1-03"
+                          className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 w-32"
+                        />
+                        <button onClick={() => addBin(w.id)} disabled={savingBin} className="text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50">
+                          {savingBin ? 'Adding…' : '+ Add bin'}
+                        </button>
+                      </div>
                     )}
-                    <button onClick={() => setDeleteTarget(w)} className="text-xs text-slate-400 hover:text-red-600">
-                      Delete
-                    </button>
                   </div>
                 )}
               </div>
@@ -167,6 +258,18 @@ export default function Warehouses() {
           busy={deleting}
           onConfirm={confirmDelete}
           onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+
+      {deleteBinTarget && (
+        <ConfirmDialog
+          title="Delete bin?"
+          message={`Delete bin "${deleteBinTarget.code}"? Fails if any stock movement references it.`}
+          confirmLabel="Delete"
+          danger
+          busy={deletingBin}
+          onConfirm={confirmDeleteBin}
+          onCancel={() => setDeleteBinTarget(null)}
         />
       )}
     </div>

@@ -138,6 +138,7 @@ export type Database = {
           organization_id: string
           sku_id: string
           warehouse_id: string
+          bin_id: string | null
           movement_type: Database["public"]["Enums"]["inventory_movement_type"]
           quantity_delta: number
           order_id: string | null
@@ -150,6 +151,7 @@ export type Database = {
           organization_id: string
           sku_id: string
           warehouse_id: string
+          bin_id?: string | null
           movement_type: Database["public"]["Enums"]["inventory_movement_type"]
           quantity_delta: number
           order_id?: string | null
@@ -180,6 +182,26 @@ export type Database = {
           created_at?: string
         }
         Update: Partial<Database["public"]["Tables"]["warehouses"]["Insert"]>
+        Relationships: []
+      }
+      bins: {
+        Row: {
+          id: string
+          organization_id: string
+          warehouse_id: string
+          code: string
+          active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          warehouse_id: string
+          code: string
+          active?: boolean
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["bins"]["Insert"]>
         Relationships: []
       }
       picklists: {
