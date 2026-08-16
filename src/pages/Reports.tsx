@@ -15,8 +15,10 @@ type Channel = Tables<'channels'>
 type Shipment = Tables<'shipments'>
 type Return = Tables<'order_returns'>
 type SettlementTxn = Tables<'settlement_transactions'>
+type Warehouse = Tables<'warehouses'>
+type LedgerRow = { sku_id: string; warehouse_id: string; quantity_delta: number; created_at: string }
 
-const TABS = ['Sales', 'Orders', 'Inventory', 'Shipping', 'Returns', 'Reconciliation', 'Profitability'] as const
+const TABS = ['Sales', 'Orders', 'Inventory', 'Ageing', 'Shipping', 'Returns', 'Reconciliation', 'Profitability'] as const
 type Tab = (typeof TABS)[number]
 
 const TREND_DAYS = 30
@@ -30,7 +32,8 @@ export default function Reports() {
   const [lineItems, setLineItems] = useState<LineItem[]>([])
   const [skus, setSkus] = useState<Sku[]>([])
   const [channels, setChannels] = useState<Channel[]>([])
-  const [ledger, setLedger] = useState<{ sku_id: string; quantity_delta: number }[]>([])
+  const [ledger, setLedger] = useState<LedgerRow[]>([])
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([])
   const [shipments, setShipments] = useState<Shipment[]>([])
   const [returns, setReturns] = useState<Return[]>([])
   const [settlements, setSettlements] = useState<SettlementTxn[]>([])
@@ -41,12 +44,13 @@ export default function Reports() {
     if (!orgId) return
     ;(async () => {
       setLoading(true)
-      const [{ data: o }, { data: li }, { data: s }, { data: c }, { data: l }, { data: sh }, { data: r }, { data: st }] = await Promise.all([
+      const [{ data: o }, { data: li }, { data: s }, { data: c }, { data: l }, { data: w }, { data: sh }, { data: r }, { data: st }] = await Promise.all([
         supabase.from('orders').select('*'),
         supabase.from('order_line_items').select('*, skus(*)'),
         supabase.from('skus').select('*'),
         supabase.from('channels').select('*'),
-        supabase.from('inventory_ledger').select('sku_id, quantity_delta'),
+        supabase.from('inventory_ledger').select('sku_id, warehouse_id, quantity_delta, created_at'),
+        supabase.from('warehouses').select('*'),
         supabase.from('shipments').select('*'),
         supabase.from('order_returns').select('*'),
         supabase.from('settlement_transactions').select('*'),
@@ -56,6 +60,7 @@ export default function Reports() {
       setSkus(s ?? [])
       setChannels(c ?? [])
       setLedger(l ?? [])
+      setWarehouses(w ?? [])
       setShipments(sh ?? [])
       setReturns(r ?? [])
       setSettlements(st ?? [])
@@ -90,6 +95,7 @@ export default function Reports() {
           {tab === 'Sales' && <SalesReport orders={orders} channels={channels} />}
           {tab === 'Orders' && <OrdersReport orders={orders} />}
           {tab === 'Inventory' && <InventoryReport skus={skus} ledger={ledger} lineItems={lineItems} orders={orders} />}
+          {tab === 'Ageing' && <AgeingReport skus={skus} ledger={ledger} warehouses={warehouses} />}
           {tab === 'Shipping' && <ShippingReport shipments={shipments} />}
           {tab === 'Returns' && <ReturnsReport returns={returns} />}
           {tab === 'Reconciliation' && <ReconciliationReport settlements={settlements} />}
@@ -255,6 +261,73 @@ function InventoryReport({ skus, ledger, lineItems, orders }: { skus: Sku[]; led
       <Table
         headers={['SKU', 'Physical', 'Allocated', 'Available', 'Buffer']}
         rows={rows.map((r) => [r.sku.sku, r.physical, r.allocated, r.available, r.sku.buffer_stock])}
+      />
+    </div>
+  )
+}
+
+const AGE_BUCKETS = ['0–30 days', '31–60 days', '61–90 days', '91–180 days', '181–365 days', '365+ days'] as const
+
+function ageBucket(days: number): (typeof AGE_BUCKETS)[number] {
+  if (days <= 30) return AGE_BUCKETS[0]
+  if (days <= 60) return AGE_BUCKETS[1]
+  if (days <= 90) return AGE_BUCKETS[2]
+  if (days <= 180) return AGE_BUCKETS[3]
+  if (days <= 365) return AGE_BUCKETS[4]
+  return AGE_BUCKETS[5]
+}
+
+function AgeingReport({ skus, ledger, warehouses }: { skus: Sku[]; ledger: LedgerRow[]; warehouses: Warehouse[] }) {
+  const skuById = new Map(skus.map((s) => [s.id, s]))
+  const warehouseById = new Map(warehouses.map((w) => [w.id, w]))
+
+  const byPair = new Map<string, { skuId: string; warehouseId: string; qty: number; lastMovement: string }>()
+  for (const row of ledger) {
+    const key = `${row.sku_id}:${row.warehouse_id}`
+    const existing = byPair.get(key) ?? { skuId: row.sku_id, warehouseId: row.warehouse_id, qty: 0, lastMovement: row.created_at }
+    existing.qty += row.quantity_delta
+    if (row.created_at > existing.lastMovement) existing.lastMovement = row.created_at
+    byPair.set(key, existing)
+  }
+
+  const now = Date.now()
+  const rows = Array.from(byPair.values())
+    .filter((p) => p.qty > 0)
+    .map((p) => {
+      const sku = skuById.get(p.skuId)
+      const warehouse = warehouseById.get(p.warehouseId)
+      const ageDays = Math.floor((now - new Date(p.lastMovement).getTime()) / (24 * 60 * 60 * 1000))
+      const value = p.qty * Number(sku?.cost_price ?? 0)
+      return { sku, warehouse, qty: p.qty, value, ageDays, bucket: ageBucket(ageDays), lastMovement: p.lastMovement }
+    })
+    .filter((r) => r.sku)
+    .sort((a, b) => b.ageDays - a.ageDays)
+
+  const bucketCounts: Record<string, number> = {}
+  const bucketValue: Record<string, number> = {}
+  for (const r of rows) {
+    bucketCounts[r.bucket] = (bucketCounts[r.bucket] ?? 0) + 1
+    bucketValue[r.bucket] = (bucketValue[r.bucket] ?? 0) + r.value
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {AGE_BUCKETS.map((b) => (
+          <Stat key={b} label={b} value={bucketCounts[b] ?? 0} sub={formatINR(bucketValue[b] ?? 0)} />
+        ))}
+      </div>
+      <Table
+        headers={['SKU', 'Warehouse', 'Quantity', 'Stock value', 'Age (days)', 'Last movement', 'Bucket']}
+        rows={rows.map((r) => [
+          r.sku!.sku,
+          r.warehouse?.name ?? '—',
+          r.qty,
+          formatINR(r.value),
+          r.ageDays,
+          format(new Date(r.lastMovement), 'dd MMM yyyy'),
+          r.bucket,
+        ])}
       />
     </div>
   )
