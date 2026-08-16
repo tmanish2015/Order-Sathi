@@ -278,6 +278,36 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["order_line_items"]["Insert"]>
         Relationships: []
       }
+      shipments: {
+        Row: {
+          id: string
+          organization_id: string
+          order_id: string
+          courier_name: string
+          awb_number: string
+          status: Database["public"]["Enums"]["shipment_status"]
+          shipped_at: string
+          tracking_url: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          order_id: string
+          courier_name: string
+          awb_number: string
+          status?: Database["public"]["Enums"]["shipment_status"]
+          shipped_at?: string
+          tracking_url?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["shipments"]["Insert"]>
+        Relationships: []
+      }
       gst_invoices: {
         Row: {
           id: string
@@ -515,6 +545,7 @@ export type Database = {
       return_type: "customer_return" | "rto"
       return_status: "initiated" | "received" | "refunded"
       picklist_status: "open" | "completed"
+      shipment_status: "booked" | "in_transit" | "delivered" | "rto" | "failed"
     }
     CompositeTypes: {
       [_ in never]: never
