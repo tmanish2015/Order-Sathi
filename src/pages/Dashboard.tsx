@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { format, subDays, startOfDay } from 'date-fns'
 import { Bar, BarChart, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, Legend } from 'recharts'
 import { supabase } from '../lib/supabase'
@@ -47,6 +48,18 @@ interface OpsKpis {
   slaBreaches: number
   rto: number
   customerReturns: number
+  ndrOpen: number
+}
+
+interface Exceptions {
+  stockShortages: number
+  slaBreaches: number
+  unmappedSkus: number
+  ndrOpen: number
+  rto: number
+  reconciliationMismatches: number
+  failedIntegrations: number
+  failedSyncs: number
 }
 
 interface InventoryKpis {
@@ -70,11 +83,14 @@ export default function Dashboard() {
   const [opsKpis, setOpsKpis] = useState<OpsKpis | null>(null)
   const [invKpis, setInvKpis] = useState<InventoryKpis | null>(null)
   const [finKpis, setFinKpis] = useState<FinancialKpis | null>(null)
+  const [exceptions, setExceptions] = useState<Exceptions | null>(null)
   const [statusChart, setStatusChart] = useState<{ status: string; count: number }[]>([])
   const [salesTrend, setSalesTrend] = useState<{ date: string; sales: number }[]>([])
   const [channelChart, setChannelChart] = useState<{ channel: string; orders: number }[]>([])
   const [warehouseChart, setWarehouseChart] = useState<{ warehouse: string; orders: number }[]>([])
   const [returnsTrend, setReturnsTrend] = useState<{ date: string; returns: number; rto: number }[]>([])
+  const [channelPerf, setChannelPerf] = useState<{ channel: string; orders: number; revenue: number; syncStatus: string }[]>([])
+  const [funnel, setFunnel] = useState<{ stage: string; count: number }[]>([])
   const orgId = profile?.organization_id
 
   useEffect(() => {
@@ -95,6 +111,10 @@ export default function Dashboard() {
       { data: statusHistory },
       { data: channels },
       { data: warehouses },
+      { data: ndrRecords },
+      { data: unmappedSkus },
+      { data: settlements },
+      { data: recentSyncLogs },
     ] = await Promise.all([
       supabase.from('orders').select('id, order_status, gross_amount, order_date, sla_due_at, channel_id'),
       supabase.from('order_line_items').select('order_id, sku_id, allocated_qty, warehouse_id'),
@@ -103,8 +123,12 @@ export default function Dashboard() {
       supabase.from('reconciliation_entries').select('status, expected_settlement, actual_settlement'),
       supabase.from('order_returns').select('created_at, return_type'),
       supabase.from('order_status_history').select('new_status, changed_at'),
-      supabase.from('channels').select('id, display_name'),
+      supabase.from('channels').select('id, display_name, sync_status, enabled'),
       supabase.from('warehouses').select('id, name'),
+      supabase.from('ndr_records').select('id, outcome'),
+      supabase.from('unmapped_sku_exceptions').select('id, resolved'),
+      supabase.from('settlement_transactions').select('id, match_status'),
+      supabase.from('sync_logs').select('status').order('started_at', { ascending: false }).limit(50),
     ])
 
     const ordersData = orders ?? []
@@ -129,6 +153,7 @@ export default function Dashboard() {
     // ── Operational KPIs ────────────────────────────────────────────────
     const openStatuses = (Object.keys(STATUS_LABEL) as Enums<'order_status'>[]).filter((s) => !TERMINAL_STATUSES.includes(s))
     const slaBreaches = ordersData.filter((o) => o.sla_due_at && openStatuses.includes(o.order_status) && new Date(o.sla_due_at).getTime() < now).length
+    const ndrOpen = (ndrRecords ?? []).filter((n) => !n.outcome || n.outcome === 'pending').length
     setOpsKpis({
       pendingPick: count(['ready_to_pick']),
       pendingPack: count(['picked']),
@@ -136,6 +161,7 @@ export default function Dashboard() {
       slaBreaches,
       rto: count(['rto']),
       customerReturns: (returns ?? []).filter((r) => r.return_type === 'customer_return').length,
+      ndrOpen,
     })
 
     // ── Inventory KPIs ──────────────────────────────────────────────────
@@ -199,10 +225,47 @@ export default function Dashboard() {
       }))
     )
 
+    // ── Channel performance ────────────────────────────────────────────
+    const channelRevenue: Record<string, number> = {}
+    for (const o of ordersData) channelRevenue[o.channel_id] = (channelRevenue[o.channel_id] ?? 0) + Number(o.gross_amount)
+    setChannelPerf(
+      (channels ?? []).map((c) => ({
+        channel: c.display_name,
+        orders: channelCounts[c.id] ?? 0,
+        revenue: channelRevenue[c.id] ?? 0,
+        syncStatus: c.enabled ? c.sync_status : 'disabled',
+      }))
+    )
+
+    // ── Fulfilment funnel ───────────────────────────────────────────────
+    setFunnel([
+      { stage: 'New', count: count(['new']) },
+      { stage: 'Allocated', count: count(['inventory_allocated', 'partially_allocated']) },
+      { stage: 'Ready to Pick', count: count(['ready_to_pick']) },
+      { stage: 'Picked', count: count(['picked']) },
+      { stage: 'Packed', count: count(['packed']) },
+      { stage: 'Ready to Ship', count: count(['ready_to_ship']) },
+      { stage: 'Shipped', count: count(['shipped']) },
+      { stage: 'Delivered', count: count(['delivered']) },
+    ])
+
+    // ── Exceptions ──────────────────────────────────────────────────────
+    setExceptions({
+      stockShortages: count(['stock_shortage']),
+      slaBreaches,
+      unmappedSkus: (unmappedSkus ?? []).filter((u) => !u.resolved).length,
+      ndrOpen,
+      rto: count(['rto']),
+      reconciliationMismatches:
+        (reconEntries ?? []).filter((r) => r.status === 'mismatch').length + (settlements ?? []).filter((s) => s.match_status === 'mismatch').length,
+      failedIntegrations: (channels ?? []).filter((c) => c.enabled && c.sync_status === 'failed').length,
+      failedSyncs: (recentSyncLogs ?? []).filter((l) => l.status === 'failed').length,
+    })
+
     setLoading(false)
   }
 
-  if (loading || !orderKpis || !opsKpis || !invKpis || !finKpis) {
+  if (loading || !orderKpis || !opsKpis || !invKpis || !finKpis || !exceptions) {
     return (
       <div className="p-4 sm:p-6 max-w-7xl mx-auto">
         <h2 className="text-xl font-semibold text-slate-900 mb-6">Dashboard</h2>
@@ -217,6 +280,8 @@ export default function Dashboard() {
         <h2 className="text-xl font-semibold text-slate-900">Dashboard</h2>
         <p className="text-xs text-slate-400 mt-0.5">{format(new Date(), 'EEEE, dd MMMM yyyy')}</p>
       </div>
+
+      <ExceptionsPanel exceptions={exceptions} />
 
       <Section title="Order status">
         <KpiGrid>
@@ -239,7 +304,7 @@ export default function Dashboard() {
           <Kpi label="Pending Pack" value={opsKpis.pendingPack} accent="amber" />
           <Kpi label="Pending Dispatch" value={opsKpis.pendingDispatch} accent="amber" />
           <Kpi label="SLA Breaches" value={opsKpis.slaBreaches} accent={opsKpis.slaBreaches > 0 ? 'red' : undefined} />
-          <Kpi label="NDR" value="—" hint="Not tracked yet — no courier NDR feed wired up" />
+          <Kpi label="NDR (open)" value={opsKpis.ndrOpen} accent={opsKpis.ndrOpen > 0 ? 'amber' : undefined} />
           <Kpi label="RTO" value={opsKpis.rto} accent="red" />
           <Kpi label="Customer Returns" value={opsKpis.customerReturns} accent="red" />
         </KpiGrid>
@@ -263,7 +328,66 @@ export default function Dashboard() {
         </KpiGrid>
       </Section>
 
+      <Section title="Channel performance">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                  <th className="px-4 py-2 font-medium">Channel</th>
+                  <th className="px-4 py-2 font-medium text-right">Orders</th>
+                  <th className="px-4 py-2 font-medium text-right">Revenue</th>
+                  <th className="px-4 py-2 font-medium">Sync status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {channelPerf.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-6 text-center text-slate-400 text-sm">
+                      No channels connected yet.
+                    </td>
+                  </tr>
+                ) : (
+                  channelPerf.map((c) => (
+                    <tr key={c.channel}>
+                      <td className="px-4 py-2.5 font-medium text-slate-700">{c.channel}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-500">{c.orders}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-700">{formatINR(c.revenue)}</td>
+                      <td className="px-4 py-2.5">
+                        <span
+                          className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${
+                            c.syncStatus === 'failed'
+                              ? 'bg-red-100 text-red-700'
+                              : c.syncStatus === 'success'
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : 'bg-slate-100 text-slate-500'
+                          }`}
+                        >
+                          {c.syncStatus}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </Section>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <ChartCard title="Fulfilment funnel">
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={funnel} layout="vertical" margin={{ left: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+              <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <YAxis type="category" dataKey="stage" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={90} />
+              <Tooltip />
+              <Bar dataKey="count" fill="#0ea5e9" radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
         <ChartCard title="Orders by status">
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={statusChart}>
@@ -325,6 +449,41 @@ export default function Dashboard() {
             </LineChart>
           </ResponsiveContainer>
         </ChartCard>
+      </div>
+    </div>
+  )
+}
+
+function ExceptionsPanel({ exceptions }: { exceptions: Exceptions }) {
+  const items: { label: string; value: number; to: string }[] = [
+    { label: 'Stock shortages', value: exceptions.stockShortages, to: '/orders' },
+    { label: 'SLA breaches', value: exceptions.slaBreaches, to: '/orders' },
+    { label: 'Unmapped SKUs', value: exceptions.unmappedSkus, to: '/sku-mapping' },
+    { label: 'Open NDR', value: exceptions.ndrOpen, to: '/ndr' },
+    { label: 'RTO', value: exceptions.rto, to: '/shipping' },
+    { label: 'Reconciliation mismatches', value: exceptions.reconciliationMismatches, to: '/reconciliation' },
+    { label: 'Failed integrations', value: exceptions.failedIntegrations, to: '/integrations' },
+    { label: 'Failed syncs (last 50)', value: exceptions.failedSyncs, to: '/sync-logs' },
+  ].filter((i) => i.value > 0)
+
+  if (items.length === 0) {
+    return (
+      <div className="mb-6 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-sm text-emerald-800">
+        No open exceptions — stock, SLA, mapping, shipping, and reconciliation all clear.
+      </div>
+    )
+  }
+
+  return (
+    <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4">
+      <div className="text-xs font-semibold uppercase text-red-700 mb-3">Exceptions — needs attention</div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {items.map((i) => (
+          <Link key={i.label} to={i.to} className="bg-white rounded-lg border border-red-100 px-3 py-2 hover:border-red-300 transition-colors">
+            <div className="text-[11px] text-slate-500">{i.label}</div>
+            <div className="text-lg font-semibold text-red-600 mt-0.5">{i.value}</div>
+          </Link>
+        ))}
       </div>
     </div>
   )
