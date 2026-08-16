@@ -4,6 +4,9 @@ import { formatINR } from './format'
 import type { Tables } from './database.types'
 
 type Sku = Tables<'skus'>
+type Order = Tables<'orders'>
+type Organization = Tables<'organizations'>
+type LineItem = Tables<'order_line_items'> & { skus: Sku | null }
 
 // Selling price isn't on the SKU record (it's set per-order-line, can vary)
 // - callers pass whatever they want printed as the retail price, defaulting
@@ -66,6 +69,52 @@ export function buildLabelSheetPdf(specs: LabelSpec[]): Blob {
       }
     }
   }
+
+  return doc.output('blob')
+}
+
+export interface ShippingLabelItem {
+  order: Order
+  lineItems: LineItem[]
+}
+
+// A generic printable label, not a courier-format shipping label - no real
+// 3PL is wired up (see courier-sync), so there's no carrier tracking
+// barcode format to match. Barcode here just encodes the order ID for a
+// quick warehouse scan-to-find, nothing a courier would recognize.
+export function buildShippingLabelsPdf(org: Organization, items: ShippingLabelItem[]): Blob {
+  const doc = new jsPDF()
+
+  items.forEach((item, i) => {
+    if (i > 0) doc.addPage()
+    const { order, lineItems } = item
+
+    doc.setFontSize(9)
+    doc.text('Ship from:', 14, 18)
+    doc.setFontSize(11)
+    doc.text(org.name, 14, 24)
+    doc.setFontSize(9)
+    if (org.address) doc.text(doc.splitTextToSize(org.address, 85), 14, 29)
+
+    doc.setFontSize(9)
+    doc.text('Ship to:', 110, 18)
+    doc.setFontSize(12)
+    const addressLines = doc.splitTextToSize(order.ship_address ?? order.buyer_state ?? 'Address not provided', 85)
+    doc.text(addressLines, 110, 25)
+
+    const barcode = barcodeDataUrl(order.amazon_order_id)
+    doc.addImage(barcode, 'PNG', 14, 55, 90, 20)
+    doc.setFontSize(10)
+    doc.text(`Order: ${order.amazon_order_id}`, 14, 80)
+
+    doc.setFontSize(9)
+    doc.text('Contents:', 14, 92)
+    let y = 98
+    for (const li of lineItems) {
+      doc.text(`${li.skus?.sku ?? '—'} × ${li.quantity} — ${li.skus?.title ?? ''}`.slice(0, 90), 14, y)
+      y += 5
+    }
+  })
 
   return doc.output('blob')
 }

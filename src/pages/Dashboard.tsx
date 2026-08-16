@@ -7,7 +7,8 @@ import { useToast } from '../lib/Toast'
 import { reportError } from '../lib/errors'
 import { formatINR } from '../lib/format'
 import { calculateInvoice } from '../lib/gstInvoice'
-import { buildInvoicePdf } from '../lib/invoicePdf'
+import { buildInvoicePdf, buildCombinedInvoicesPdf, type InvoicePrintItem } from '../lib/invoicePdf'
+import { buildShippingLabelsPdf, type ShippingLabelItem } from '../lib/labelPdf'
 import ConfirmDialog from '../components/ConfirmDialog'
 import Skeleton from '../components/Skeleton'
 import EmptyState from '../components/EmptyState'
@@ -57,6 +58,8 @@ export default function Dashboard() {
   const [confirmBulkShip, setConfirmBulkShip] = useState(false)
   const [bulkInvoicing, setBulkInvoicing] = useState(false)
   const [bulkInvoiceProgress, setBulkInvoiceProgress] = useState({ done: 0, total: 0 })
+  const [printingInvoices, setPrintingInvoices] = useState(false)
+  const [printingLabels, setPrintingLabels] = useState(false)
   const [skus, setSkus] = useState<Sku[]>([])
   const [defaultWarehouseId, setDefaultWarehouseId] = useState<string | null>(null)
   const [showNewOrder, setShowNewOrder] = useState(false)
@@ -333,6 +336,56 @@ export default function Dashboard() {
     showSuccess(`Generated ${targets.length - failed} of ${targets.length} invoice(s).${failed > 0 ? ` ${failed} failed — check Sync Logs.` : ''}`)
   }
 
+  async function bulkPrintInvoices() {
+    if (!org || !orgId) return
+    const targets = orders.filter((o) => selectedIds.has(o.id) && invoicedOrderIds.has(o.id))
+    if (targets.length === 0) {
+      showError('None of the selected orders have an invoice yet — generate one first.')
+      return
+    }
+    setPrintingInvoices(true)
+    try {
+      const items: InvoicePrintItem[] = []
+      for (const order of targets) {
+        const [{ data: invoice }, { data: lineItems }] = await Promise.all([
+          supabase.from('gst_invoices').select('invoice_number').eq('order_id', order.id).single(),
+          supabase.from('order_line_items').select('*, skus(*)').eq('order_id', order.id),
+        ])
+        if (!invoice || !lineItems || lineItems.length === 0) continue
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const calc = calculateInvoice(org.state, order.buyer_state, lineItems as any)
+        items.push({ order, invoiceNumber: invoice.invoice_number, calc })
+      }
+      if (items.length === 0) {
+        showError('Could not load invoice data for the selected orders.')
+        return
+      }
+      const blob = buildCombinedInvoicesPdf(org, items)
+      window.open(URL.createObjectURL(blob), '_blank')
+    } finally {
+      setPrintingInvoices(false)
+    }
+  }
+
+  async function bulkPrintLabels() {
+    if (!org || !orgId) return
+    const targets = orders.filter((o) => selectedIds.has(o.id))
+    if (targets.length === 0) return
+    setPrintingLabels(true)
+    try {
+      const items: ShippingLabelItem[] = []
+      for (const order of targets) {
+        const { data: lineItems } = await supabase.from('order_line_items').select('*, skus(*)').eq('order_id', order.id)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        items.push({ order, lineItems: (lineItems as any) ?? [] })
+      }
+      const blob = buildShippingLabelsPdf(org, items)
+      window.open(URL.createObjectURL(blob), '_blank')
+    } finally {
+      setPrintingLabels(false)
+    }
+  }
+
   const connectedChannels = channels.filter((c) => c.status === 'connected')
 
   return (
@@ -536,6 +589,20 @@ export default function Dashboard() {
               className="text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50"
             >
               {bulkInvoicing ? `Generating ${bulkInvoiceProgress.done}/${bulkInvoiceProgress.total}…` : 'Generate invoices'}
+            </button>
+            <button
+              onClick={bulkPrintInvoices}
+              disabled={printingInvoices}
+              className="text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50"
+            >
+              {printingInvoices ? 'Building PDF…' : '🖨 Print invoices'}
+            </button>
+            <button
+              onClick={bulkPrintLabels}
+              disabled={printingLabels}
+              className="text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50"
+            >
+              {printingLabels ? 'Building PDF…' : '🖨 Print shipping labels'}
             </button>
             <button onClick={() => setSelectedIds(new Set())} className="text-xs text-slate-400 hover:text-slate-600">
               Clear

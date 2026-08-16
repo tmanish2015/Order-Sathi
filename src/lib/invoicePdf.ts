@@ -8,9 +8,7 @@ import type { InvoiceCalc } from './gstInvoice'
 type Organization = Tables<'organizations'>
 type Order = Tables<'orders'>
 
-export function buildInvoicePdf(org: Organization, order: Order, invoiceNumber: string, calc: InvoiceCalc): Blob {
-  const doc = new jsPDF()
-
+function renderInvoicePage(doc: jsPDF, org: Organization, order: Order, invoiceNumber: string, calc: InvoiceCalc) {
   doc.setFontSize(16)
   doc.text('Tax Invoice', 14, 18)
 
@@ -57,6 +55,25 @@ export function buildInvoicePdf(org: Organization, order: Order, invoiceNumber: 
   }
   doc.setFontSize(11)
   doc.text(`Total: ${formatINR(calc.totalAmount)}`, 140, finalY + 18)
+}
 
+export function buildInvoicePdf(org: Organization, order: Order, invoiceNumber: string, calc: InvoiceCalc): Blob {
+  const doc = new jsPDF()
+  renderInvoicePage(doc, org, order, invoiceNumber, calc)
+  return doc.output('blob')
+}
+
+export interface InvoicePrintItem {
+  order: Order
+  invoiceNumber: string
+  calc: InvoiceCalc
+}
+
+export function buildCombinedInvoicesPdf(org: Organization, items: InvoicePrintItem[]): Blob {
+  const doc = new jsPDF()
+  items.forEach((item, i) => {
+    if (i > 0) doc.addPage()
+    renderInvoicePage(doc, org, item.order, item.invoiceNumber, item.calc)
+  })
   return doc.output('blob')
 }
