@@ -3,11 +3,14 @@ import { NavLink, Outlet, Navigate } from 'react-router-dom'
 import { useAuth } from '../lib/AuthContext'
 
 const NAV = [
-  { to: '/', label: 'Orders', icon: '📦', roles: ['admin', 'ops', 'finance'] },
+  { to: '/', label: 'Dashboard', icon: '📊', roles: ['admin', 'ops', 'finance'] },
+  { to: '/orders', label: 'Orders', icon: '📦', roles: ['admin', 'ops', 'finance'] },
   { to: '/inventory', label: 'Inventory', icon: '📋', roles: ['admin', 'ops', 'finance'] },
   { to: '/warehouses', label: 'Warehouses', icon: '🏭', roles: ['admin', 'ops'] },
+  { to: '/grn', label: 'GRN / Inward', icon: '📦', roles: ['admin', 'ops'] },
   { to: '/putaway', label: 'Put-away', icon: '📥', roles: ['admin', 'ops'] },
   { to: '/picklist', label: 'Picklists', icon: '🧾', roles: ['admin', 'ops'] },
+  { to: '/packing', label: 'Packing', icon: '📦', roles: ['admin', 'ops'] },
   { to: '/shipping', label: 'Shipping', icon: '🚚', roles: ['admin', 'ops'] },
   { to: '/invoices', label: 'GST Invoices', icon: '🧾', roles: ['admin', 'finance'] },
   { to: '/reconciliation', label: 'Reconciliation', icon: '🔄', roles: ['admin', 'finance'] },

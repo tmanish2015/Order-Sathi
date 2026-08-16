@@ -4,9 +4,12 @@ import { ToastProvider } from './lib/Toast'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
+import Orders from './pages/Orders'
 import Inventory from './pages/Inventory'
 import Warehouses from './pages/Warehouses'
+import Grn from './pages/Grn'
 import Picklist from './pages/Picklist'
+import Packing from './pages/Packing'
 import Shipping from './pages/Shipping'
 import Putaway from './pages/Putaway'
 import Invoices from './pages/Invoices'
@@ -26,9 +29,12 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/orders" element={<Orders />} />
             <Route path="/inventory" element={<Inventory />} />
             <Route path="/warehouses" element={<Warehouses />} />
+            <Route path="/grn" element={<Grn />} />
             <Route path="/picklist" element={<Picklist />} />
+            <Route path="/packing" element={<Packing />} />
             <Route path="/shipping" element={<Shipping />} />
             <Route path="/putaway" element={<Putaway />} />
             <Route path="/invoices" element={<Invoices />} />

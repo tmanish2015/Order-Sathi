@@ -226,13 +226,10 @@ function formatShippingAddress(addr: any): string | null {
   return lines.length > 0 ? lines.join('\n') : null
 }
 
-function mapOrderStatus(amazonStatus: string): 'pending' | 'shipped' | 'delivered' | 'cancelled' | 'returned' {
-  switch (amazonStatus) {
-    case 'Shipped':
-      return 'shipped'
-    case 'Cancelled':
-      return 'cancelled'
-    default:
-      return 'pending'
-  }
+// A synced order always lands as 'new' regardless of Amazon's own status,
+// even if Amazon already shows it Shipped/Cancelled by the time we first
+// see it — this app's workflow (allocate/pick/pack/ship) hasn't run for it
+// yet, so it can't skip straight to a downstream state.
+function mapOrderStatus(_amazonStatus: string): 'new' {
+  return 'new'
 }

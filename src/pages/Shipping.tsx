@@ -74,6 +74,11 @@ export default function Shipping() {
       setFinding(false)
       return
     }
+    if (order.order_status !== 'ready_to_ship') {
+      showError(`Order ${order.amazon_order_id} is "${order.order_status}", not Ready to Ship — pack it first, then mark Ready to Ship on the Orders page.`)
+      setFinding(false)
+      return
+    }
     setFoundOrder(order)
     setFinding(false)
   }
@@ -163,7 +168,9 @@ export default function Shipping() {
       return
     }
     if (status === 'rto' && s.orders) {
-      await supabase.from('orders').update({ order_status: 'returned' }).eq('id', s.order_id)
+      await supabase.from('orders').update({ order_status: 'rto' }).eq('id', s.order_id)
+    } else if (status === 'delivered' && s.orders) {
+      await supabase.from('orders').update({ order_status: 'delivered' }).eq('id', s.order_id)
     }
     load()
   }

@@ -1,836 +1,346 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { format } from 'date-fns'
+import { format, subDays, startOfDay } from 'date-fns'
+import { Bar, BarChart, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, Legend } from 'recharts'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/AuthContext'
-import { useToast } from '../lib/Toast'
-import { reportError } from '../lib/errors'
 import { formatINR } from '../lib/format'
-import { calculateInvoice } from '../lib/gstInvoice'
-import { buildInvoicePdf, buildCombinedInvoicesPdf, type InvoicePrintItem } from '../lib/invoicePdf'
-import { buildShippingLabelsPdf, type ShippingLabelItem } from '../lib/labelPdf'
-import ConfirmDialog from '../components/ConfirmDialog'
 import Skeleton from '../components/Skeleton'
-import EmptyState from '../components/EmptyState'
-import Pagination from '../components/Pagination'
-import type { Tables, Enums } from '../lib/database.types'
+import type { Enums } from '../lib/database.types'
 
-type Order = Tables<'orders'> & { channels: Tables<'channels'> | null }
-type Channel = Tables<'channels'>
-type Organization = Tables<'organizations'>
-type Sku = Tables<'skus'>
-type Warehouse = Tables<'warehouses'>
+const TERMINAL_STATUSES: Enums<'order_status'>[] = ['delivered', 'cancelled', 'returned', 'rto']
+const TREND_DAYS = 14
 
-interface LineItemDraft {
-  sku_id: string
-  quantity: string
-  unit_price: string
+const STATUS_LABEL: Record<Enums<'order_status'>, string> = {
+  new: 'New',
+  confirmed: 'Confirmed',
+  inventory_allocated: 'Allocated',
+  partially_allocated: 'Partial Alloc.',
+  stock_shortage: 'Shortage',
+  ready_to_pick: 'Ready to Pick',
+  picked: 'Picked',
+  packed: 'Packed',
+  ready_to_ship: 'Ready to Ship',
+  shipped: 'Shipped',
+  delivered: 'Delivered',
+  cancelled: 'Cancelled',
+  returned: 'Returned',
+  rto: 'RTO',
 }
 
-const BLANK_LINE_ITEM: LineItemDraft = { sku_id: '', quantity: '1', unit_price: '' }
-const PAGE_SIZE = 20
-const STATUSES: Enums<'order_status'>[] = ['pending', 'shipped', 'delivered', 'cancelled', 'returned']
-
-const STATUS_COLOR: Record<Order['order_status'], string> = {
-  pending: 'bg-amber-100 text-amber-700',
-  shipped: 'bg-blue-100 text-blue-700',
-  delivered: 'bg-emerald-100 text-emerald-700',
-  cancelled: 'bg-slate-100 text-slate-500',
-  returned: 'bg-red-100 text-red-700',
+interface OrderKpis {
+  total: number
+  new: number
+  processing: number
+  readyToPick: number
+  picked: number
+  packed: number
+  readyToShip: number
+  shipped: number
+  delivered: number
+  cancelled: number
 }
 
-const PRIORITY_COLOR: Record<Enums<'order_priority'>, string> = {
-  normal: 'bg-slate-100 text-slate-600',
-  high: 'bg-amber-100 text-amber-700',
-  urgent: 'bg-red-100 text-red-700',
+interface OpsKpis {
+  pendingPick: number
+  pendingPack: number
+  pendingDispatch: number
+  slaBreaches: number
+  rto: number
+  customerReturns: number
 }
 
-const OPEN_STATUSES: Order['order_status'][] = ['pending', 'shipped']
+interface InventoryKpis {
+  totalSkus: number
+  availableStock: number
+  allocatedStock: number
+  lowStock: number
+  outOfStock: number
+}
 
-function slaState(o: Order): 'overdue' | 'due_soon' | 'ok' | null {
-  if (!o.sla_due_at || !OPEN_STATUSES.includes(o.order_status)) return null
-  const due = new Date(o.sla_due_at).getTime()
-  const now = Date.now()
-  if (due < now) return 'overdue'
-  if (due - now < 24 * 60 * 60 * 1000) return 'due_soon'
-  return 'ok'
+interface FinancialKpis {
+  todaySales: number
+  pendingReconciliation: number
+  pendingSettlement: number
 }
 
 export default function Dashboard() {
   const { profile } = useAuth()
-  const { showError, showSuccess } = useToast()
-  const [orders, setOrders] = useState<Order[]>([])
-  const [totalOrders, setTotalOrders] = useState(0)
-  const [page, setPage] = useState(0)
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<Enums<'order_status'> | ''>('')
-  const [stats, setStats] = useState({ gross: 0, pending: 0, shipped: 0, overdue: 0 })
-  const [updatingPriorityId, setUpdatingPriorityId] = useState<string | null>(null)
-  const [channels, setChannels] = useState<Channel[]>([])
-  const [org, setOrg] = useState<Organization | null>(null)
-  const [invoicedOrderIds, setInvoicedOrderIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
-  const [generatingId, setGeneratingId] = useState<string | null>(null)
-  const [confirmInvoiceFor, setConfirmInvoiceFor] = useState<Order | null>(null)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [bulkShipping, setBulkShipping] = useState(false)
-  const [confirmBulkShip, setConfirmBulkShip] = useState(false)
-  const [bulkInvoicing, setBulkInvoicing] = useState(false)
-  const [bulkInvoiceProgress, setBulkInvoiceProgress] = useState({ done: 0, total: 0 })
-  const [printingInvoices, setPrintingInvoices] = useState(false)
-  const [printingLabels, setPrintingLabels] = useState(false)
-  const [skus, setSkus] = useState<Sku[]>([])
-  const [warehousesList, setWarehousesList] = useState<Warehouse[]>([])
-  const [defaultWarehouseId, setDefaultWarehouseId] = useState<string | null>(null)
-  const [showNewOrder, setShowNewOrder] = useState(false)
-  const [creatingChannel, setCreatingChannel] = useState(false)
-  const [savingOrder, setSavingOrder] = useState(false)
-  const [orderForm, setOrderForm] = useState({
-    amazon_order_id: '',
-    order_date: format(new Date(), 'yyyy-MM-dd'),
-    buyer_state: '',
-    ship_state: '',
-    ship_address: '',
-    channel_id: '',
-    priority: 'normal' as Enums<'order_priority'>,
-    sla_due_at: '',
-  })
-  const [lineItems, setLineItems] = useState<LineItemDraft[]>([{ ...BLANK_LINE_ITEM }])
+  const [orderKpis, setOrderKpis] = useState<OrderKpis | null>(null)
+  const [opsKpis, setOpsKpis] = useState<OpsKpis | null>(null)
+  const [invKpis, setInvKpis] = useState<InventoryKpis | null>(null)
+  const [finKpis, setFinKpis] = useState<FinancialKpis | null>(null)
+  const [statusChart, setStatusChart] = useState<{ status: string; count: number }[]>([])
+  const [salesTrend, setSalesTrend] = useState<{ date: string; sales: number }[]>([])
+  const [channelChart, setChannelChart] = useState<{ channel: string; orders: number }[]>([])
+  const [warehouseChart, setWarehouseChart] = useState<{ warehouse: string; orders: number }[]>([])
+  const [returnsTrend, setReturnsTrend] = useState<{ date: string; returns: number; rto: number }[]>([])
   const orgId = profile?.organization_id
-  const canEdit = profile?.role === 'admin' || profile?.role === 'ops'
-
-  async function loadOrders() {
-    setLoading(true)
-    let query = supabase.from('orders').select('*, channels(*)', { count: 'exact' }).order('order_date', { ascending: false })
-    if (search.trim()) query = query.ilike('amazon_order_id', `%${search.trim()}%`)
-    if (statusFilter) query = query.eq('order_status', statusFilter)
-    const { data, count } = await query.range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1)
-    setOrders((data as unknown as Order[]) ?? [])
-    setTotalOrders(count ?? 0)
-    setLoading(false)
-  }
-
-  async function loadStats() {
-    const { data } = await supabase.from('orders').select('gross_amount, order_status, sla_due_at')
-    const rows = data ?? []
-    const now = Date.now()
-    setStats({
-      gross: rows.reduce((sum, r) => sum + Number(r.gross_amount), 0),
-      pending: rows.filter((r) => r.order_status === 'pending').length,
-      shipped: rows.filter((r) => r.order_status === 'shipped').length,
-      overdue: rows.filter((r) => r.sla_due_at && OPEN_STATUSES.includes(r.order_status) && new Date(r.sla_due_at).getTime() < now).length,
-    })
-  }
-
-  async function loadSupportingData() {
-    if (!orgId) return
-    const [{ data: c }, { data: orgRow }, { data: inv }, { data: s }, { data: w }] = await Promise.all([
-      supabase.from('channels').select('*'),
-      supabase.from('organizations').select('*').eq('id', orgId).single(),
-      supabase.from('gst_invoices').select('order_id'),
-      supabase.from('skus').select('*').eq('active', true).order('sku'),
-      supabase.from('warehouses').select('*').order('allocation_priority'),
-    ])
-    setChannels(c ?? [])
-    setOrg(orgRow ?? null)
-    setInvoicedOrderIds(new Set((inv ?? []).map((i) => i.order_id)))
-    setSkus(s ?? [])
-    setWarehousesList(w ?? [])
-    setDefaultWarehouseId((w ?? []).find((x) => x.is_default)?.id ?? null)
-    if (c && c.length > 0 && !orderForm.channel_id) setOrderForm((f) => ({ ...f, channel_id: c[0].id }))
-  }
 
   useEffect(() => {
     if (!orgId) return
-    loadSupportingData()
-    loadStats()
+    load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId])
 
-  useEffect(() => {
-    if (!orgId) return
-    loadOrders()
-    setSelectedIds(new Set())
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orgId, page, search, statusFilter])
+  async function load() {
+    setLoading(true)
+    const [
+      { data: orders },
+      { data: lineItems },
+      { data: skus },
+      { data: ledger },
+      { data: reconEntries },
+      { data: returns },
+      { data: statusHistory },
+      { data: channels },
+      { data: warehouses },
+    ] = await Promise.all([
+      supabase.from('orders').select('id, order_status, gross_amount, order_date, sla_due_at, channel_id'),
+      supabase.from('order_line_items').select('order_id, sku_id, allocated_qty, warehouse_id'),
+      supabase.from('skus').select('id, buffer_stock, active').eq('active', true),
+      supabase.from('inventory_ledger').select('sku_id, quantity_delta'),
+      supabase.from('reconciliation_entries').select('status, expected_settlement, actual_settlement'),
+      supabase.from('order_returns').select('created_at, return_type'),
+      supabase.from('order_status_history').select('new_status, changed_at'),
+      supabase.from('channels').select('id, display_name'),
+      supabase.from('warehouses').select('id, name'),
+    ])
 
-  useEffect(() => {
-    setPage(0)
-  }, [search, statusFilter])
+    const ordersData = orders ?? []
+    const now = Date.now()
+    const today = startOfDay(new Date())
 
-  async function createTestChannel() {
-    if (!orgId) return
-    setCreatingChannel(true)
-    const { error } = await supabase.from('channels').insert({
-      organization_id: orgId,
-      marketplace_id: 'A21TJRUUN4KGV',
-      seller_id: 'MANUAL-TEST',
-      display_name: 'Manual Test Channel',
-      status: 'manual',
-      connected_by: profile!.id,
-      connected_at: new Date().toISOString(),
+    // ── Order KPIs ──────────────────────────────────────────────────────
+    const count = (statuses: Enums<'order_status'>[]) => ordersData.filter((o) => statuses.includes(o.order_status)).length
+    setOrderKpis({
+      total: ordersData.length,
+      new: count(['new']),
+      processing: count(['confirmed', 'inventory_allocated', 'partially_allocated', 'stock_shortage']),
+      readyToPick: count(['ready_to_pick']),
+      picked: count(['picked']),
+      packed: count(['packed']),
+      readyToShip: count(['ready_to_ship']),
+      shipped: count(['shipped']),
+      delivered: count(['delivered']),
+      cancelled: count(['cancelled']),
     })
-    setCreatingChannel(false)
-    if (error) {
-      reportError(showError, 'Create test channel', error, orgId, profile?.id)
-      return
-    }
-    showSuccess('Test channel created — manual orders can now be entered against it.')
-    loadSupportingData()
-  }
 
-  function updateLineItem(index: number, patch: Partial<LineItemDraft>) {
-    setLineItems((items) => items.map((it, i) => (i === index ? { ...it, ...patch } : it)))
-  }
-
-  // Picks the lowest-priority-number warehouse that actually has enough
-  // stock for this SKU; falls back to the default warehouse if none do
-  // (never blocks order creation over an allocation preference).
-  async function pickWarehouseForDeduction(skuId: string, qty: number): Promise<string> {
-    for (const w of warehousesList) {
-      const { data: rows } = await supabase.from('inventory_ledger').select('quantity_delta').eq('sku_id', skuId).eq('warehouse_id', w.id)
-      const stock = (rows ?? []).reduce((sum, r) => sum + r.quantity_delta, 0)
-      if (stock >= qty) return w.id
-    }
-    return defaultWarehouseId!
-  }
-
-  async function submitOrder() {
-    if (!orgId) return
-    if (!orderForm.amazon_order_id.trim() || !orderForm.channel_id) {
-      showError('Order ID and channel are required.')
-      return
-    }
-    const validLines = lineItems.filter((li) => li.sku_id && Number(li.quantity) > 0 && li.unit_price !== '')
-    if (validLines.length === 0) {
-      showError('Add at least one line item with a SKU, quantity, and price.')
-      return
-    }
-    if (!defaultWarehouseId) {
-      showError('No default warehouse set — add one under Warehouses first.')
-      return
-    }
-
-    setSavingOrder(true)
-    try {
-      const grossAmount = validLines.reduce((sum, li) => sum + Number(li.quantity) * Number(li.unit_price), 0)
-
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          organization_id: orgId,
-          channel_id: orderForm.channel_id,
-          amazon_order_id: orderForm.amazon_order_id.trim(),
-          order_date: new Date(orderForm.order_date).toISOString(),
-          buyer_state: orderForm.buyer_state || null,
-          ship_state: orderForm.ship_state || orderForm.buyer_state || null,
-          ship_address: orderForm.ship_address || null,
-          priority: orderForm.priority,
-          sla_due_at: orderForm.sla_due_at ? new Date(orderForm.sla_due_at).toISOString() : null,
-          gross_amount: grossAmount,
-        })
-        .select()
-        .single()
-      if (orderError || !order) throw orderError ?? new Error('Could not create order')
-
-      const { error: liError } = await supabase.from('order_line_items').insert(
-        validLines.map((li) => ({
-          organization_id: orgId,
-          order_id: order.id,
-          sku_id: li.sku_id,
-          quantity: Number(li.quantity),
-          unit_price: Number(li.unit_price),
-        }))
-      )
-      if (liError) throw liError
-
-      // Bundle SKUs don't hold their own stock - selling one deducts each
-      // component's stock instead (one level deep only).
-      const bundleSkuIds = validLines.map((li) => li.sku_id).filter((id) => skus.find((s) => s.id === id)?.is_bundle)
-      const { data: bundleComponents } = bundleSkuIds.length > 0
-        ? await supabase.from('bundle_components').select('*').in('bundle_sku_id', bundleSkuIds)
-        : { data: [] }
-
-      const deductions: { sku_id: string; quantity: number }[] = []
-      for (const li of validLines) {
-        const components = (bundleComponents ?? []).filter((c) => c.bundle_sku_id === li.sku_id)
-        if (components.length > 0) {
-          for (const c of components) deductions.push({ sku_id: c.component_sku_id, quantity: c.quantity * Number(li.quantity) })
-        } else {
-          deductions.push({ sku_id: li.sku_id, quantity: Number(li.quantity) })
-        }
-      }
-
-      const ledgerRows = await Promise.all(
-        deductions.map(async (d) => ({
-          organization_id: orgId,
-          sku_id: d.sku_id,
-          warehouse_id: await pickWarehouseForDeduction(d.sku_id, d.quantity),
-          movement_type: 'order_deduction' as const,
-          quantity_delta: -d.quantity,
-          order_id: order.id,
-          note: `Manual order ${orderForm.amazon_order_id.trim()}`,
-        }))
-      )
-      const { error: ledgerError } = await supabase.from('inventory_ledger').insert(ledgerRows)
-      if (ledgerError) throw ledgerError
-
-      showSuccess(`Order ${orderForm.amazon_order_id} created.`)
-      setOrderForm((f) => ({ ...f, amazon_order_id: '', buyer_state: '', ship_state: '', ship_address: '', priority: 'normal', sla_due_at: '' }))
-      setLineItems([{ ...BLANK_LINE_ITEM }])
-      setShowNewOrder(false)
-      loadOrders()
-      loadStats()
-    } catch (err) {
-      reportError(showError, 'Create manual order', err as { message: string }, orgId, profile?.id)
-    } finally {
-      setSavingOrder(false)
-    }
-  }
-
-  // Throws on failure - shared by the single-order button and the bulk
-  // action, which need different error handling (one toast vs. a summary).
-  async function generateInvoiceCore(order: Order) {
-    if (!org || !orgId) throw new Error('Organization not loaded')
-
-    const { data: lineItems, error: liError } = await supabase
-      .from('order_line_items')
-      .select('*, skus(*)')
-      .eq('order_id', order.id)
-    if (liError) throw liError
-    if (!lineItems || lineItems.length === 0) throw new Error('No line items on this order — cannot generate an invoice.')
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const calc = calculateInvoice(org.state, order.buyer_state, lineItems as any)
-
-    const { data: invoiceNumber, error: numError } = await supabase.rpc('next_invoice_number')
-    if (numError || !invoiceNumber) throw numError ?? new Error('Could not allocate invoice number')
-
-    const pdfBlob = buildInvoicePdf(org, order, invoiceNumber, calc)
-    const path = `${orgId}/${invoiceNumber}.pdf`
-    const { error: uploadError } = await supabase.storage.from('invoices').upload(path, pdfBlob, { contentType: 'application/pdf' })
-    if (uploadError) throw uploadError
-
-    const { error: insertError } = await supabase.from('gst_invoices').insert({
-      organization_id: orgId,
-      order_id: order.id,
-      invoice_number: invoiceNumber,
-      invoice_type: calc.invoiceType,
-      taxable_value: calc.taxableValue,
-      cgst_amount: calc.cgstAmount,
-      sgst_amount: calc.sgstAmount,
-      igst_amount: calc.igstAmount,
-      total_amount: calc.totalAmount,
-      pdf_url: path,
+    // ── Operational KPIs ────────────────────────────────────────────────
+    const openStatuses = (Object.keys(STATUS_LABEL) as Enums<'order_status'>[]).filter((s) => !TERMINAL_STATUSES.includes(s))
+    const slaBreaches = ordersData.filter((o) => o.sla_due_at && openStatuses.includes(o.order_status) && new Date(o.sla_due_at).getTime() < now).length
+    setOpsKpis({
+      pendingPick: count(['ready_to_pick']),
+      pendingPack: count(['picked']),
+      pendingDispatch: count(['ready_to_ship']),
+      slaBreaches,
+      rto: count(['rto']),
+      customerReturns: (returns ?? []).filter((r) => r.return_type === 'customer_return').length,
     })
-    if (insertError) throw insertError
 
-    setInvoicedOrderIds((s) => new Set(s).add(order.id))
-    return invoiceNumber
-  }
-
-  async function generateInvoice(order: Order) {
-    setGeneratingId(order.id)
-    try {
-      const invoiceNumber = await generateInvoiceCore(order)
-      showSuccess(`Invoice ${invoiceNumber} generated.`)
-    } catch (err) {
-      reportError(showError, 'Generate invoice', err as { message: string }, orgId, profile?.id)
-    } finally {
-      setGeneratingId(null)
-      setConfirmInvoiceFor(null)
+    // ── Inventory KPIs ──────────────────────────────────────────────────
+    const stockBySku: Record<string, number> = {}
+    for (const row of ledger ?? []) stockBySku[row.sku_id] = (stockBySku[row.sku_id] ?? 0) + row.quantity_delta
+    const allocatedBySku: Record<string, number> = {}
+    const openOrderIds = new Set(ordersData.filter((o) => !TERMINAL_STATUSES.includes(o.order_status)).map((o) => o.id))
+    let totalAllocated = 0
+    for (const li of lineItems ?? []) {
+      if (!openOrderIds.has(li.order_id)) continue
+      allocatedBySku[li.sku_id] = (allocatedBySku[li.sku_id] ?? 0) + li.allocated_qty
+      totalAllocated += li.allocated_qty
     }
-  }
-
-  async function updatePriority(order: Order, priority: Enums<'order_priority'>) {
-    setUpdatingPriorityId(order.id)
-    const { error } = await supabase.from('orders').update({ priority }).eq('id', order.id)
-    setUpdatingPriorityId(null)
-    if (error) {
-      reportError(showError, 'Update priority', error, orgId, profile?.id)
-      return
-    }
-    loadOrders()
-  }
-
-  function toggleSelected(id: string) {
-    setSelectedIds((s) => {
-      const next = new Set(s)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
+    const totalPhysical = Object.values(stockBySku).reduce((s, v) => s + v, 0)
+    const lowStock = (skus ?? []).filter((s) => (stockBySku[s.id] ?? 0) <= s.buffer_stock && (stockBySku[s.id] ?? 0) > 0).length
+    const outOfStock = (skus ?? []).filter((s) => (stockBySku[s.id] ?? 0) <= 0).length
+    setInvKpis({
+      totalSkus: (skus ?? []).length,
+      availableStock: Math.max(totalPhysical - totalAllocated, 0),
+      allocatedStock: totalAllocated,
+      lowStock,
+      outOfStock,
     })
+
+    // ── Financial KPIs ──────────────────────────────────────────────────
+    const todaySales = ordersData.filter((o) => new Date(o.order_date) >= today).reduce((s, o) => s + Number(o.gross_amount), 0)
+    const pendingReconciliation = (reconEntries ?? []).filter((r) => r.status === 'pending_review').length
+    const pendingSettlement = (reconEntries ?? []).filter((r) => r.actual_settlement == null).reduce((s, r) => s + Number(r.expected_settlement), 0)
+    setFinKpis({ todaySales, pendingReconciliation, pendingSettlement })
+
+    // ── Charts ──────────────────────────────────────────────────────────
+    const statusCounts: Record<string, number> = {}
+    for (const o of ordersData) statusCounts[o.order_status] = (statusCounts[o.order_status] ?? 0) + 1
+    setStatusChart(Object.entries(statusCounts).map(([status, c]) => ({ status: STATUS_LABEL[status as Enums<'order_status'>] ?? status, count: c })))
+
+    const days = Array.from({ length: TREND_DAYS }).map((_, i) => startOfDay(subDays(new Date(), TREND_DAYS - 1 - i)))
+    setSalesTrend(
+      days.map((d) => ({
+        date: format(d, 'dd MMM'),
+        sales: ordersData.filter((o) => startOfDay(new Date(o.order_date)).getTime() === d.getTime()).reduce((s, o) => s + Number(o.gross_amount), 0),
+      }))
+    )
+
+    const channelCounts: Record<string, number> = {}
+    for (const o of ordersData) channelCounts[o.channel_id] = (channelCounts[o.channel_id] ?? 0) + 1
+    setChannelChart((channels ?? []).map((c) => ({ channel: c.display_name, orders: channelCounts[c.id] ?? 0 })))
+
+    const orderWarehouses: Record<string, Set<string>> = {}
+    for (const li of lineItems ?? []) {
+      if (!li.warehouse_id) continue
+      orderWarehouses[li.warehouse_id] = orderWarehouses[li.warehouse_id] ?? new Set()
+      orderWarehouses[li.warehouse_id].add(li.order_id)
+    }
+    setWarehouseChart((warehouses ?? []).map((w) => ({ warehouse: w.name, orders: orderWarehouses[w.id]?.size ?? 0 })))
+
+    setReturnsTrend(
+      days.map((d) => ({
+        date: format(d, 'dd MMM'),
+        returns: (returns ?? []).filter((r) => startOfDay(new Date(r.created_at)).getTime() === d.getTime() && r.return_type === 'customer_return').length,
+        rto: (statusHistory ?? []).filter((h) => h.new_status === 'rto' && startOfDay(new Date(h.changed_at)).getTime() === d.getTime()).length,
+      }))
+    )
+
+    setLoading(false)
   }
 
-  function toggleSelectAll() {
-    setSelectedIds((s) => (s.size === orders.length ? new Set() : new Set(orders.map((o) => o.id))))
+  if (loading || !orderKpis || !opsKpis || !invKpis || !finKpis) {
+    return (
+      <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+        <h2 className="text-xl font-semibold text-slate-900 mb-6">Dashboard</h2>
+        <Skeleton rows={6} />
+      </div>
+    )
   }
-
-  async function bulkMarkShipped() {
-    if (!orgId || selectedIds.size === 0) return
-    setBulkShipping(true)
-    const { error } = await supabase.from('orders').update({ order_status: 'shipped' }).in('id', Array.from(selectedIds))
-    setBulkShipping(false)
-    setConfirmBulkShip(false)
-    if (error) {
-      reportError(showError, 'Bulk mark shipped', error, orgId, profile?.id)
-      return
-    }
-    showSuccess(`${selectedIds.size} order(s) marked shipped.`)
-    setSelectedIds(new Set())
-    loadOrders()
-    loadStats()
-  }
-
-  async function bulkGenerateInvoices() {
-    const targets = orders.filter((o) => selectedIds.has(o.id) && !invoicedOrderIds.has(o.id))
-    if (targets.length === 0) {
-      showError('All selected orders already have invoices.')
-      return
-    }
-    setBulkInvoicing(true)
-    setBulkInvoiceProgress({ done: 0, total: targets.length })
-    let failed = 0
-    for (const order of targets) {
-      try {
-        await generateInvoiceCore(order)
-      } catch (err) {
-        failed++
-        await supabase.from('sync_logs').insert({
-          organization_id: orgId!,
-          operation: 'Bulk generate invoice',
-          status: 'failed',
-          fault: 'order_sathi',
-          message: `Order ${order.amazon_order_id}: ${(err as { message?: string })?.message ?? String(err)}`,
-        })
-      }
-      setBulkInvoiceProgress((p) => ({ ...p, done: p.done + 1 }))
-    }
-    setBulkInvoicing(false)
-    setSelectedIds(new Set())
-    showSuccess(`Generated ${targets.length - failed} of ${targets.length} invoice(s).${failed > 0 ? ` ${failed} failed — check Sync Logs.` : ''}`)
-  }
-
-  async function bulkPrintInvoices() {
-    if (!org || !orgId) return
-    const targets = orders.filter((o) => selectedIds.has(o.id) && invoicedOrderIds.has(o.id))
-    if (targets.length === 0) {
-      showError('None of the selected orders have an invoice yet — generate one first.')
-      return
-    }
-    setPrintingInvoices(true)
-    try {
-      const items: InvoicePrintItem[] = []
-      for (const order of targets) {
-        const [{ data: invoice }, { data: lineItems }] = await Promise.all([
-          supabase.from('gst_invoices').select('invoice_number').eq('order_id', order.id).single(),
-          supabase.from('order_line_items').select('*, skus(*)').eq('order_id', order.id),
-        ])
-        if (!invoice || !lineItems || lineItems.length === 0) continue
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const calc = calculateInvoice(org.state, order.buyer_state, lineItems as any)
-        items.push({ order, invoiceNumber: invoice.invoice_number, calc })
-      }
-      if (items.length === 0) {
-        showError('Could not load invoice data for the selected orders.')
-        return
-      }
-      const blob = buildCombinedInvoicesPdf(org, items)
-      window.open(URL.createObjectURL(blob), '_blank')
-    } finally {
-      setPrintingInvoices(false)
-    }
-  }
-
-  async function bulkPrintLabels() {
-    if (!org || !orgId) return
-    const targets = orders.filter((o) => selectedIds.has(o.id))
-    if (targets.length === 0) return
-    setPrintingLabels(true)
-    try {
-      const items: ShippingLabelItem[] = []
-      for (const order of targets) {
-        const { data: lineItems } = await supabase.from('order_line_items').select('*, skus(*)').eq('order_id', order.id)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        items.push({ order, lineItems: (lineItems as any) ?? [] })
-      }
-      const blob = buildShippingLabelsPdf(org, items)
-      window.open(URL.createObjectURL(blob), '_blank')
-    } finally {
-      setPrintingLabels(false)
-    }
-  }
-
-  const connectedChannels = channels.filter((c) => c.status === 'connected')
 
   return (
-    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6">
-        <div>
-          <h2 className="text-xl font-semibold text-slate-900">Orders</h2>
-          <p className="text-xs text-slate-400 mt-0.5">{format(new Date(), 'EEEE, dd MMMM yyyy')}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link to="/integrations" className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700">
-            🔌 Connect Amazon
-          </Link>
-          {canEdit && channels.length > 0 && (
-            <button
-              onClick={() => setShowNewOrder((v) => !v)}
-              className="text-sm rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50"
-            >
-              {showNewOrder ? 'Cancel' : '+ New order'}
-            </button>
-          )}
-        </div>
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold text-slate-900">Dashboard</h2>
+        <p className="text-xs text-slate-400 mt-0.5">{format(new Date(), 'EEEE, dd MMMM yyyy')}</p>
       </div>
 
-      {channels.length === 0 && !loading && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-sm text-amber-800 flex items-center justify-between gap-3 flex-wrap">
-          <span>
-            No Amazon channel connected yet. Orders won't sync until SP-API credentials are added —{' '}
-            <Link to="/integrations" className="underline font-medium">connect one here</Link>.
-          </span>
-          {profile?.role === 'admin' && (
-            <button
-              onClick={createTestChannel}
-              disabled={creatingChannel}
-              className="text-xs font-medium rounded-lg border border-amber-300 bg-white px-3 py-1.5 hover:bg-amber-100 disabled:opacity-50 whitespace-nowrap"
-            >
-              {creatingChannel ? 'Creating…' : 'Create test channel for a dry run'}
-            </button>
-          )}
-        </div>
-      )}
+      <Section title="Order status">
+        <KpiGrid>
+          <Kpi label="Total Orders" value={orderKpis.total} />
+          <Kpi label="New" value={orderKpis.new} accent="slate" />
+          <Kpi label="Processing" value={orderKpis.processing} accent="sky" />
+          <Kpi label="Ready to Pick" value={orderKpis.readyToPick} accent="purple" />
+          <Kpi label="Picked" value={orderKpis.picked} accent="purple" />
+          <Kpi label="Packed" value={orderKpis.packed} accent="blue" />
+          <Kpi label="Ready to Ship" value={orderKpis.readyToShip} accent="blue" />
+          <Kpi label="Shipped" value={orderKpis.shipped} accent="cyan" />
+          <Kpi label="Delivered" value={orderKpis.delivered} accent="emerald" />
+          <Kpi label="Cancelled" value={orderKpis.cancelled} accent="slate" />
+        </KpiGrid>
+      </Section>
 
-      {showNewOrder && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6">
-          <div className="text-xs font-semibold uppercase text-slate-500 mb-3">New manual order</div>
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-3">
-            <Field label="Order ID" value={orderForm.amazon_order_id} onChange={(v) => setOrderForm((f) => ({ ...f, amazon_order_id: v }))} placeholder="TEST-001" />
-            <label className="block">
-              <span className="text-xs text-slate-500">Order date</span>
-              <input
-                type="date"
-                value={orderForm.order_date}
-                onChange={(e) => setOrderForm((f) => ({ ...f, order_date: e.target.value }))}
-                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
-              />
-            </label>
-            <Field label="Buyer state" value={orderForm.buyer_state} onChange={(v) => setOrderForm((f) => ({ ...f, buyer_state: v }))} placeholder="e.g. Rajasthan" />
-            {channels.length > 1 ? (
-              <label className="block">
-                <span className="text-xs text-slate-500">Channel</span>
-                <select
-                  value={orderForm.channel_id}
-                  onChange={(e) => setOrderForm((f) => ({ ...f, channel_id: e.target.value }))}
-                  className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
-                >
-                  {channels.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.display_name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : (
-              <Field label="Ship state" value={orderForm.ship_state} onChange={(v) => setOrderForm((f) => ({ ...f, ship_state: v }))} placeholder="defaults to buyer state" />
-            )}
-            <label className="block sm:col-span-4">
-              <span className="text-xs text-slate-500">Shipping address</span>
-              <textarea
-                value={orderForm.ship_address}
-                onChange={(e) => setOrderForm((f) => ({ ...f, ship_address: e.target.value }))}
-                placeholder="Full address as it should appear on the invoice"
-                rows={2}
-                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
-              />
-            </label>
-            <label className="block">
-              <span className="text-xs text-slate-500">Priority</span>
-              <select
-                value={orderForm.priority}
-                onChange={(e) => setOrderForm((f) => ({ ...f, priority: e.target.value as Enums<'order_priority'> }))}
-                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
-              >
-                <option value="normal">Normal</option>
-                <option value="high">High</option>
-                <option value="urgent">Urgent</option>
-              </select>
-            </label>
-            <label className="block">
-              <span className="text-xs text-slate-500">SLA due (optional)</span>
-              <input
-                type="datetime-local"
-                value={orderForm.sla_due_at}
-                onChange={(e) => setOrderForm((f) => ({ ...f, sla_due_at: e.target.value }))}
-                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
-              />
-            </label>
-          </div>
+      <Section title="Operational">
+        <KpiGrid>
+          <Kpi label="Pending Pick" value={opsKpis.pendingPick} accent="amber" />
+          <Kpi label="Pending Pack" value={opsKpis.pendingPack} accent="amber" />
+          <Kpi label="Pending Dispatch" value={opsKpis.pendingDispatch} accent="amber" />
+          <Kpi label="SLA Breaches" value={opsKpis.slaBreaches} accent={opsKpis.slaBreaches > 0 ? 'red' : undefined} />
+          <Kpi label="NDR" value="—" hint="Not tracked yet — no courier NDR feed wired up" />
+          <Kpi label="RTO" value={opsKpis.rto} accent="red" />
+          <Kpi label="Customer Returns" value={opsKpis.customerReturns} accent="red" />
+        </KpiGrid>
+      </Section>
 
-          <div className="text-xs text-slate-500 mb-2">Line items</div>
-          {skus.length === 0 ? (
-            <p className="text-sm text-slate-400 mb-3">
-              No SKUs yet — <Link to="/inventory" className="underline font-medium">add one under Inventory</Link> first.
-            </p>
-          ) : (
-            <div className="space-y-2 mb-3">
-              {lineItems.map((li, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <select
-                    value={li.sku_id}
-                    onChange={(e) => updateLineItem(i, { sku_id: e.target.value })}
-                    className="flex-1 text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
-                  >
-                    <option value="">Select SKU…</option>
-                    {skus.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.sku} — {s.title}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="number"
-                    min="1"
-                    value={li.quantity}
-                    onChange={(e) => updateLineItem(i, { quantity: e.target.value })}
-                    placeholder="Qty"
-                    className="w-20 text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
-                  />
-                  <input
-                    type="number"
-                    value={li.unit_price}
-                    onChange={(e) => updateLineItem(i, { unit_price: e.target.value })}
-                    placeholder="Unit price"
-                    className="w-28 text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
-                  />
-                  <button
-                    onClick={() => setLineItems((items) => items.filter((_, idx) => idx !== i))}
-                    disabled={lineItems.length === 1}
-                    className="text-xs text-slate-400 hover:text-red-600 disabled:opacity-30"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-              <button onClick={() => setLineItems((items) => [...items, { ...BLANK_LINE_ITEM }])} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">
-                + Add line item
-              </button>
-            </div>
-          )}
+      <Section title="Inventory">
+        <KpiGrid>
+          <Kpi label="Total SKUs" value={invKpis.totalSkus} />
+          <Kpi label="Available Stock" value={invKpis.availableStock} accent="emerald" />
+          <Kpi label="Allocated Stock" value={invKpis.allocatedStock} accent="indigo" />
+          <Kpi label="Low Stock" value={invKpis.lowStock} accent={invKpis.lowStock > 0 ? 'amber' : undefined} />
+          <Kpi label="Out of Stock" value={invKpis.outOfStock} accent={invKpis.outOfStock > 0 ? 'red' : undefined} />
+        </KpiGrid>
+      </Section>
 
-          <button
-            onClick={submitOrder}
-            disabled={savingOrder || skus.length === 0}
-            className="text-sm rounded-lg bg-indigo-600 text-white px-3 py-1.5 hover:bg-indigo-700 disabled:opacity-50"
-          >
-            {savingOrder ? 'Creating…' : 'Create order'}
-          </button>
-        </div>
-      )}
+      <Section title="Financial / Settlement">
+        <KpiGrid>
+          <Kpi label="Today's Sales" value={formatINR(finKpis.todaySales)} accent="indigo" />
+          <Kpi label="Pending Reconciliation" value={finKpis.pendingReconciliation} accent="amber" />
+          <Kpi label="Pending Settlement" value={formatINR(finKpis.pendingSettlement)} accent="amber" />
+        </KpiGrid>
+      </Section>
 
-      {org && !org.state && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-sm text-amber-800">
-          Your organization's state isn't set — GST invoices can't tell CGST/SGST from IGST without it. Set it under{' '}
-          <Link to="/team" className="underline font-medium">Team → Organization</Link>.
-        </div>
-      )}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <ChartCard title="Orders by status">
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={statusChart}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis dataKey="status" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} angle={-30} textAnchor="end" height={60} />
+              <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <Tooltip />
+              <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
 
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-6">
-        <Stat label="Gross sales (all orders)" value={formatINR(stats.gross)} accent="indigo" />
-        <Stat label="Awaiting shipment" value={String(stats.pending)} accent="amber" />
-        <Stat label="Shipped" value={String(stats.shipped)} accent="purple" />
-        <Stat label="SLA overdue" value={String(stats.overdue)} accent={stats.overdue > 0 ? 'red' : undefined} />
-        <Stat label="Channels connected" value={String(connectedChannels.length)} />
+        <ChartCard title="Sales trend (last 14 days)">
+          <ResponsiveContainer width="100%" height={240}>
+            <LineChart data={salesTrend}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
+              <Tooltip formatter={(v) => formatINR(Number(v))} />
+              <Line type="monotone" dataKey="sales" stroke="#6366f1" strokeWidth={2} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard title="Channel-wise orders">
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={channelChart}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis dataKey="channel" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <Tooltip />
+              <Bar dataKey="orders" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard title="Warehouse-wise orders">
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={warehouseChart}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis dataKey="warehouse" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <Tooltip />
+              <Bar dataKey="orders" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard title="Returns / RTO trend (last 14 days)" full>
+          <ResponsiveContainer width="100%" height={240}>
+            <LineChart data={returnsTrend}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <Tooltip />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Line type="monotone" dataKey="returns" name="Customer returns" stroke="#f59e0b" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="rto" name="RTO" stroke="#ef4444" strokeWidth={2} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </ChartCard>
       </div>
-
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <span className="text-xs font-semibold uppercase text-slate-500">Orders</span>
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search order ID…"
-              className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 w-40"
-            />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as Enums<'order_status'> | '')}
-              className="text-sm rounded-lg border border-slate-300 px-2 py-1.5"
-            >
-              <option value="">All statuses</option>
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        {canEdit && selectedIds.size > 0 && (
-          <div className="px-4 py-2.5 border-b border-slate-100 bg-indigo-50 flex items-center gap-3 flex-wrap">
-            <span className="text-xs font-medium text-indigo-700">{selectedIds.size} selected</span>
-            <button
-              onClick={() => setConfirmBulkShip(true)}
-              disabled={bulkShipping}
-              className="text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50"
-            >
-              Mark as shipped
-            </button>
-            <button
-              onClick={bulkGenerateInvoices}
-              disabled={bulkInvoicing}
-              className="text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50"
-            >
-              {bulkInvoicing ? `Generating ${bulkInvoiceProgress.done}/${bulkInvoiceProgress.total}…` : 'Generate invoices'}
-            </button>
-            <button
-              onClick={bulkPrintInvoices}
-              disabled={printingInvoices}
-              className="text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50"
-            >
-              {printingInvoices ? 'Building PDF…' : '🖨 Print invoices'}
-            </button>
-            <button
-              onClick={bulkPrintLabels}
-              disabled={printingLabels}
-              className="text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50"
-            >
-              {printingLabels ? 'Building PDF…' : '🖨 Print shipping labels'}
-            </button>
-            <button onClick={() => setSelectedIds(new Set())} className="text-xs text-slate-400 hover:text-slate-600">
-              Clear
-            </button>
-          </div>
-        )}
-        {loading ? (
-          <Skeleton />
-        ) : orders.length === 0 ? (
-          <EmptyState icon="📦" title={search || statusFilter ? 'No orders match this filter.' : 'No orders yet.'} />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
-                  {canEdit && (
-                    <th className="px-4 py-2 font-medium w-8">
-                      <input type="checkbox" checked={selectedIds.size === orders.length && orders.length > 0} onChange={toggleSelectAll} />
-                    </th>
-                  )}
-                  <th className="px-4 py-2 font-medium">Order ID</th>
-                  <th className="px-4 py-2 font-medium">Channel</th>
-                  <th className="px-4 py-2 font-medium">Date</th>
-                  <th className="px-4 py-2 font-medium">Shipment status</th>
-                  <th className="px-4 py-2 font-medium">Priority</th>
-                  <th className="px-4 py-2 font-medium">SLA</th>
-                  <th className="px-4 py-2 font-medium text-right">Amount</th>
-                  <th className="px-4 py-2 font-medium text-right">GST invoice</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {orders.map((o) => {
-                  const invoiced = invoicedOrderIds.has(o.id)
-                  return (
-                    <tr key={o.id}>
-                      {canEdit && (
-                        <td className="px-4 py-2.5">
-                          <input type="checkbox" checked={selectedIds.has(o.id)} onChange={() => toggleSelected(o.id)} />
-                        </td>
-                      )}
-                      <td className="px-4 py-2.5 font-medium text-slate-700">{o.amazon_order_id}</td>
-                      <td className="px-4 py-2.5 text-slate-500">{o.channels?.display_name ?? '—'}</td>
-                      <td className="px-4 py-2.5 text-slate-500">{format(new Date(o.order_date), 'dd MMM yyyy')}</td>
-                      <td className="px-4 py-2.5">
-                        <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${STATUS_COLOR[o.order_status]}`}>
-                          {o.order_status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2.5">
-                        {canEdit ? (
-                          <select
-                            value={o.priority}
-                            onChange={(e) => updatePriority(o, e.target.value as Enums<'order_priority'>)}
-                            disabled={updatingPriorityId === o.id}
-                            className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded border-0 ${PRIORITY_COLOR[o.priority]}`}
-                          >
-                            <option value="normal">Normal</option>
-                            <option value="high">High</option>
-                            <option value="urgent">Urgent</option>
-                          </select>
-                        ) : (
-                          <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${PRIORITY_COLOR[o.priority]}`}>{o.priority}</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-2.5 text-xs">
-                        {o.sla_due_at ? (
-                          <span
-                            className={
-                              slaState(o) === 'overdue'
-                                ? 'text-red-600 font-medium'
-                                : slaState(o) === 'due_soon'
-                                  ? 'text-amber-600 font-medium'
-                                  : 'text-slate-400'
-                            }
-                          >
-                            {format(new Date(o.sla_due_at), 'dd MMM, HH:mm')}
-                            {slaState(o) === 'overdue' && ' (overdue)'}
-                          </span>
-                        ) : (
-                          <span className="text-slate-300">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-2.5 text-right text-slate-700">{formatINR(Number(o.gross_amount))}</td>
-                      <td className="px-4 py-2.5 text-right">
-                        {invoiced ? (
-                          <Link to="/invoices" className="text-xs text-emerald-600 font-medium hover:underline">
-                            Generated
-                          </Link>
-                        ) : (
-                          <button
-                            onClick={() => setConfirmInvoiceFor(o)}
-                            disabled={generatingId === o.id}
-                            className="text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50"
-                          >
-                            {generatingId === o.id ? 'Generating…' : 'Generate invoice'}
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-        {!loading && orders.length > 0 && <Pagination page={page} pageSize={PAGE_SIZE} total={totalOrders} onPageChange={setPage} />}
-      </div>
-
-      {confirmInvoiceFor && (
-        <ConfirmDialog
-          title="Generate GST invoice?"
-          message={`This permanently consumes the next invoice number for order ${confirmInvoiceFor.amazon_order_id}. Cannot be undone.`}
-          confirmLabel="Generate"
-          busy={generatingId === confirmInvoiceFor.id}
-          onConfirm={() => generateInvoice(confirmInvoiceFor)}
-          onCancel={() => setConfirmInvoiceFor(null)}
-        />
-      )}
-
-      {confirmBulkShip && (
-        <ConfirmDialog
-          title="Mark orders as shipped?"
-          message={`Set shipment status to "shipped" for ${selectedIds.size} order(s)?`}
-          confirmLabel="Mark shipped"
-          busy={bulkShipping}
-          onConfirm={bulkMarkShipped}
-          onCancel={() => setConfirmBulkShip(false)}
-        />
-      )}
     </div>
   )
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="mb-6">
+      <h3 className="text-xs font-semibold uppercase text-slate-500 mb-2">{title}</h3>
+      {children}
+    </div>
+  )
+}
+
+function KpiGrid({ children }: { children: React.ReactNode }) {
+  return <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">{children}</div>
 }
 
 const ACCENTS = {
@@ -838,29 +348,28 @@ const ACCENTS = {
   purple: 'from-purple-500 to-purple-600',
   amber: 'from-amber-500 to-amber-600',
   red: 'from-red-500 to-red-600',
+  emerald: 'from-emerald-500 to-emerald-600',
+  slate: 'from-slate-400 to-slate-500',
+  sky: 'from-sky-500 to-sky-600',
+  blue: 'from-blue-500 to-blue-600',
+  cyan: 'from-cyan-500 to-cyan-600',
 } as const
 
-function Stat({ label, value, accent }: { label: string; value: string; accent?: keyof typeof ACCENTS }) {
+function Kpi({ label, value, accent, hint }: { label: string; value: string | number; accent?: keyof typeof ACCENTS; hint?: string }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3.5 sm:p-4 relative overflow-hidden">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3 relative overflow-hidden" title={hint}>
       {accent && <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${ACCENTS[accent]}`} />}
-      <div className="text-xs text-slate-400">{label}</div>
-      <div className="text-lg sm:text-xl font-semibold mt-1 text-slate-900">{value}</div>
+      <div className="text-[11px] text-slate-400">{label}</div>
+      <div className="text-lg font-semibold mt-0.5 text-slate-900">{value}</div>
     </div>
   )
 }
 
-function Field({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+function ChartCard({ title, children, full }: { title: string; children: React.ReactNode; full?: boolean }) {
   return (
-    <label className="block">
-      <span className="text-xs text-slate-500">{label}</span>
-      <input
-        type="text"
-        value={value}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
-      />
-    </label>
+    <div className={`bg-white rounded-xl border border-slate-200 shadow-sm p-4 ${full ? 'lg:col-span-2' : ''}`}>
+      <div className="text-xs font-semibold uppercase text-slate-500 mb-3">{title}</div>
+      {children}
+    </div>
   )
 }

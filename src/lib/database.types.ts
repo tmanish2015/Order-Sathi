@@ -20,6 +20,7 @@ export type Database = {
           state: string | null
           address: string | null
           invoice_seq: number
+          grn_seq: number
           created_at: string
         }
         Insert: {
@@ -29,6 +30,7 @@ export type Database = {
           state?: string | null
           address?: string | null
           invoice_seq?: number
+          grn_seq?: number
           created_at?: string
         }
         Update: {
@@ -38,6 +40,7 @@ export type Database = {
           state?: string | null
           address?: string | null
           invoice_seq?: number
+          grn_seq?: number
           created_at?: string
         }
         Relationships: []
@@ -164,6 +167,8 @@ export type Database = {
           movement_type: Database["public"]["Enums"]["inventory_movement_type"]
           quantity_delta: number
           order_id: string | null
+          reference_type: string | null
+          reference_id: string | null
           note: string | null
           created_by: string | null
           created_at: string
@@ -177,6 +182,8 @@ export type Database = {
           movement_type: Database["public"]["Enums"]["inventory_movement_type"]
           quantity_delta: number
           order_id?: string | null
+          reference_type?: string | null
+          reference_id?: string | null
           note?: string | null
           created_by?: string | null
           created_at?: string
@@ -234,6 +241,7 @@ export type Database = {
           organization_id: string
           status: Database["public"]["Enums"]["picklist_status"]
           order_count: number
+          assigned_to: string | null
           created_by: string | null
           created_at: string
         }
@@ -242,6 +250,7 @@ export type Database = {
           organization_id: string
           status?: Database["public"]["Enums"]["picklist_status"]
           order_count?: number
+          assigned_to?: string | null
           created_by?: string | null
           created_at?: string
         }
@@ -255,7 +264,9 @@ export type Database = {
           picklist_id: string
           sku_id: string
           total_quantity: number
+          picked_qty: number
           picked: boolean
+          order_ids: string[]
           created_at: string
         }
         Insert: {
@@ -264,7 +275,9 @@ export type Database = {
           picklist_id: string
           sku_id: string
           total_quantity: number
+          picked_qty?: number
           picked?: boolean
+          order_ids?: string[]
           created_at?: string
         }
         Update: Partial<Database["public"]["Tables"]["picklist_items"]["Insert"]>
@@ -283,6 +296,8 @@ export type Database = {
           ship_address: string | null
           priority: Database["public"]["Enums"]["order_priority"]
           sla_due_at: string | null
+          customer_name: string | null
+          payment_type: string | null
           gross_amount: number
           raw_payload: Json | null
           created_at: string
@@ -299,6 +314,8 @@ export type Database = {
           ship_address?: string | null
           priority?: Database["public"]["Enums"]["order_priority"]
           sla_due_at?: string | null
+          customer_name?: string | null
+          payment_type?: string | null
           gross_amount: number
           raw_payload?: Json | null
           created_at?: string
@@ -314,6 +331,11 @@ export type Database = {
           sku_id: string
           quantity: number
           unit_price: number
+          allocated_qty: number
+          picked_qty: number
+          packed_qty: number
+          shipped_qty: number
+          warehouse_id: string | null
           created_at: string
         }
         Insert: {
@@ -323,9 +345,130 @@ export type Database = {
           sku_id: string
           quantity: number
           unit_price: number
+          allocated_qty?: number
+          picked_qty?: number
+          packed_qty?: number
+          shipped_qty?: number
+          warehouse_id?: string | null
           created_at?: string
         }
         Update: Partial<Database["public"]["Tables"]["order_line_items"]["Insert"]>
+        Relationships: []
+      }
+      order_status_history: {
+        Row: {
+          id: string
+          organization_id: string
+          order_id: string
+          previous_status: Database["public"]["Enums"]["order_status"] | null
+          new_status: Database["public"]["Enums"]["order_status"]
+          reason: string | null
+          changed_by: string | null
+          changed_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          order_id: string
+          previous_status?: Database["public"]["Enums"]["order_status"] | null
+          new_status: Database["public"]["Enums"]["order_status"]
+          reason?: string | null
+          changed_by?: string | null
+          changed_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["order_status_history"]["Insert"]>
+        Relationships: []
+      }
+      grns: {
+        Row: {
+          id: string
+          organization_id: string
+          grn_number: string
+          warehouse_id: string
+          supplier_name: string | null
+          reference_po: string | null
+          status: Database["public"]["Enums"]["grn_status"]
+          created_by: string | null
+          created_at: string
+          confirmed_at: string | null
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          grn_number: string
+          warehouse_id: string
+          supplier_name?: string | null
+          reference_po?: string | null
+          status?: Database["public"]["Enums"]["grn_status"]
+          created_by?: string | null
+          created_at?: string
+          confirmed_at?: string | null
+        }
+        Update: Partial<Database["public"]["Tables"]["grns"]["Insert"]>
+        Relationships: []
+      }
+      grn_line_items: {
+        Row: {
+          id: string
+          organization_id: string
+          grn_id: string
+          sku_id: string
+          ordered_qty: number
+          received_qty: number
+          accepted_qty: number
+          rejected_qty: number
+          reason: string | null
+          batch: string | null
+          expiry: string | null
+          remarks: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          grn_id: string
+          sku_id: string
+          ordered_qty?: number
+          received_qty?: number
+          accepted_qty?: number
+          rejected_qty?: number
+          reason?: string | null
+          batch?: string | null
+          expiry?: string | null
+          remarks?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["grn_line_items"]["Insert"]>
+        Relationships: []
+      }
+      packages: {
+        Row: {
+          id: string
+          organization_id: string
+          order_id: string
+          package_count: number
+          weight_kg: number | null
+          length_cm: number | null
+          width_cm: number | null
+          height_cm: number | null
+          packed_by: string | null
+          packed_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          order_id: string
+          package_count?: number
+          weight_kg?: number | null
+          length_cm?: number | null
+          width_cm?: number | null
+          height_cm?: number | null
+          packed_by?: string | null
+          packed_at?: string
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["packages"]["Insert"]>
         Relationships: []
       }
       shipments: {
@@ -604,19 +747,35 @@ export type Database = {
         Returns: undefined
       }
       next_invoice_number: { Args: Record<PropertyKey, never>; Returns: string }
+      next_grn_number: { Args: Record<PropertyKey, never>; Returns: string }
     }
     Enums: {
       user_role: "admin" | "ops" | "finance"
       user_status: "pending" | "active"
       inventory_movement_type: "order_deduction" | "manual_adjustment" | "restock" | "return"
-      order_status: "pending" | "shipped" | "delivered" | "cancelled" | "returned"
+      order_status:
+        | "new"
+        | "confirmed"
+        | "inventory_allocated"
+        | "partially_allocated"
+        | "stock_shortage"
+        | "ready_to_pick"
+        | "picked"
+        | "packed"
+        | "ready_to_ship"
+        | "shipped"
+        | "delivered"
+        | "cancelled"
+        | "returned"
+        | "rto"
       gst_invoice_type: "intra_state" | "inter_state"
       reconciliation_status: "matched" | "mismatch" | "pending_review"
       log_fault: "amazon" | "order_sathi" | "seller_data" | "unknown"
       log_status: "success" | "failed" | "partial"
       return_type: "customer_return" | "rto"
       return_status: "initiated" | "received" | "refunded"
-      picklist_status: "open" | "completed"
+      picklist_status: "created" | "assigned" | "picking" | "picked" | "completed"
+      grn_status: "draft" | "confirmed"
       shipment_status: "booked" | "in_transit" | "delivered" | "rto" | "failed"
       order_priority: "normal" | "high" | "urgent"
     }
