@@ -52,6 +52,11 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [generatingId, setGeneratingId] = useState<string | null>(null)
   const [confirmInvoiceFor, setConfirmInvoiceFor] = useState<Order | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkShipping, setBulkShipping] = useState(false)
+  const [confirmBulkShip, setConfirmBulkShip] = useState(false)
+  const [bulkInvoicing, setBulkInvoicing] = useState(false)
+  const [bulkInvoiceProgress, setBulkInvoiceProgress] = useState({ done: 0, total: 0 })
   const [skus, setSkus] = useState<Sku[]>([])
   const [defaultWarehouseId, setDefaultWarehouseId] = useState<string | null>(null)
   const [showNewOrder, setShowNewOrder] = useState(false)
@@ -110,6 +115,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (!orgId) return
     loadOrders()
+    setSelectedIds(new Set())
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId, page, search, statusFilter])
 
@@ -215,53 +221,116 @@ export default function Dashboard() {
     }
   }
 
+  // Throws on failure - shared by the single-order button and the bulk
+  // action, which need different error handling (one toast vs. a summary).
+  async function generateInvoiceCore(order: Order) {
+    if (!org || !orgId) throw new Error('Organization not loaded')
+
+    const { data: lineItems, error: liError } = await supabase
+      .from('order_line_items')
+      .select('*, skus(*)')
+      .eq('order_id', order.id)
+    if (liError) throw liError
+    if (!lineItems || lineItems.length === 0) throw new Error('No line items on this order — cannot generate an invoice.')
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const calc = calculateInvoice(org.state, order.buyer_state, lineItems as any)
+
+    const { data: invoiceNumber, error: numError } = await supabase.rpc('next_invoice_number')
+    if (numError || !invoiceNumber) throw numError ?? new Error('Could not allocate invoice number')
+
+    const pdfBlob = buildInvoicePdf(org, order, invoiceNumber, calc)
+    const path = `${orgId}/${invoiceNumber}.pdf`
+    const { error: uploadError } = await supabase.storage.from('invoices').upload(path, pdfBlob, { contentType: 'application/pdf' })
+    if (uploadError) throw uploadError
+
+    const { error: insertError } = await supabase.from('gst_invoices').insert({
+      organization_id: orgId,
+      order_id: order.id,
+      invoice_number: invoiceNumber,
+      invoice_type: calc.invoiceType,
+      taxable_value: calc.taxableValue,
+      cgst_amount: calc.cgstAmount,
+      sgst_amount: calc.sgstAmount,
+      igst_amount: calc.igstAmount,
+      total_amount: calc.totalAmount,
+      pdf_url: path,
+    })
+    if (insertError) throw insertError
+
+    setInvoicedOrderIds((s) => new Set(s).add(order.id))
+    return invoiceNumber
+  }
+
   async function generateInvoice(order: Order) {
-    if (!org || !orgId) return
     setGeneratingId(order.id)
     try {
-      const { data: lineItems, error: liError } = await supabase
-        .from('order_line_items')
-        .select('*, skus(*)')
-        .eq('order_id', order.id)
-      if (liError) throw liError
-      if (!lineItems || lineItems.length === 0) {
-        showError('No line items on this order — cannot generate an invoice.')
-        return
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const calc = calculateInvoice(org.state, order.buyer_state, lineItems as any)
-
-      const { data: invoiceNumber, error: numError } = await supabase.rpc('next_invoice_number')
-      if (numError || !invoiceNumber) throw numError ?? new Error('Could not allocate invoice number')
-
-      const pdfBlob = buildInvoicePdf(org, order, invoiceNumber, calc)
-      const path = `${orgId}/${invoiceNumber}.pdf`
-      const { error: uploadError } = await supabase.storage.from('invoices').upload(path, pdfBlob, { contentType: 'application/pdf' })
-      if (uploadError) throw uploadError
-
-      const { error: insertError } = await supabase.from('gst_invoices').insert({
-        organization_id: orgId,
-        order_id: order.id,
-        invoice_number: invoiceNumber,
-        invoice_type: calc.invoiceType,
-        taxable_value: calc.taxableValue,
-        cgst_amount: calc.cgstAmount,
-        sgst_amount: calc.sgstAmount,
-        igst_amount: calc.igstAmount,
-        total_amount: calc.totalAmount,
-        pdf_url: path,
-      })
-      if (insertError) throw insertError
-
+      const invoiceNumber = await generateInvoiceCore(order)
       showSuccess(`Invoice ${invoiceNumber} generated.`)
-      setInvoicedOrderIds((s) => new Set(s).add(order.id))
     } catch (err) {
       reportError(showError, 'Generate invoice', err as { message: string }, orgId, profile?.id)
     } finally {
       setGeneratingId(null)
       setConfirmInvoiceFor(null)
     }
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds((s) => {
+      const next = new Set(s)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleSelectAll() {
+    setSelectedIds((s) => (s.size === orders.length ? new Set() : new Set(orders.map((o) => o.id))))
+  }
+
+  async function bulkMarkShipped() {
+    if (!orgId || selectedIds.size === 0) return
+    setBulkShipping(true)
+    const { error } = await supabase.from('orders').update({ order_status: 'shipped' }).in('id', Array.from(selectedIds))
+    setBulkShipping(false)
+    setConfirmBulkShip(false)
+    if (error) {
+      reportError(showError, 'Bulk mark shipped', error, orgId, profile?.id)
+      return
+    }
+    showSuccess(`${selectedIds.size} order(s) marked shipped.`)
+    setSelectedIds(new Set())
+    loadOrders()
+    loadStats()
+  }
+
+  async function bulkGenerateInvoices() {
+    const targets = orders.filter((o) => selectedIds.has(o.id) && !invoicedOrderIds.has(o.id))
+    if (targets.length === 0) {
+      showError('All selected orders already have invoices.')
+      return
+    }
+    setBulkInvoicing(true)
+    setBulkInvoiceProgress({ done: 0, total: targets.length })
+    let failed = 0
+    for (const order of targets) {
+      try {
+        await generateInvoiceCore(order)
+      } catch (err) {
+        failed++
+        await supabase.from('sync_logs').insert({
+          organization_id: orgId!,
+          operation: 'Bulk generate invoice',
+          status: 'failed',
+          fault: 'order_sathi',
+          message: `Order ${order.amazon_order_id}: ${(err as { message?: string })?.message ?? String(err)}`,
+        })
+      }
+      setBulkInvoiceProgress((p) => ({ ...p, done: p.done + 1 }))
+    }
+    setBulkInvoicing(false)
+    setSelectedIds(new Set())
+    showSuccess(`Generated ${targets.length - failed} of ${targets.length} invoice(s).${failed > 0 ? ` ${failed} failed — check Sync Logs.` : ''}`)
   }
 
   const connectedChannels = channels.filter((c) => c.status === 'connected')
@@ -451,6 +520,28 @@ export default function Dashboard() {
             </select>
           </div>
         </div>
+        {canEdit && selectedIds.size > 0 && (
+          <div className="px-4 py-2.5 border-b border-slate-100 bg-indigo-50 flex items-center gap-3 flex-wrap">
+            <span className="text-xs font-medium text-indigo-700">{selectedIds.size} selected</span>
+            <button
+              onClick={() => setConfirmBulkShip(true)}
+              disabled={bulkShipping}
+              className="text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50"
+            >
+              Mark as shipped
+            </button>
+            <button
+              onClick={bulkGenerateInvoices}
+              disabled={bulkInvoicing}
+              className="text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50"
+            >
+              {bulkInvoicing ? `Generating ${bulkInvoiceProgress.done}/${bulkInvoiceProgress.total}…` : 'Generate invoices'}
+            </button>
+            <button onClick={() => setSelectedIds(new Set())} className="text-xs text-slate-400 hover:text-slate-600">
+              Clear
+            </button>
+          </div>
+        )}
         {loading ? (
           <Skeleton />
         ) : orders.length === 0 ? (
@@ -460,6 +551,11 @@ export default function Dashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                  {canEdit && (
+                    <th className="px-4 py-2 font-medium w-8">
+                      <input type="checkbox" checked={selectedIds.size === orders.length && orders.length > 0} onChange={toggleSelectAll} />
+                    </th>
+                  )}
                   <th className="px-4 py-2 font-medium">Order ID</th>
                   <th className="px-4 py-2 font-medium">Channel</th>
                   <th className="px-4 py-2 font-medium">Date</th>
@@ -473,6 +569,11 @@ export default function Dashboard() {
                   const invoiced = invoicedOrderIds.has(o.id)
                   return (
                     <tr key={o.id}>
+                      {canEdit && (
+                        <td className="px-4 py-2.5">
+                          <input type="checkbox" checked={selectedIds.has(o.id)} onChange={() => toggleSelected(o.id)} />
+                        </td>
+                      )}
                       <td className="px-4 py-2.5 font-medium text-slate-700">{o.amazon_order_id}</td>
                       <td className="px-4 py-2.5 text-slate-500">{o.channels?.display_name ?? '—'}</td>
                       <td className="px-4 py-2.5 text-slate-500">{format(new Date(o.order_date), 'dd MMM yyyy')}</td>
@@ -515,6 +616,17 @@ export default function Dashboard() {
           busy={generatingId === confirmInvoiceFor.id}
           onConfirm={() => generateInvoice(confirmInvoiceFor)}
           onCancel={() => setConfirmInvoiceFor(null)}
+        />
+      )}
+
+      {confirmBulkShip && (
+        <ConfirmDialog
+          title="Mark orders as shipped?"
+          message={`Set shipment status to "shipped" for ${selectedIds.size} order(s)?`}
+          confirmLabel="Mark shipped"
+          busy={bulkShipping}
+          onConfirm={bulkMarkShipped}
+          onCancel={() => setConfirmBulkShip(false)}
         />
       )}
     </div>
