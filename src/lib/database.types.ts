@@ -182,6 +182,48 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["warehouses"]["Insert"]>
         Relationships: []
       }
+      picklists: {
+        Row: {
+          id: string
+          organization_id: string
+          status: Database["public"]["Enums"]["picklist_status"]
+          order_count: number
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          status?: Database["public"]["Enums"]["picklist_status"]
+          order_count?: number
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["picklists"]["Insert"]>
+        Relationships: []
+      }
+      picklist_items: {
+        Row: {
+          id: string
+          organization_id: string
+          picklist_id: string
+          sku_id: string
+          total_quantity: number
+          picked: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          picklist_id: string
+          sku_id: string
+          total_quantity: number
+          picked?: boolean
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["picklist_items"]["Insert"]>
+        Relationships: []
+      }
       orders: {
         Row: {
           id: string
@@ -472,6 +514,7 @@ export type Database = {
       log_status: "success" | "failed" | "partial"
       return_type: "customer_return" | "rto"
       return_status: "initiated" | "received" | "refunded"
+      picklist_status: "open" | "completed"
     }
     CompositeTypes: {
       [_ in never]: never
