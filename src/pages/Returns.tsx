@@ -17,13 +17,25 @@ const MISMATCH_THRESHOLD = 2
 
 const STATUS_COLOR: Record<ReturnRow['status'], string> = {
   initiated: 'bg-amber-100 text-amber-700',
+  in_transit: 'bg-indigo-100 text-indigo-700',
   received: 'bg-blue-100 text-blue-700',
+  qc_pending: 'bg-amber-100 text-amber-700',
+  qc_complete: 'bg-slate-100 text-slate-600',
   refunded: 'bg-emerald-100 text-emerald-700',
 }
 
 const TYPE_LABEL: Record<Enums<'return_type'>, string> = {
   customer_return: 'Customer return',
   rto: 'RTO',
+}
+
+const QC_OUTCOME_LABEL: Record<Enums<'return_qc_outcome'>, string> = {
+  resalable: 'Resalable — restock full qty',
+  partial: 'Partial — restock some',
+  damaged: 'Damaged — no sellable stock',
+  missing_item: 'Missing item — exception',
+  wrong_item: 'Wrong item — exception',
+  rejected: 'Rejected — exception',
 }
 
 export default function Returns() {
@@ -44,6 +56,12 @@ export default function Returns() {
   const [editValue, setEditValue] = useState('')
   const [savingId, setSavingId] = useState<string | null>(null)
   const [restockingId, setRestockingId] = useState<string | null>(null)
+
+  const [qcId, setQcId] = useState<string | null>(null)
+  const [qcOutcome, setQcOutcome] = useState<Enums<'return_qc_outcome'>>('resalable')
+  const [qcQty, setQcQty] = useState('')
+  const [qcNotes, setQcNotes] = useState('')
+  const [qcSavingId, setQcSavingId] = useState<string | null>(null)
 
   const orgId = profile?.organization_id
   const canEdit = profile?.role === 'admin' || profile?.role === 'ops' || profile?.role === 'finance'
@@ -128,34 +146,103 @@ export default function Returns() {
     load()
   }
 
+  // Receiving goods does NOT restock anything by itself - stock only moves
+  // once QC assigns an outcome, so damaged/wrong/missing goods never
+  // silently become sellable inventory.
   async function markReceived(r: ReturnRow) {
-    if (r.restocked) return
-    if (!defaultWarehouseId) {
-      showError('No default warehouse set — add one under Warehouses first.')
-      return
-    }
     setRestockingId(r.id)
-    const { error: ledgerError } = await supabase.from('inventory_ledger').insert({
-      organization_id: orgId!,
-      sku_id: r.sku_id,
-      warehouse_id: defaultWarehouseId,
-      movement_type: 'return',
-      quantity_delta: r.quantity,
-      order_id: r.order_id,
-      note: `${TYPE_LABEL[r.return_type]} — order ${r.orders?.amazon_order_id ?? r.order_id}`,
-    })
-    if (ledgerError) {
-      setRestockingId(null)
-      reportError(showError, 'Restock return', ledgerError, orgId, profile?.id)
-      return
-    }
-    const { error } = await supabase.from('order_returns').update({ status: 'received', restocked: true, updated_at: new Date().toISOString() }).eq('id', r.id)
+    const { error } = await supabase.from('order_returns').update({ status: 'received', updated_at: new Date().toISOString() }).eq('id', r.id)
     setRestockingId(null)
     if (error) {
-      reportError(showError, 'Update return status', error, orgId, profile?.id)
+      reportError(showError, 'Mark received', error, orgId, profile?.id)
       return
     }
-    showSuccess(`${r.quantity} unit(s) restocked.`)
+    showSuccess('Marked received — run QC to release stock.')
+    load()
+  }
+
+  function openQc(r: ReturnRow) {
+    setQcId(r.id)
+    setQcOutcome('resalable')
+    setQcQty(String(r.quantity))
+    setQcNotes('')
+  }
+
+  async function completeQc(r: ReturnRow) {
+    if (!orgId) return
+    const qty = Number(qcQty)
+    if (qcOutcome === 'partial' && (!Number.isFinite(qty) || qty <= 0 || qty > r.quantity)) {
+      showError(`Resalable quantity must be between 1 and ${r.quantity}.`)
+      return
+    }
+    setQcSavingId(r.id)
+
+    let restocked = false
+    if (qcOutcome === 'resalable' || qcOutcome === 'partial') {
+      if (!defaultWarehouseId) {
+        setQcSavingId(null)
+        showError('No default warehouse set — add one under Warehouses first.')
+        return
+      }
+      const restockQty = qcOutcome === 'resalable' ? r.quantity : qty
+      const { error: ledgerError } = await supabase.from('inventory_ledger').insert({
+        organization_id: orgId,
+        sku_id: r.sku_id,
+        warehouse_id: defaultWarehouseId,
+        movement_type: 'return',
+        quantity_delta: restockQty,
+        order_id: r.order_id,
+        note: `QC ${qcOutcome} — ${TYPE_LABEL[r.return_type]} order ${r.orders?.amazon_order_id ?? r.order_id}`,
+      })
+      if (ledgerError) {
+        setQcSavingId(null)
+        reportError(showError, 'Restock from QC', ledgerError, orgId, profile?.id)
+        return
+      }
+      restocked = true
+    } else if (qcOutcome === 'damaged') {
+      if (!defaultWarehouseId) {
+        setQcSavingId(null)
+        showError('No default warehouse set — add one under Warehouses first.')
+        return
+      }
+      // Logged for audit even though it never increases sellable stock.
+      const { error: ledgerError } = await supabase.from('inventory_ledger').insert({
+        organization_id: orgId,
+        sku_id: r.sku_id,
+        warehouse_id: defaultWarehouseId,
+        movement_type: 'damaged',
+        quantity_delta: 0,
+        order_id: r.order_id,
+        note: `QC damaged (${r.quantity} unit(s)) — ${TYPE_LABEL[r.return_type]} order ${r.orders?.amazon_order_id ?? r.order_id}`,
+      })
+      if (ledgerError) {
+        setQcSavingId(null)
+        reportError(showError, 'Log damaged stock', ledgerError, orgId, profile?.id)
+        return
+      }
+    }
+    // missing_item / wrong_item / rejected: exception only, no ledger movement.
+
+    const { error } = await supabase
+      .from('order_returns')
+      .update({
+        status: 'qc_complete',
+        qc_outcome: qcOutcome,
+        qc_notes: qcNotes || null,
+        qc_by: profile!.id,
+        qc_at: new Date().toISOString(),
+        restocked,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', r.id)
+    setQcSavingId(null)
+    if (error) {
+      reportError(showError, 'Save QC outcome', error, orgId, profile?.id)
+      return
+    }
+    showSuccess(`QC complete — ${QC_OUTCOME_LABEL[qcOutcome]}.`)
+    setQcId(null)
     load()
   }
 
@@ -190,8 +277,9 @@ export default function Returns() {
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       <h2 className="text-lg font-semibold text-slate-900 mb-1">Returns &amp; RTO</h2>
       <p className="text-xs text-slate-400 mb-6">
-        Track customer returns and RTO per SKU — restock only happens when you explicitly mark goods received, and refund mismatches are
-        flagged, never silently accepted.
+        Track customer returns and RTO per SKU. Receiving goods never restocks by itself — stock only moves after QC assigns an
+        outcome (resalable/partial restock, damaged goes to the audit log with no sellable increase, missing/wrong/rejected stay
+        exceptions with no stock movement). Refund mismatches are flagged, never silently accepted.
       </p>
 
       {canEdit && (
@@ -306,6 +394,7 @@ export default function Returns() {
                   <th className="px-4 py-2 font-medium text-right">Expected refund</th>
                   <th className="px-4 py-2 font-medium text-right">Actual refund</th>
                   <th className="px-4 py-2 font-medium">Status</th>
+                  <th className="px-4 py-2 font-medium">QC outcome</th>
                   <th className="px-4 py-2 font-medium">Date</th>
                   <th className="px-4 py-2 font-medium text-right">Actions</th>
                 </tr>
@@ -314,6 +403,7 @@ export default function Returns() {
                 {returns.map((r) => {
                   const mismatch = r.actual_refund != null && Math.abs(Number(r.actual_refund) - Number(r.expected_refund)) > MISMATCH_THRESHOLD
                   return (
+                    <>
                     <tr key={r.id}>
                       <td className="px-4 py-2.5 font-medium text-slate-700">{r.orders?.amazon_order_id ?? '—'}</td>
                       <td className="px-4 py-2.5 text-slate-500">{r.skus?.sku ?? '—'}</td>
@@ -344,22 +434,87 @@ export default function Returns() {
                         )}
                       </td>
                       <td className="px-4 py-2.5">
-                        <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${STATUS_COLOR[r.status]}`}>{r.status}</span>
+                        <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${STATUS_COLOR[r.status]}`}>{r.status.replace('_', ' ')}</span>
                       </td>
+                      <td className="px-4 py-2.5 text-xs text-slate-500">{r.qc_outcome ? QC_OUTCOME_LABEL[r.qc_outcome] : '—'}</td>
                       <td className="px-4 py-2.5 text-slate-500">{format(new Date(r.created_at), 'dd MMM yyyy')}</td>
                       <td className="px-4 py-2.5 text-right">
-                        {!r.restocked && canEdit && (
+                        {r.status === 'initiated' && canEdit && (
                           <button
                             onClick={() => markReceived(r)}
                             disabled={restockingId === r.id}
                             className="text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50"
                           >
-                            {restockingId === r.id ? 'Restocking…' : 'Mark received & restock'}
+                            {restockingId === r.id ? 'Saving…' : 'Mark received'}
                           </button>
                         )}
-                        {r.restocked && <span className="text-xs text-emerald-600">Restocked</span>}
+                        {r.status === 'received' && canEdit && (
+                          <button onClick={() => openQc(r)} className="text-xs font-medium text-amber-600 hover:text-amber-700">
+                            Run QC
+                          </button>
+                        )}
+                        {r.status === 'qc_complete' && (
+                          <span className={`text-xs ${r.restocked ? 'text-emerald-600' : 'text-slate-400'}`}>{r.restocked ? 'Restocked' : 'No stock movement'}</span>
+                        )}
                       </td>
                     </tr>
+                    {qcId === r.id && (
+                      <tr>
+                        <td colSpan={10} className="px-4 py-3 bg-amber-50">
+                          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+                            <label className="block sm:col-span-2">
+                              <span className="text-xs text-slate-500">QC outcome</span>
+                              <select
+                                value={qcOutcome}
+                                onChange={(e) => setQcOutcome(e.target.value as Enums<'return_qc_outcome'>)}
+                                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                              >
+                                {(Object.keys(QC_OUTCOME_LABEL) as Enums<'return_qc_outcome'>[]).map((o) => (
+                                  <option key={o} value={o}>
+                                    {QC_OUTCOME_LABEL[o]}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            {qcOutcome === 'partial' && (
+                              <label className="block">
+                                <span className="text-xs text-slate-500">Resalable qty (of {r.quantity})</span>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max={r.quantity}
+                                  value={qcQty}
+                                  onChange={(e) => setQcQty(e.target.value)}
+                                  className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                                />
+                              </label>
+                            )}
+                            <label className="block sm:col-span-2">
+                              <span className="text-xs text-slate-500">QC notes (optional)</span>
+                              <input
+                                type="text"
+                                value={qcNotes}
+                                onChange={(e) => setQcNotes(e.target.value)}
+                                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                              />
+                            </label>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => completeQc(r)}
+                                disabled={qcSavingId === r.id}
+                                className="text-sm rounded-lg bg-indigo-600 text-white px-3 py-1.5 hover:bg-indigo-700 disabled:opacity-50"
+                              >
+                                {qcSavingId === r.id ? 'Saving…' : 'Complete QC'}
+                              </button>
+                              <button onClick={() => setQcId(null)} className="text-sm rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50">
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </>
                   )
                 })}
               </tbody>
