@@ -6,17 +6,21 @@ import { reportError } from '../lib/errors'
 import { formatINR } from '../lib/format'
 import { parseMtrCsv } from '../lib/mtrParser'
 import { parseBankStatementCsv } from '../lib/bankStatementParser'
+import { parseSettlementCsv } from '../lib/settlementParser'
 import Skeleton from '../components/Skeleton'
 import EmptyState from '../components/EmptyState'
 import type { Tables } from '../lib/database.types'
 
 type Entry = Tables<'reconciliation_entries'> & { orders: Tables<'orders'> | null }
 type Channel = Tables<'channels'>
+type SettlementTxn = Tables<'settlement_transactions'> & { orders: Tables<'orders'> | null }
 
 const STATUS_COLOR: Record<Entry['status'], string> = {
   matched: 'bg-emerald-100 text-emerald-700',
   mismatch: 'bg-red-100 text-red-700',
   pending_review: 'bg-amber-100 text-amber-700',
+  resolved: 'bg-slate-100 text-slate-600',
+  ignored: 'bg-slate-100 text-slate-400',
 }
 
 // Bank credits round differently than the paise-precise settlement math -
@@ -38,25 +42,144 @@ export default function Reconciliation() {
   const [statusFilter, setStatusFilter] = useState<Entry['status'] | ''>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const bankFileInputRef = useRef<HTMLInputElement>(null)
+
+  const [settlements, setSettlements] = useState<SettlementTxn[]>([])
+  const [settlementChannel, setSettlementChannel] = useState('')
+  const [importingSettlement, setImportingSettlement] = useState(false)
+  const settlementFileInputRef = useRef<HTMLInputElement>(null)
+  const [resolvingId, setResolvingId] = useState<string | null>(null)
+  const [resolveNote, setResolveNote] = useState('')
+
   const orgId = profile?.organization_id
   const canEdit = profile?.role === 'admin' || profile?.role === 'finance'
 
   async function load() {
     if (!orgId) return
     setLoading(true)
-    const [{ data: e }, { data: c }] = await Promise.all([
+    const [{ data: e }, { data: c }, { data: s }] = await Promise.all([
       supabase.from('reconciliation_entries').select('*, orders(*)').order('created_at', { ascending: false }),
       supabase.from('channels').select('*'),
+      supabase.from('settlement_transactions').select('*, orders(*)').order('created_at', { ascending: false }),
     ])
     setEntries((e as unknown as Entry[]) ?? [])
     setChannels(c ?? [])
-    if (c && c.length === 1) setSelectedChannel(c[0].id)
+    setSettlements((s as unknown as SettlementTxn[]) ?? [])
+    if (c && c.length === 1) {
+      setSelectedChannel(c[0].id)
+      setSettlementChannel(c[0].id)
+    }
     setLoading(false)
   }
 
   useEffect(() => {
     load()
   }, [orgId])
+
+  async function handleSettlementFile(file: File) {
+    if (!orgId || !settlementChannel) return
+    setImportingSettlement(true)
+    try {
+      const text = await file.text()
+      const { rows, unmatchedColumns } = parseSettlementCsv(text)
+      if (rows.length === 0) throw new Error('No usable rows found in this file.')
+
+      const settlementId = `${file.name}-${Date.now()}`
+      const orderIds = rows.map((r) => r.channelOrderId)
+      const { data: orders } = await supabase
+        .from('orders')
+        .select('id, amazon_order_id')
+        .eq('channel_id', settlementChannel)
+        .in('amazon_order_id', orderIds)
+      const orderByChannelOrderId = new Map((orders ?? []).map((o) => [o.amazon_order_id, o.id]))
+
+      const matchedOrderIds = Array.from(orderByChannelOrderId.values())
+      const { data: existingEntries } = await supabase.from('reconciliation_entries').select('order_id, expected_settlement').in('order_id', matchedOrderIds)
+      const entryByOrderId = new Map((existingEntries ?? []).map((e) => [e.order_id, e]))
+
+      let matched = 0
+      let mismatched = 0
+      const txnRows = rows.map((r) => {
+        const orderId = orderByChannelOrderId.get(r.channelOrderId) ?? null
+        let matchStatus: Entry['status'] = 'pending_review'
+        let matchNote: string | null = null
+        if (!orderId) {
+          matchNote = 'No matching order found for this channel order ID.'
+        } else {
+          const reconEntry = entryByOrderId.get(orderId)
+          if (!reconEntry) {
+            matchNote = 'Order found, but no MTR reconciliation entry to compare against yet.'
+          } else if (Math.abs(r.net - Number(reconEntry.expected_settlement)) <= MISMATCH_THRESHOLD) {
+            matchStatus = 'matched'
+            matched++
+          } else {
+            matchStatus = 'mismatch'
+            mismatched++
+            matchNote = `Expected ${formatINR(Number(reconEntry.expected_settlement))}, settlement reports ${formatINR(r.net)}.`
+          }
+        }
+        return {
+          organization_id: orgId,
+          channel_id: settlementChannel,
+          settlement_id: settlementId,
+          order_id: orderId,
+          channel_order_id: r.channelOrderId,
+          gross_amount: r.gross,
+          fees: r.fees,
+          taxes: r.taxes,
+          refunds: r.refunds,
+          adjustments: r.adjustments,
+          net_amount: r.net,
+          settlement_date: r.settlementDate,
+          match_status: matchStatus,
+          match_note: matchNote,
+        }
+      })
+
+      const { error: insertError } = await supabase.from('settlement_transactions').insert(txnRows)
+      if (insertError) throw insertError
+
+      const unmatched = rows.length - matched - mismatched
+      const messageParts = [`${matched} matched, ${mismatched} mismatched, ${unmatched} pending review of ${rows.length} settlement rows.`]
+      if (unmatchedColumns.length > 0) messageParts.push(`Columns not found in file (defaulted to 0): ${unmatchedColumns.join(', ')}.`)
+
+      await supabase.from('sync_logs').insert({
+        organization_id: orgId,
+        channel_id: settlementChannel,
+        operation: 'settlement_import',
+        sync_type: 'settlement',
+        status: mismatched > 0 || unmatched > 0 ? 'partial' : 'success',
+        fault: mismatched > 0 || unmatched > 0 ? 'seller_data' : null,
+        message: messageParts.join(' '),
+      })
+
+      showSuccess(`Imported ${file.name}: ${messageParts[0]}`)
+      load()
+    } catch (err) {
+      reportError(showError, 'Settlement import', err as { message: string }, orgId, profile?.id)
+    } finally {
+      setImportingSettlement(false)
+      if (settlementFileInputRef.current) settlementFileInputRef.current.value = ''
+    }
+  }
+
+  async function resolveSettlement(t: SettlementTxn, status: 'resolved' | 'ignored') {
+    if (!resolveNote.trim()) {
+      showError('A note is required before resolving or ignoring a mismatch.')
+      return
+    }
+    setResolvingId(t.id)
+    const { error } = await supabase
+      .from('settlement_transactions')
+      .update({ match_status: status, match_note: resolveNote.trim() })
+      .eq('id', t.id)
+    setResolvingId(null)
+    if (error) {
+      reportError(showError, 'Resolve settlement exception', error, orgId, profile?.id)
+      return
+    }
+    setResolveNote('')
+    load()
+  }
 
   async function handleFile(file: File) {
     if (!orgId || !selectedChannel) return
@@ -277,6 +400,90 @@ export default function Reconciliation() {
         </div>
       </div>
 
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6">
+        <div className="text-xs font-semibold uppercase text-slate-500 mb-1">Import settlement file</div>
+        <p className="text-xs text-slate-400 mb-3">
+          Matches each settlement row to an order by channel order ID, then compares net settlement against the MTR expected
+          amount. Anything unmatched or off goes straight to the exception queue below — never silently accepted.
+        </p>
+        {channels.length === 0 ? (
+          <p className="text-sm text-slate-400">No channel connected yet — connect Amazon under Integrations first.</p>
+        ) : (
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            {channels.length > 1 && (
+              <select
+                value={settlementChannel}
+                onChange={(e) => setSettlementChannel(e.target.value)}
+                className="text-sm rounded-lg border border-slate-300 px-2 py-1.5"
+              >
+                <option value="">Select channel…</option>
+                {channels.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.display_name}
+                  </option>
+                ))}
+              </select>
+            )}
+            <input
+              ref={settlementFileInputRef}
+              type="file"
+              accept=".csv"
+              disabled={!settlementChannel || importingSettlement}
+              onChange={(e) => e.target.files?.[0] && handleSettlementFile(e.target.files[0])}
+              className="text-sm text-slate-500 disabled:opacity-50"
+            />
+            {importingSettlement && <span className="text-xs text-slate-400">Importing…</span>}
+          </div>
+        )}
+      </div>
+
+      {settlements.filter((t) => t.match_status === 'mismatch' || t.match_status === 'pending_review').length > 0 && (
+        <div className="bg-white rounded-xl border border-red-200 shadow-sm p-4 mb-6">
+          <div className="text-xs font-semibold uppercase text-red-600 mb-3">
+            Reconciliation exception queue — {settlements.filter((t) => t.match_status === 'mismatch' || t.match_status === 'pending_review').length} open
+          </div>
+          <div className="space-y-3">
+            {settlements
+              .filter((t) => t.match_status === 'mismatch' || t.match_status === 'pending_review')
+              .map((t) => (
+                <div key={t.id} className="border border-slate-100 rounded-lg p-3">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="text-sm">
+                      <span className="font-medium text-slate-700">{t.channel_order_id}</span>{' '}
+                      <span className={`ml-2 text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${STATUS_COLOR[t.match_status]}`}>
+                        {t.match_status.replace('_', ' ')}
+                      </span>
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      Net {formatINR(Number(t.net_amount))} · Fees {formatINR(Number(t.fees))} · Taxes {formatINR(Number(t.taxes))} · Refunds{' '}
+                      {formatINR(Number(t.refunds))}
+                    </div>
+                  </div>
+                  {t.match_note && <p className="text-xs text-slate-500 mt-1">{t.match_note}</p>}
+                  {canEdit && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <input
+                        type="text"
+                        placeholder="Resolution note (required)"
+                        value={resolvingId === t.id ? resolveNote : ''}
+                        onFocus={() => setResolvingId(t.id)}
+                        onChange={(e) => setResolveNote(e.target.value)}
+                        className="flex-1 text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                      />
+                      <button onClick={() => resolveSettlement(t, 'resolved')} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">
+                        Resolve
+                      </button>
+                      <button onClick={() => resolveSettlement(t, 'ignored')} className="text-xs font-medium text-slate-400 hover:text-slate-600">
+                        Ignore
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
       {mismatches.length > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 text-sm text-red-800">
           {mismatches.length} order{mismatches.length > 1 ? 's' : ''} with a settlement mismatch — needs manual review.
@@ -294,6 +501,8 @@ export default function Reconciliation() {
             <option value="pending_review">Pending review</option>
             <option value="matched">Matched</option>
             <option value="mismatch">Mismatch</option>
+            <option value="resolved">Resolved</option>
+            <option value="ignored">Ignored</option>
           </select>
         </div>
         {loading ? (
