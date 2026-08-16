@@ -113,6 +113,7 @@ export type Database = {
           active: boolean
           product_type: string | null
           cost_price: number
+          is_bundle: boolean
           created_at: string
         }
         Insert: {
@@ -127,9 +128,30 @@ export type Database = {
           active?: boolean
           product_type?: string | null
           cost_price?: number
+          is_bundle?: boolean
           created_at?: string
         }
         Update: Partial<Database["public"]["Tables"]["skus"]["Insert"]>
+        Relationships: []
+      }
+      bundle_components: {
+        Row: {
+          id: string
+          organization_id: string
+          bundle_sku_id: string
+          component_sku_id: string
+          quantity: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          bundle_sku_id: string
+          component_sku_id: string
+          quantity: number
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["bundle_components"]["Insert"]>
         Relationships: []
       }
       inventory_ledger: {

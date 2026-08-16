@@ -244,13 +244,30 @@ export default function Dashboard() {
       )
       if (liError) throw liError
 
+      // Bundle SKUs don't hold their own stock - selling one deducts each
+      // component's stock instead (one level deep only).
+      const bundleSkuIds = validLines.map((li) => li.sku_id).filter((id) => skus.find((s) => s.id === id)?.is_bundle)
+      const { data: bundleComponents } = bundleSkuIds.length > 0
+        ? await supabase.from('bundle_components').select('*').in('bundle_sku_id', bundleSkuIds)
+        : { data: [] }
+
+      const deductions: { sku_id: string; quantity: number }[] = []
+      for (const li of validLines) {
+        const components = (bundleComponents ?? []).filter((c) => c.bundle_sku_id === li.sku_id)
+        if (components.length > 0) {
+          for (const c of components) deductions.push({ sku_id: c.component_sku_id, quantity: c.quantity * Number(li.quantity) })
+        } else {
+          deductions.push({ sku_id: li.sku_id, quantity: Number(li.quantity) })
+        }
+      }
+
       const ledgerRows = await Promise.all(
-        validLines.map(async (li) => ({
+        deductions.map(async (d) => ({
           organization_id: orgId,
-          sku_id: li.sku_id,
-          warehouse_id: await pickWarehouseForDeduction(li.sku_id, Number(li.quantity)),
+          sku_id: d.sku_id,
+          warehouse_id: await pickWarehouseForDeduction(d.sku_id, d.quantity),
           movement_type: 'order_deduction' as const,
-          quantity_delta: -Number(li.quantity),
+          quantity_delta: -d.quantity,
           order_id: order.id,
           note: `Manual order ${orderForm.amazon_order_id.trim()}`,
         }))

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/AuthContext'
 import { useToast } from '../lib/Toast'
@@ -19,12 +19,15 @@ type Bin = Tables<'bins'>
 const SELL_THROUGH_WINDOW_DAYS = 14
 const REORDER_ALERT_DAYS = 7
 
+type BundleComponent = Tables<'bundle_components'>
+
 interface SkuFormValues {
   title: string
   gst_rate: string
   buffer_stock: string
   product_type: string
   cost_price: string
+  is_bundle: boolean
 }
 
 function toFormValues(s: Sku): SkuFormValues {
@@ -34,6 +37,7 @@ function toFormValues(s: Sku): SkuFormValues {
     buffer_stock: String(s.buffer_stock),
     product_type: s.product_type ?? '',
     cost_price: String(s.cost_price),
+    is_bundle: s.is_bundle,
   }
 }
 
@@ -55,13 +59,17 @@ export default function Inventory() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [editForm, setEditForm] = useState<SkuFormValues>({ title: '', gst_rate: '', buffer_stock: '', product_type: '', cost_price: '' })
+  const [editForm, setEditForm] = useState<SkuFormValues>({ title: '', gst_rate: '', buffer_stock: '', product_type: '', cost_price: '', is_bundle: false })
   const [savingEdit, setSavingEdit] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Sku | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [showAddSku, setShowAddSku] = useState(false)
-  const [newSku, setNewSku] = useState({ sku: '', title: '', gst_rate: '18', buffer_stock: '0', cost_price: '0' })
+  const [newSku, setNewSku] = useState({ sku: '', title: '', gst_rate: '18', buffer_stock: '0', cost_price: '0', is_bundle: false })
   const [savingSku, setSavingSku] = useState(false)
+  const [bundleComponents, setBundleComponents] = useState<BundleComponent[]>([])
+  const [expandedBundleId, setExpandedBundleId] = useState<string | null>(null)
+  const [newComponent, setNewComponent] = useState({ component_sku_id: '', quantity: '1' })
+  const [savingComponent, setSavingComponent] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [labelCopies, setLabelCopies] = useState('1')
   const [showLabelPanel, setShowLabelPanel] = useState(false)
@@ -72,16 +80,18 @@ export default function Inventory() {
   async function load() {
     if (!orgId) return
     setLoading(true)
-    const [{ data: s }, { data: l }, { data: c }, { data: w }, { data: b }] = await Promise.all([
+    const [{ data: s }, { data: l }, { data: c }, { data: w }, { data: b }, { data: bc }] = await Promise.all([
       supabase.from('skus').select('*').order('sku'),
       supabase.from('inventory_ledger').select('*'),
       supabase.from('channels').select('*'),
       supabase.from('warehouses').select('*').order('name'),
       supabase.from('bins').select('*').order('code'),
+      supabase.from('bundle_components').select('*'),
     ])
     setBins(b ?? [])
     setSkus(s ?? [])
     setLedger((l as Ledger[]) ?? [])
+    setBundleComponents(bc ?? [])
 
     // Recent sell-through: units sold per day over the last 14 days, from
     // order_deduction movements only (restocks/returns/adjustments don't
@@ -121,6 +131,14 @@ export default function Inventory() {
     }
     return totals
   }, [ledger, warehouseFilter])
+
+  // A bundle SKU doesn't hold its own stock — how many can be assembled is
+  // capped by whichever component runs out first.
+  function bundleAvailable(bundleSkuId: string): number {
+    const components = bundleComponents.filter((c) => c.bundle_sku_id === bundleSkuId)
+    if (components.length === 0) return 0
+    return Math.min(...components.map((c) => Math.floor((stockBySku[c.component_sku_id] ?? 0) / c.quantity)))
+  }
 
   const filteredSkus = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -162,6 +180,7 @@ export default function Inventory() {
         buffer_stock: Number(editForm.buffer_stock) || 0,
         product_type: editForm.product_type.trim() || null,
         cost_price: Number(editForm.cost_price) || 0,
+        is_bundle: editForm.is_bundle,
       })
       .eq('id', s.id)
     setSavingEdit(false)
@@ -200,6 +219,7 @@ export default function Inventory() {
       gst_rate: Number(newSku.gst_rate) || 0,
       buffer_stock: Number(newSku.buffer_stock) || 0,
       cost_price: Number(newSku.cost_price) || 0,
+      is_bundle: newSku.is_bundle,
     })
     setSavingSku(false)
     if (error) {
@@ -207,7 +227,7 @@ export default function Inventory() {
       return
     }
     showSuccess(`SKU ${newSku.sku} added.`)
-    setNewSku({ sku: '', title: '', gst_rate: '18', buffer_stock: '0', cost_price: '0' })
+    setNewSku({ sku: '', title: '', gst_rate: '18', buffer_stock: '0', cost_price: '0', is_bundle: false })
     setShowAddSku(false)
     load()
   }
@@ -238,6 +258,41 @@ export default function Inventory() {
     showSuccess('Stock adjusted.')
     setAdjustForm((f) => ({ ...f, quantity: '', note: '', bin_id: '' }))
     setShowAdjust(false)
+    load()
+  }
+
+  async function addComponent(bundleSkuId: string) {
+    if (!orgId || !newComponent.component_sku_id) {
+      showError('Pick a component SKU.')
+      return
+    }
+    const qty = Number(newComponent.quantity)
+    if (!Number.isFinite(qty) || qty <= 0) {
+      showError('Quantity must be a positive number.')
+      return
+    }
+    setSavingComponent(true)
+    const { error } = await supabase.from('bundle_components').insert({
+      organization_id: orgId,
+      bundle_sku_id: bundleSkuId,
+      component_sku_id: newComponent.component_sku_id,
+      quantity: qty,
+    })
+    setSavingComponent(false)
+    if (error) {
+      reportError(showError, 'Add bundle component', error, orgId, profile?.id)
+      return
+    }
+    setNewComponent({ component_sku_id: '', quantity: '1' })
+    load()
+  }
+
+  async function removeComponent(id: string) {
+    const { error } = await supabase.from('bundle_components').delete().eq('id', id)
+    if (error) {
+      reportError(showError, 'Remove bundle component', error, orgId, profile?.id)
+      return
+    }
     load()
   }
 
@@ -434,6 +489,10 @@ export default function Inventory() {
               className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
             />
           </label>
+          <label className="flex items-center gap-1.5 text-sm text-slate-600 pb-1.5">
+            <input type="checkbox" checked={newSku.is_bundle} onChange={(e) => setNewSku((f) => ({ ...f, is_bundle: e.target.checked }))} />
+            Bundle (add components after saving)
+          </label>
           <div className="sm:col-span-5">
             <button
               onClick={addSku}
@@ -577,12 +636,13 @@ export default function Inventory() {
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {filteredSkus.map((s) => {
-                  const stock = stockBySku[s.id] ?? 0
-                  const available = Math.max(stock - s.buffer_stock, 0)
+                  const stock = s.is_bundle ? bundleAvailable(s.id) : stockBySku[s.id] ?? 0
+                  const available = s.is_bundle ? stock : Math.max(stock - s.buffer_stock, 0)
                   const low = stock <= s.buffer_stock
                   const isEditing = editingId === s.id
                   return (
-                    <tr key={s.id}>
+                    <Fragment key={s.id}>
+                    <tr>
                       <td className="px-4 py-2.5">
                         <input type="checkbox" checked={selectedIds.has(s.id)} onChange={() => toggleSelected(s.id)} />
                       </td>
@@ -603,8 +663,12 @@ export default function Inventory() {
                               value={editForm.product_type}
                               onChange={(e) => setEditForm((f) => ({ ...f, product_type: e.target.value }))}
                               placeholder="e.g. LUGGAGE"
-                              className="w-28 text-sm rounded-lg border border-slate-300 px-2 py-1"
+                              className="w-28 text-sm rounded-lg border border-slate-300 px-2 py-1 mb-1"
                             />
+                            <label className="flex items-center gap-1 text-xs text-slate-500">
+                              <input type="checkbox" checked={editForm.is_bundle} onChange={(e) => setEditForm((f) => ({ ...f, is_bundle: e.target.checked }))} />
+                              Bundle
+                            </label>
                           </td>
                           <td className="px-4 py-2.5 text-right">
                             <input
@@ -637,18 +701,27 @@ export default function Inventory() {
                       ) : (
                         <>
                           <td className="px-4 py-2.5 text-slate-500">{s.title}</td>
-                          <td className="px-4 py-2.5 text-slate-500">{s.product_type ?? '—'}</td>
+                          <td className="px-4 py-2.5 text-slate-500">
+                            {s.is_bundle ? <span className="text-[10px] uppercase tracking-wide bg-purple-50 text-purple-600 rounded px-1.5 py-0.5">🎁 Bundle</span> : s.product_type ?? '—'}
+                          </td>
                           <td className="px-4 py-2.5 text-right text-slate-500">{formatINR(s.cost_price)}</td>
-                          <td className="px-4 py-2.5 text-right text-slate-500">{s.buffer_stock}</td>
+                          <td className="px-4 py-2.5 text-right text-slate-500">{s.is_bundle ? '—' : s.buffer_stock}</td>
                           <td className={`px-4 py-2.5 text-right font-medium ${low ? 'text-red-600' : 'text-slate-700'}`}>{stock}</td>
                           <td className="px-4 py-2.5 text-right text-slate-500">{available}</td>
                           <td className={`px-4 py-2.5 text-right ${(daysToBuffer(s) ?? Infinity) <= REORDER_ALERT_DAYS ? 'text-amber-600 font-medium' : 'text-slate-500'}`}>
-                            {(() => {
-                              const days = daysToBuffer(s)
-                              return days != null ? `~${Math.round(days)}d` : '—'
-                            })()}
+                            {s.is_bundle
+                              ? '—'
+                              : (() => {
+                                  const days = daysToBuffer(s)
+                                  return days != null ? `~${Math.round(days)}d` : '—'
+                                })()}
                           </td>
                           <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                            {s.is_bundle && (
+                              <button onClick={() => setExpandedBundleId(expandedBundleId === s.id ? null : s.id)} className="text-xs font-medium text-purple-600 hover:text-purple-700 mr-3">
+                                Components
+                              </button>
+                            )}
                             {canEdit && (
                               <button onClick={() => startEdit(s)} className="text-xs font-medium text-indigo-600 hover:text-indigo-700 mr-3">
                                 Edit
@@ -663,6 +736,67 @@ export default function Inventory() {
                         </>
                       )}
                     </tr>
+                    {s.is_bundle && expandedBundleId === s.id && (
+                      <tr>
+                        <td colSpan={10} className="px-4 py-3 bg-slate-50">
+                          <div className="text-xs font-semibold uppercase text-slate-500 mb-2">Components</div>
+                          {bundleComponents.filter((c) => c.bundle_sku_id === s.id).length === 0 ? (
+                            <p className="text-xs text-slate-400 mb-2">No components yet — this bundle can't be sold until you add some.</p>
+                          ) : (
+                            <div className="space-y-1 mb-2">
+                              {bundleComponents
+                                .filter((c) => c.bundle_sku_id === s.id)
+                                .map((c) => {
+                                  const compSku = skus.find((sk) => sk.id === c.component_sku_id)
+                                  return (
+                                    <div key={c.id} className="flex items-center gap-2 text-sm">
+                                      <span className="text-slate-700">
+                                        {c.quantity} × {compSku?.sku ?? '—'} ({compSku?.title ?? 'unknown'})
+                                      </span>
+                                      {canEdit && (
+                                        <button onClick={() => removeComponent(c.id)} className="text-xs text-slate-400 hover:text-red-600">
+                                          Remove
+                                        </button>
+                                      )}
+                                    </div>
+                                  )
+                                })}
+                            </div>
+                          )}
+                          {canEdit && (
+                            <div className="flex items-center gap-2">
+                              <select
+                                value={newComponent.component_sku_id}
+                                onChange={(e) => setNewComponent((f) => ({ ...f, component_sku_id: e.target.value }))}
+                                className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                              >
+                                <option value="">Select component SKU…</option>
+                                {skus.filter((sk) => sk.id !== s.id && !sk.is_bundle).map((sk) => (
+                                  <option key={sk.id} value={sk.id}>
+                                    {sk.sku} — {sk.title}
+                                  </option>
+                                ))}
+                              </select>
+                              <input
+                                type="number"
+                                min="1"
+                                value={newComponent.quantity}
+                                onChange={(e) => setNewComponent((f) => ({ ...f, quantity: e.target.value }))}
+                                className="w-16 text-sm rounded-lg border border-slate-300 px-2 py-1.5"
+                              />
+                              <button
+                                onClick={() => addComponent(s.id)}
+                                disabled={savingComponent}
+                                className="text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50"
+                              >
+                                {savingComponent ? 'Adding…' : '+ Add'}
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                   )
                 })}
               </tbody>
