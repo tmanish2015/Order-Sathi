@@ -5,6 +5,7 @@ import Layout from './components/Layout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Inventory from './pages/Inventory'
+import Warehouses from './pages/Warehouses'
 import Invoices from './pages/Invoices'
 import Reconciliation from './pages/Reconciliation'
 import Returns from './pages/Returns'
@@ -23,6 +24,7 @@ export default function App() {
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/inventory" element={<Inventory />} />
+            <Route path="/warehouses" element={<Warehouses />} />
             <Route path="/invoices" element={<Invoices />} />
             <Route path="/reconciliation" element={<Reconciliation />} />
             <Route path="/returns" element={<Returns />} />

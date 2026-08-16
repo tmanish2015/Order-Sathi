@@ -12,6 +12,7 @@ import type { Tables } from '../lib/database.types'
 type Sku = Tables<'skus'>
 type Ledger = Tables<'inventory_ledger'>
 type Channel = Tables<'channels'>
+type Warehouse = Tables<'warehouses'>
 
 const SELL_THROUGH_WINDOW_DAYS = 14
 const REORDER_ALERT_DAYS = 7
@@ -38,10 +39,15 @@ export default function Inventory() {
   const { profile } = useAuth()
   const { showError, showSuccess } = useToast()
   const [skus, setSkus] = useState<Sku[]>([])
-  const [stockBySku, setStockBySku] = useState<Record<string, number>>({})
+  const [ledger, setLedger] = useState<Ledger[]>([])
   const [dailyRateBySku, setDailyRateBySku] = useState<Record<string, number>>({})
   const [channels, setChannels] = useState<Channel[]>([])
   const [selectedChannel, setSelectedChannel] = useState('')
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([])
+  const [warehouseFilter, setWarehouseFilter] = useState('')
+  const [showAdjust, setShowAdjust] = useState(false)
+  const [adjustForm, setAdjustForm] = useState({ sku_id: '', warehouse_id: '', movement_type: 'restock' as 'restock' | 'manual_adjustment', quantity: '', note: '' })
+  const [savingAdjust, setSavingAdjust] = useState(false)
   const [pushing, setPushing] = useState(false)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -60,21 +66,19 @@ export default function Inventory() {
   async function load() {
     if (!orgId) return
     setLoading(true)
-    const [{ data: s }, { data: l }, { data: c }] = await Promise.all([
+    const [{ data: s }, { data: l }, { data: c }, { data: w }] = await Promise.all([
       supabase.from('skus').select('*').order('sku'),
       supabase.from('inventory_ledger').select('*'),
       supabase.from('channels').select('*'),
+      supabase.from('warehouses').select('*').order('name'),
     ])
     setSkus(s ?? [])
-    const totals: Record<string, number> = {}
-    for (const row of (l ?? []) as Ledger[]) {
-      totals[row.sku_id] = (totals[row.sku_id] ?? 0) + row.quantity_delta
-    }
-    setStockBySku(totals)
+    setLedger((l as Ledger[]) ?? [])
 
     // Recent sell-through: units sold per day over the last 14 days, from
     // order_deduction movements only (restocks/returns/adjustments don't
-    // represent demand).
+    // represent demand). Always across all warehouses - reorder timing
+    // depends on total demand, not where it's currently sitting.
     const cutoff = Date.now() - SELL_THROUGH_WINDOW_DAYS * 24 * 60 * 60 * 1000
     const soldRecent: Record<string, number> = {}
     for (const row of (l ?? []) as Ledger[]) {
@@ -90,12 +94,25 @@ export default function Inventory() {
 
     setChannels(c ?? [])
     if (c && c.length === 1) setSelectedChannel(c[0].id)
+    setWarehouses(w ?? [])
+    if (w && w.length > 0) {
+      setAdjustForm((f) => (f.warehouse_id ? f : { ...f, warehouse_id: w.find((x) => x.is_default)?.id ?? w[0].id }))
+    }
     setLoading(false)
   }
 
   useEffect(() => {
     load()
   }, [orgId])
+
+  const stockBySku = useMemo(() => {
+    const totals: Record<string, number> = {}
+    for (const row of ledger) {
+      if (warehouseFilter && row.warehouse_id !== warehouseFilter) continue
+      totals[row.sku_id] = (totals[row.sku_id] ?? 0) + row.quantity_delta
+    }
+    return totals
+  }, [ledger, warehouseFilter])
 
   const filteredSkus = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -187,6 +204,34 @@ export default function Inventory() {
     load()
   }
 
+  async function submitAdjustment() {
+    if (!orgId) return
+    const qty = Number(adjustForm.quantity)
+    if (!adjustForm.sku_id || !adjustForm.warehouse_id || !Number.isFinite(qty) || qty === 0) {
+      showError('Pick a SKU, warehouse, and a non-zero quantity.')
+      return
+    }
+    setSavingAdjust(true)
+    const { error } = await supabase.from('inventory_ledger').insert({
+      organization_id: orgId,
+      sku_id: adjustForm.sku_id,
+      warehouse_id: adjustForm.warehouse_id,
+      movement_type: adjustForm.movement_type,
+      quantity_delta: qty,
+      note: adjustForm.note || null,
+      created_by: profile!.id,
+    })
+    setSavingAdjust(false)
+    if (error) {
+      reportError(showError, 'Adjust stock', error, orgId, profile?.id)
+      return
+    }
+    showSuccess('Stock adjusted.')
+    setAdjustForm((f) => ({ ...f, quantity: '', note: '' }))
+    setShowAdjust(false)
+    load()
+  }
+
   async function pushToAmazon() {
     if (!selectedChannel) return
     setPushing(true)
@@ -204,14 +249,97 @@ export default function Inventory() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-1">
         <h2 className="text-lg font-semibold text-slate-900">Inventory</h2>
         {canEdit && (
-          <button
-            onClick={() => setShowAddSku((v) => !v)}
-            className="text-sm rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50"
-          >
-            {showAddSku ? 'Cancel' : '+ Add SKU'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowAdjust((v) => !v)}
+              className="text-sm rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50"
+            >
+              {showAdjust ? 'Cancel' : '⇅ Adjust stock'}
+            </button>
+            <button
+              onClick={() => setShowAddSku((v) => !v)}
+              className="text-sm rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50"
+            >
+              {showAddSku ? 'Cancel' : '+ Add SKU'}
+            </button>
+          </div>
         )}
       </div>
+
+      {showAdjust && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6 grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
+          <label className="block sm:col-span-2">
+            <span className="text-xs text-slate-500">SKU</span>
+            <select
+              value={adjustForm.sku_id}
+              onChange={(e) => setAdjustForm((f) => ({ ...f, sku_id: e.target.value }))}
+              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+            >
+              <option value="">Select SKU…</option>
+              {skus.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.sku} — {s.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-xs text-slate-500">Warehouse</span>
+            <select
+              value={adjustForm.warehouse_id}
+              onChange={(e) => setAdjustForm((f) => ({ ...f, warehouse_id: e.target.value }))}
+              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+            >
+              {warehouses.length === 0 && <option value="">No warehouses yet</option>}
+              {warehouses.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-xs text-slate-500">Type</span>
+            <select
+              value={adjustForm.movement_type}
+              onChange={(e) => setAdjustForm((f) => ({ ...f, movement_type: e.target.value as 'restock' | 'manual_adjustment' }))}
+              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+            >
+              <option value="restock">Restock</option>
+              <option value="manual_adjustment">Manual adjustment</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-xs text-slate-500">Quantity (+/-)</span>
+            <input
+              type="number"
+              value={adjustForm.quantity}
+              onChange={(e) => setAdjustForm((f) => ({ ...f, quantity: e.target.value }))}
+              placeholder="e.g. 20 or -3"
+              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+            />
+          </label>
+          <label className="block sm:col-span-4">
+            <span className="text-xs text-slate-500">Note</span>
+            <input
+              type="text"
+              value={adjustForm.note}
+              onChange={(e) => setAdjustForm((f) => ({ ...f, note: e.target.value }))}
+              placeholder="e.g. New stock from supplier, invoice #123"
+              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+            />
+          </label>
+          <div>
+            <button
+              onClick={submitAdjustment}
+              disabled={savingAdjust || warehouses.length === 0}
+              className="text-sm rounded-lg bg-indigo-600 text-white px-3 py-1.5 hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {savingAdjust ? 'Saving…' : 'Apply'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {showAddSku && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6 grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
@@ -319,7 +447,7 @@ export default function Inventory() {
       )}
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-100">
+        <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2 flex-wrap">
           <input
             type="text"
             value={search}
@@ -327,6 +455,20 @@ export default function Inventory() {
             placeholder="Search SKU or title…"
             className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 w-56"
           />
+          {warehouses.length > 1 && (
+            <select
+              value={warehouseFilter}
+              onChange={(e) => setWarehouseFilter(e.target.value)}
+              className="text-sm rounded-lg border border-slate-300 px-2 py-1.5"
+            >
+              <option value="">Stock: all warehouses</option>
+              {warehouses.map((w) => (
+                <option key={w.id} value={w.id}>
+                  Stock: {w.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
         {loading ? (
           <Skeleton />

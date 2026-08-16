@@ -31,6 +31,7 @@ export default function Returns() {
   const { showError, showSuccess } = useToast()
   const [returns, setReturns] = useState<ReturnRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [defaultWarehouseId, setDefaultWarehouseId] = useState<string | null>(null)
 
   const [orderIdInput, setOrderIdInput] = useState('')
   const [finding, setFinding] = useState(false)
@@ -50,8 +51,12 @@ export default function Returns() {
   async function load() {
     if (!orgId) return
     setLoading(true)
-    const { data } = await supabase.from('order_returns').select('*, orders(*), skus(*)').order('created_at', { ascending: false })
+    const [{ data }, { data: w }] = await Promise.all([
+      supabase.from('order_returns').select('*, orders(*), skus(*)').order('created_at', { ascending: false }),
+      supabase.from('warehouses').select('id').eq('is_default', true).limit(1).maybeSingle(),
+    ])
     setReturns((data as unknown as ReturnRow[]) ?? [])
+    setDefaultWarehouseId(w?.id ?? null)
     setLoading(false)
   }
 
@@ -125,10 +130,15 @@ export default function Returns() {
 
   async function markReceived(r: ReturnRow) {
     if (r.restocked) return
+    if (!defaultWarehouseId) {
+      showError('No default warehouse set — add one under Warehouses first.')
+      return
+    }
     setRestockingId(r.id)
     const { error: ledgerError } = await supabase.from('inventory_ledger').insert({
       organization_id: orgId!,
       sku_id: r.sku_id,
+      warehouse_id: defaultWarehouseId,
       movement_type: 'return',
       quantity_delta: r.quantity,
       order_id: r.order_id,

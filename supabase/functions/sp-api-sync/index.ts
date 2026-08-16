@@ -137,6 +137,14 @@ Deno.serve(async (req) => {
     const createdAfter = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
     const amazonOrders = await fetchOrders(accessToken, channel.marketplace_id, createdAfter)
 
+    const { data: defaultWarehouse } = await supabase
+      .from('warehouses')
+      .select('id')
+      .eq('organization_id', channel.organization_id)
+      .eq('is_default', true)
+      .limit(1)
+      .maybeSingle()
+
     let synced = 0
     for (const ao of amazonOrders) {
       const { data: order, error: orderError } = await supabase
@@ -180,9 +188,15 @@ Deno.serve(async (req) => {
           unit_price: Number(item.ItemPrice?.Amount ?? 0),
         })
 
+        if (!defaultWarehouse) {
+          logs.push({ operation: 'order_pull', status: 'partial', fault: 'seller_data', message: `No default warehouse set — order ${ao.AmazonOrderId} imported but stock wasn't deducted. Add a warehouse first.` })
+          continue
+        }
+
         await supabase.from('inventory_ledger').insert({
           organization_id: channel.organization_id,
           sku_id: sku.id,
+          warehouse_id: defaultWarehouse.id,
           movement_type: 'order_deduction',
           quantity_delta: -item.QuantityOrdered,
           order_id: order.id,

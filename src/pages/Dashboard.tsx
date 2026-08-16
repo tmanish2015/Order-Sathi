@@ -53,6 +53,7 @@ export default function Dashboard() {
   const [generatingId, setGeneratingId] = useState<string | null>(null)
   const [confirmInvoiceFor, setConfirmInvoiceFor] = useState<Order | null>(null)
   const [skus, setSkus] = useState<Sku[]>([])
+  const [defaultWarehouseId, setDefaultWarehouseId] = useState<string | null>(null)
   const [showNewOrder, setShowNewOrder] = useState(false)
   const [creatingChannel, setCreatingChannel] = useState(false)
   const [savingOrder, setSavingOrder] = useState(false)
@@ -84,16 +85,18 @@ export default function Dashboard() {
 
   async function loadSupportingData() {
     if (!orgId) return
-    const [{ data: c }, { data: orgRow }, { data: inv }, { data: s }] = await Promise.all([
+    const [{ data: c }, { data: orgRow }, { data: inv }, { data: s }, { data: w }] = await Promise.all([
       supabase.from('channels').select('*'),
       supabase.from('organizations').select('*').eq('id', orgId).single(),
       supabase.from('gst_invoices').select('order_id'),
       supabase.from('skus').select('*').eq('active', true).order('sku'),
+      supabase.from('warehouses').select('*').eq('is_default', true).limit(1).maybeSingle(),
     ])
     setChannels(c ?? [])
     setOrg(orgRow ?? null)
     setInvoicedOrderIds(new Set((inv ?? []).map((i) => i.order_id)))
     setSkus(s ?? [])
+    setDefaultWarehouseId(w?.id ?? null)
     if (c && c.length > 0 && !orderForm.channel_id) setOrderForm((f) => ({ ...f, channel_id: c[0].id }))
   }
 
@@ -150,6 +153,10 @@ export default function Dashboard() {
       showError('Add at least one line item with a SKU, quantity, and price.')
       return
     }
+    if (!defaultWarehouseId) {
+      showError('No default warehouse set — add one under Warehouses first.')
+      return
+    }
 
     setSavingOrder(true)
     try {
@@ -186,6 +193,7 @@ export default function Dashboard() {
         validLines.map((li) => ({
           organization_id: orgId,
           sku_id: li.sku_id,
+          warehouse_id: defaultWarehouseId,
           movement_type: 'order_deduction' as const,
           quantity_delta: -Number(li.quantity),
           order_id: order.id,
