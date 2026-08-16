@@ -18,6 +18,7 @@ const NAV = [
   { to: '/reconciliation', label: 'Reconciliation', icon: '🔄', roles: ['admin', 'finance'] },
   { to: '/returns', label: 'Returns & RTO', icon: '↩️', roles: ['admin', 'ops', 'finance'] },
   { to: '/profit', label: 'Profit & Loss', icon: '📊', roles: ['admin', 'finance'] },
+  { to: '/reports', label: 'Reports & Analytics', icon: '📈', roles: ['admin', 'ops', 'finance'] },
   { to: '/sync-logs', label: 'Sync Logs', icon: '📡', roles: ['admin', 'ops', 'finance'] },
   { to: '/integrations', label: 'Integrations', icon: '🔌', roles: ['admin', 'finance'] },
   { to: '/team', label: 'Team', icon: '👥', roles: ['admin'] },
