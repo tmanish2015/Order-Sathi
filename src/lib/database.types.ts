@@ -143,6 +143,16 @@ export type Database = {
           safety_stock: number
           reorder_qty: number
           lead_time_days: number
+          brand: string | null
+          category: string | null
+          subcategory: string | null
+          description: string | null
+          image_url: string | null
+          weight_kg: number | null
+          length_cm: number | null
+          width_cm: number | null
+          height_cm: number | null
+          attributes: Json
           created_at: string
         }
         Insert: {
@@ -166,6 +176,16 @@ export type Database = {
           safety_stock?: number
           reorder_qty?: number
           lead_time_days?: number
+          brand?: string | null
+          category?: string | null
+          subcategory?: string | null
+          description?: string | null
+          image_url?: string | null
+          weight_kg?: number | null
+          length_cm?: number | null
+          width_cm?: number | null
+          height_cm?: number | null
+          attributes?: Json
           created_at?: string
         }
         Update: Partial<Database["public"]["Tables"]["skus"]["Insert"]>

@@ -414,7 +414,12 @@ function AbcFsnReport({
   warehouses: Warehouse[]
 }) {
   const [warehouseFilter, setWarehouseFilter] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('')
   const [windowDays, setWindowDays] = useState(FSN_WINDOW_DAYS_DEFAULT)
+
+  const categories = Array.from(new Set(skus.map((s) => s.category).filter((c): c is string => !!c))).sort()
+  const scopedSkus = categoryFilter ? skus.filter((s) => s.category === categoryFilter) : skus
+  const scopedSkuIds = new Set(scopedSkus.map((s) => s.id))
 
   const cutoff = Date.now() - windowDays * 24 * 60 * 60 * 1000
 
@@ -422,11 +427,12 @@ function AbcFsnReport({
   const revenueBySku: Record<string, number> = {}
   for (const li of lineItems) {
     if (warehouseFilter && li.warehouse_id !== warehouseFilter) continue
+    if (!scopedSkuIds.has(li.sku_id)) continue
     if (new Date(li.created_at).getTime() < cutoff) continue
     revenueBySku[li.sku_id] = (revenueBySku[li.sku_id] ?? 0) + li.quantity * Number(li.unit_price)
   }
   const totalRevenue = Object.values(revenueBySku).reduce((a, b) => a + b, 0)
-  const rankedByRevenue = skus
+  const rankedByRevenue = scopedSkus
     .map((s) => ({ sku: s, revenue: revenueBySku[s.id] ?? 0 }))
     .sort((a, b) => b.revenue - a.revenue)
   let cumulative = 0
@@ -442,23 +448,24 @@ function AbcFsnReport({
   for (const row of ledger) {
     if (row.movement_type !== 'order_deduction') continue
     if (warehouseFilter && row.warehouse_id !== warehouseFilter) continue
+    if (!scopedSkuIds.has(row.sku_id)) continue
     if (new Date(row.created_at).getTime() < cutoff) continue
     unitsBySku[row.sku_id] = (unitsBySku[row.sku_id] ?? 0) + -row.quantity_delta
   }
   const fsnBySku: Record<string, 'Fast' | 'Slow' | 'Non'> = {}
-  for (const s of skus) {
+  for (const s of scopedSkus) {
     const rate = (unitsBySku[s.id] ?? 0) / windowDays
     fsnBySku[s.id] = rate >= FAST_MOVING_RATE ? 'Fast' : rate > 0 ? 'Slow' : 'Non'
   }
 
   const abcCounts = { A: 0, B: 0, C: 0 }
   const fsnCounts = { Fast: 0, Slow: 0, Non: 0 }
-  for (const s of skus) {
+  for (const s of scopedSkus) {
     abcCounts[abcBySku[s.id]]++
     fsnCounts[fsnBySku[s.id]]++
   }
 
-  const rows = skus
+  const rows = scopedSkus
     .map((s) => ({ sku: s, revenue: revenueBySku[s.id] ?? 0, units: unitsBySku[s.id] ?? 0, abc: abcBySku[s.id], fsn: fsnBySku[s.id] }))
     .sort((a, b) => b.revenue - a.revenue)
 
@@ -480,7 +487,17 @@ function AbcFsnReport({
           <option value={60}>Last 60 days</option>
           <option value={90}>Last 90 days</option>
         </select>
-        <span className="text-xs text-slate-400 self-center">Category/brand filters need the catalog fields from a later Phase 3 task.</span>
+        {categories.length > 0 && (
+          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5">
+            <option value="">All categories</option>
+            {categories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        )}
+        {categories.length === 0 && <span className="text-xs text-slate-400 self-center">No categories set yet — add them on the Inventory page.</span>}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">

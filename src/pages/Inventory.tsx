@@ -35,6 +35,15 @@ interface SkuFormValues {
   reorder_qty: string
   lead_time_days: string
   barcode: string
+  brand: string
+  category: string
+  subcategory: string
+  description: string
+  image_url: string
+  weight_kg: string
+  length_cm: string
+  width_cm: string
+  height_cm: string
 }
 
 function toFormValues(s: Sku): SkuFormValues {
@@ -52,6 +61,15 @@ function toFormValues(s: Sku): SkuFormValues {
     reorder_qty: String(s.reorder_qty),
     lead_time_days: String(s.lead_time_days),
     barcode: s.barcode ?? '',
+    brand: s.brand ?? '',
+    category: s.category ?? '',
+    subcategory: s.subcategory ?? '',
+    description: s.description ?? '',
+    image_url: s.image_url ?? '',
+    weight_kg: s.weight_kg != null ? String(s.weight_kg) : '',
+    length_cm: s.length_cm != null ? String(s.length_cm) : '',
+    width_cm: s.width_cm != null ? String(s.width_cm) : '',
+    height_cm: s.height_cm != null ? String(s.height_cm) : '',
   }
 }
 
@@ -99,6 +117,15 @@ export default function Inventory() {
     reorder_qty: '',
     lead_time_days: '',
     barcode: '',
+    brand: '',
+    category: '',
+    subcategory: '',
+    description: '',
+    image_url: '',
+    weight_kg: '',
+    length_cm: '',
+    width_cm: '',
+    height_cm: '',
   })
   const [savingEdit, setSavingEdit] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Sku | null>(null)
@@ -118,6 +145,8 @@ export default function Inventory() {
     reorder_qty: '0',
     lead_time_days: '0',
     barcode: '',
+    brand: '',
+    category: '',
   })
   const [alertFilter, setAlertFilter] = useState<AlertKind | ''>('')
   const [savingSku, setSavingSku] = useState(false)
@@ -264,6 +293,15 @@ export default function Inventory() {
         reorder_qty: Number(editForm.reorder_qty) || 0,
         lead_time_days: Number(editForm.lead_time_days) || 0,
         barcode: editForm.barcode.trim() || null,
+        brand: editForm.brand.trim() || null,
+        category: editForm.category.trim() || null,
+        subcategory: editForm.subcategory.trim() || null,
+        description: editForm.description.trim() || null,
+        image_url: editForm.image_url.trim() || null,
+        weight_kg: editForm.weight_kg.trim() ? Number(editForm.weight_kg) : null,
+        length_cm: editForm.length_cm.trim() ? Number(editForm.length_cm) : null,
+        width_cm: editForm.width_cm.trim() ? Number(editForm.width_cm) : null,
+        height_cm: editForm.height_cm.trim() ? Number(editForm.height_cm) : null,
       })
       .eq('id', s.id)
     setSavingEdit(false)
@@ -310,6 +348,8 @@ export default function Inventory() {
       reorder_qty: Number(newSku.reorder_qty) || 0,
       lead_time_days: Number(newSku.lead_time_days) || 0,
       barcode: newSku.barcode.trim() || null,
+      brand: newSku.brand.trim() || null,
+      category: newSku.category.trim() || null,
     })
     setSavingSku(false)
     if (error) {
@@ -331,6 +371,8 @@ export default function Inventory() {
       reorder_qty: '0',
       lead_time_days: '0',
       barcode: '',
+      brand: '',
+      category: '',
     })
     setShowAddSku(false)
     load()
@@ -603,6 +645,24 @@ export default function Inventory() {
               className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
             />
           </label>
+          <label className="block">
+            <span className="text-xs text-slate-500">Brand</span>
+            <input
+              type="text"
+              value={newSku.brand}
+              onChange={(e) => setNewSku((f) => ({ ...f, brand: e.target.value }))}
+              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs text-slate-500">Category</span>
+            <input
+              type="text"
+              value={newSku.category}
+              onChange={(e) => setNewSku((f) => ({ ...f, category: e.target.value }))}
+              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+            />
+          </label>
           <label className="flex items-center gap-1.5 text-sm text-slate-600 pb-1.5">
             <input type="checkbox" checked={newSku.is_bundle} onChange={(e) => setNewSku((f) => ({ ...f, is_bundle: e.target.checked }))} />
             Bundle (add components after saving)
@@ -863,7 +923,12 @@ export default function Inventory() {
                         </>
                       ) : (
                         <>
-                          <td className="px-4 py-2.5 text-slate-500">{s.title}</td>
+                          <td className="px-4 py-2.5 text-slate-500">
+                            {s.title}
+                            {(s.brand || s.category) && (
+                              <div className="text-[10px] text-slate-400">{[s.brand, s.category].filter(Boolean).join(' · ')}</div>
+                            )}
+                          </td>
                           <td className="px-4 py-2.5 text-slate-500">
                             {s.is_bundle ? <span className="text-[10px] uppercase tracking-wide bg-purple-50 text-purple-600 rounded px-1.5 py-0.5">🎁 Bundle</span> : s.product_type ?? '—'}
                           </td>
@@ -933,6 +998,42 @@ export default function Inventory() {
                               <input type="text" value={editForm.barcode} onChange={(e) => setEditForm((f) => ({ ...f, barcode: e.target.value }))} placeholder="Scan or type" className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
                             </label>
                           </div>
+
+                          <div className="text-xs font-semibold uppercase text-slate-500 mb-2 mt-4">Catalog details</div>
+                          <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 mb-2">
+                            <label className="block">
+                              <span className="text-xs text-slate-500">Brand</span>
+                              <input type="text" value={editForm.brand} onChange={(e) => setEditForm((f) => ({ ...f, brand: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                            </label>
+                            <label className="block">
+                              <span className="text-xs text-slate-500">Category</span>
+                              <input type="text" value={editForm.category} onChange={(e) => setEditForm((f) => ({ ...f, category: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                            </label>
+                            <label className="block">
+                              <span className="text-xs text-slate-500">Subcategory</span>
+                              <input type="text" value={editForm.subcategory} onChange={(e) => setEditForm((f) => ({ ...f, subcategory: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                            </label>
+                            <label className="block">
+                              <span className="text-xs text-slate-500">Weight (kg)</span>
+                              <input type="number" value={editForm.weight_kg} onChange={(e) => setEditForm((f) => ({ ...f, weight_kg: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                            </label>
+                            <label className="block">
+                              <span className="text-xs text-slate-500">Dimensions L×W×H (cm)</span>
+                              <div className="flex gap-1 mt-1">
+                                <input type="number" value={editForm.length_cm} onChange={(e) => setEditForm((f) => ({ ...f, length_cm: e.target.value }))} placeholder="L" className="w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                                <input type="number" value={editForm.width_cm} onChange={(e) => setEditForm((f) => ({ ...f, width_cm: e.target.value }))} placeholder="W" className="w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                                <input type="number" value={editForm.height_cm} onChange={(e) => setEditForm((f) => ({ ...f, height_cm: e.target.value }))} placeholder="H" className="w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                              </div>
+                            </label>
+                            <label className="block">
+                              <span className="text-xs text-slate-500">Image URL</span>
+                              <input type="text" value={editForm.image_url} onChange={(e) => setEditForm((f) => ({ ...f, image_url: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                            </label>
+                          </div>
+                          <label className="block">
+                            <span className="text-xs text-slate-500">Description</span>
+                            <textarea value={editForm.description} onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))} rows={2} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                          </label>
                         </td>
                       </tr>
                     )}
