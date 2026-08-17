@@ -153,6 +153,7 @@ export type Database = {
           width_cm: number | null
           height_cm: number | null
           attributes: Json
+          tracking_mode: Database["public"]["Enums"]["sku_tracking_mode"]
           created_at: string
         }
         Insert: {
@@ -186,6 +187,7 @@ export type Database = {
           width_cm?: number | null
           height_cm?: number | null
           attributes?: Json
+          tracking_mode?: Database["public"]["Enums"]["sku_tracking_mode"]
           created_at?: string
         }
         Update: Partial<Database["public"]["Tables"]["skus"]["Insert"]>
@@ -475,6 +477,8 @@ export type Database = {
           batch: string | null
           expiry: string | null
           remarks: string | null
+          serials: string | null
+          manufacturing_date: string | null
           created_at: string
         }
         Insert: {
@@ -490,9 +494,67 @@ export type Database = {
           batch?: string | null
           expiry?: string | null
           remarks?: string | null
+          serials?: string | null
+          manufacturing_date?: string | null
           created_at?: string
         }
         Update: Partial<Database["public"]["Tables"]["grn_line_items"]["Insert"]>
+        Relationships: []
+      }
+      batches: {
+        Row: {
+          id: string
+          organization_id: string
+          sku_id: string
+          warehouse_id: string
+          batch_number: string
+          manufacturing_date: string | null
+          expiry_date: string | null
+          received_qty: number
+          grn_line_item_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          sku_id: string
+          warehouse_id: string
+          batch_number: string
+          manufacturing_date?: string | null
+          expiry_date?: string | null
+          received_qty?: number
+          grn_line_item_id?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["batches"]["Insert"]>
+        Relationships: []
+      }
+      serials: {
+        Row: {
+          id: string
+          organization_id: string
+          sku_id: string
+          warehouse_id: string
+          serial_number: string
+          status: Database["public"]["Enums"]["serial_status"]
+          order_id: string | null
+          grn_line_item_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          sku_id: string
+          warehouse_id: string
+          serial_number: string
+          status?: Database["public"]["Enums"]["serial_status"]
+          order_id?: string | null
+          grn_line_item_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["serials"]["Insert"]>
         Relationships: []
       }
       stock_transfers: {
@@ -1125,6 +1187,8 @@ export type Database = {
       inventory_movement_type: "order_deduction" | "manual_adjustment" | "restock" | "return" | "damaged" | "transfer_out" | "transfer_in"
       transfer_status: "requested" | "approved" | "dispatched" | "in_transit" | "received" | "rejected"
       cycle_count_status: "scheduled" | "counting" | "pending_approval" | "approved" | "rejected"
+      sku_tracking_mode: "none" | "batch" | "serial"
+      serial_status: "in_stock" | "allocated" | "shipped" | "returned" | "damaged"
       order_status:
         | "new"
         | "confirmed"

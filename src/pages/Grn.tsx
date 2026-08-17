@@ -21,9 +21,31 @@ interface DraftLine {
   accepted_qty: string
   rejected_qty: string
   reason: string
+  batch: string
+  manufacturing_date: string
+  expiry: string
+  serials: string
 }
 
-const BLANK_LINE: DraftLine = { sku_id: '', ordered_qty: '', received_qty: '', accepted_qty: '', rejected_qty: '0', reason: '' }
+const BLANK_LINE: DraftLine = {
+  sku_id: '',
+  ordered_qty: '',
+  received_qty: '',
+  accepted_qty: '',
+  rejected_qty: '0',
+  reason: '',
+  batch: '',
+  manufacturing_date: '',
+  expiry: '',
+  serials: '',
+}
+
+function serialLines(s: string): string[] {
+  return s
+    .split('\n')
+    .map((x) => x.trim())
+    .filter(Boolean)
+}
 
 const STATUS_COLOR: Record<Enums<'grn_status'>, string> = {
   draft: 'bg-amber-100 text-amber-700',
@@ -123,6 +145,21 @@ export default function Grn() {
       showError('Add at least one line item.')
       return
     }
+    for (const l of validLines) {
+      const sku = skus.find((s) => s.id === l.sku_id)
+      if (sku?.tracking_mode === 'batch' && !l.batch.trim()) {
+        showError(`${sku.sku} is batch-tracked — enter a batch number.`)
+        return
+      }
+      if (sku?.tracking_mode === 'serial') {
+        const count = serialLines(l.serials).length
+        const expected = Number(l.accepted_qty) || Number(l.received_qty) || 0
+        if (count !== expected) {
+          showError(`${sku.sku} is serial-tracked — enter exactly ${expected} serial number(s), one per line (got ${count}).`)
+          return
+        }
+      }
+    }
     setSaving(true)
     try {
       const { data: grnNumber, error: numError } = await supabase.rpc('next_grn_number')
@@ -152,6 +189,10 @@ export default function Grn() {
           accepted_qty: Number(l.accepted_qty) || Number(l.received_qty) || 0,
           rejected_qty: Number(l.rejected_qty) || 0,
           reason: l.reason || null,
+          batch: l.batch.trim() || null,
+          manufacturing_date: l.manufacturing_date || null,
+          expiry: l.expiry || null,
+          serials: l.serials.trim() || null,
         }))
       )
       if (linesError) throw linesError
@@ -198,6 +239,42 @@ export default function Grn() {
         )
         if (ledgerError) throw ledgerError
       }
+
+      // Batch/serial registries are receipt records for expiry/unit
+      // visibility, materialized only now (confirm time) - same timing as
+      // when the ledger itself gets the stock, never before.
+      const withBatch = withStock.filter((l) => l.batch)
+      if (withBatch.length > 0) {
+        const { error: batchError } = await supabase.from('batches').insert(
+          withBatch.map((l) => ({
+            organization_id: orgId!,
+            sku_id: l.sku_id,
+            warehouse_id: g.warehouse_id,
+            batch_number: l.batch!,
+            manufacturing_date: l.manufacturing_date,
+            expiry_date: l.expiry,
+            received_qty: l.accepted_qty,
+            grn_line_item_id: l.id,
+          }))
+        )
+        if (batchError) throw batchError
+      }
+      const withSerials = withStock.filter((l) => l.serials)
+      if (withSerials.length > 0) {
+        const { error: serialError } = await supabase.from('serials').insert(
+          withSerials.flatMap((l) =>
+            serialLines(l.serials!).map((serial_number) => ({
+              organization_id: orgId!,
+              sku_id: l.sku_id,
+              warehouse_id: g.warehouse_id,
+              serial_number,
+              grn_line_item_id: l.id,
+            }))
+          )
+        )
+        if (serialError) throw serialError
+      }
+
       const { error: statusError } = await supabase.from('grns').update({ status: 'confirmed', confirmed_at: new Date().toISOString() }).eq('id', g.id)
       if (statusError) throw statusError
       showSuccess(`GRN ${g.grn_number} confirmed — stock added. Pending items are now in Put-away.`)
@@ -305,6 +382,33 @@ export default function Grn() {
                     Barcode: {sku.barcode ?? '—'} · Current stock: {stockBySku[sku.id] ?? 0} · Unit: {sku.product_type ?? 'ea'}
                   </div>
                 )}
+                {sku?.tracking_mode === 'batch' && (
+                  <div className="grid grid-cols-3 gap-2 mt-1.5 pl-1">
+                    <input type="text" placeholder="Batch number *" value={l.batch} onChange={(e) => updateLine(i, { batch: e.target.value })} className="text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                    <label className="flex items-center gap-1 text-xs text-slate-500">
+                      Mfg
+                      <input type="date" value={l.manufacturing_date} onChange={(e) => updateLine(i, { manufacturing_date: e.target.value })} className="flex-1 text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                    </label>
+                    <label className="flex items-center gap-1 text-xs text-slate-500">
+                      Expiry
+                      <input type="date" value={l.expiry} onChange={(e) => updateLine(i, { expiry: e.target.value })} className="flex-1 text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                    </label>
+                  </div>
+                )}
+                {sku?.tracking_mode === 'serial' && (
+                  <div className="mt-1.5 pl-1">
+                    <span className="text-xs text-slate-500">
+                      Serial numbers — one per line, must total {Number(l.accepted_qty) || Number(l.received_qty) || 0} ({serialLines(l.serials).length} entered)
+                    </span>
+                    <textarea
+                      value={l.serials}
+                      onChange={(e) => updateLine(i, { serials: e.target.value })}
+                      rows={3}
+                      placeholder={'SN00123\nSN00124\n...'}
+                      className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1 font-mono"
+                    />
+                  </div>
+                )}
               </div>
               )
             })}
@@ -348,6 +452,7 @@ export default function Grn() {
                           <th className="py-1 font-medium text-right">Received</th>
                           <th className="py-1 font-medium text-right">Accepted</th>
                           <th className="py-1 font-medium text-right">Rejected</th>
+                          <th className="py-1 font-medium">Batch/Expiry</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -358,6 +463,9 @@ export default function Grn() {
                             <td className="py-1 text-right text-slate-500">{l.received_qty}</td>
                             <td className="py-1 text-right text-emerald-600 font-medium">{l.accepted_qty}</td>
                             <td className="py-1 text-right text-red-500">{l.rejected_qty}</td>
+                            <td className="py-1 text-slate-500">
+                              {l.batch ? `${l.batch}${l.expiry ? ` · exp ${format(new Date(l.expiry), 'dd MMM yyyy')}` : ''}` : l.serials ? `${serialLines(l.serials).length} serial(s)` : '—'}
+                            </td>
                           </tr>
                         ))}
                       </tbody>

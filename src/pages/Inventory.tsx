@@ -8,7 +8,7 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import Skeleton from '../components/Skeleton'
 import EmptyState from '../components/EmptyState'
 import { buildLabelSheetPdf } from '../lib/labelPdf'
-import type { Tables } from '../lib/database.types'
+import type { Tables, Enums } from '../lib/database.types'
 
 type Sku = Tables<'skus'>
 type Ledger = Tables<'inventory_ledger'>
@@ -44,6 +44,7 @@ interface SkuFormValues {
   length_cm: string
   width_cm: string
   height_cm: string
+  tracking_mode: Enums<'sku_tracking_mode'>
 }
 
 function toFormValues(s: Sku): SkuFormValues {
@@ -70,6 +71,7 @@ function toFormValues(s: Sku): SkuFormValues {
     length_cm: s.length_cm != null ? String(s.length_cm) : '',
     width_cm: s.width_cm != null ? String(s.width_cm) : '',
     height_cm: s.height_cm != null ? String(s.height_cm) : '',
+    tracking_mode: s.tracking_mode,
   }
 }
 
@@ -126,6 +128,7 @@ export default function Inventory() {
     length_cm: '',
     width_cm: '',
     height_cm: '',
+    tracking_mode: 'none',
   })
   const [savingEdit, setSavingEdit] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Sku | null>(null)
@@ -302,6 +305,7 @@ export default function Inventory() {
         length_cm: editForm.length_cm.trim() ? Number(editForm.length_cm) : null,
         width_cm: editForm.width_cm.trim() ? Number(editForm.width_cm) : null,
         height_cm: editForm.height_cm.trim() ? Number(editForm.height_cm) : null,
+        tracking_mode: editForm.tracking_mode,
       })
       .eq('id', s.id)
     setSavingEdit(false)
@@ -1030,10 +1034,30 @@ export default function Inventory() {
                               <input type="text" value={editForm.image_url} onChange={(e) => setEditForm((f) => ({ ...f, image_url: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
                             </label>
                           </div>
-                          <label className="block">
+                          <label className="block mb-2">
                             <span className="text-xs text-slate-500">Description</span>
                             <textarea value={editForm.description} onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))} rows={2} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
                           </label>
+
+                          <div className="text-xs font-semibold uppercase text-slate-500 mb-2 mt-4">Batch / serial tracking</div>
+                          <label className="block max-w-xs">
+                            <span className="text-xs text-slate-500">Tracking mode</span>
+                            <select
+                              value={editForm.tracking_mode}
+                              onChange={(e) => setEditForm((f) => ({ ...f, tracking_mode: e.target.value as Enums<'sku_tracking_mode'> }))}
+                              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1"
+                            >
+                              <option value="none">None</option>
+                              <option value="batch">Batch (batch number, mfg/expiry date)</option>
+                              <option value="serial">Serial (one unique number per unit)</option>
+                            </select>
+                          </label>
+                          {editForm.tracking_mode !== 'none' && (
+                            <p className="text-[10px] text-slate-400 mt-1">
+                              Save this first, then capture {editForm.tracking_mode === 'batch' ? 'batch/expiry' : 'serial numbers'} the
+                              next time this SKU is received on a GRN.
+                            </p>
+                          )}
                         </td>
                       </tr>
                     )}
