@@ -22,6 +22,7 @@ export type Database = {
           invoice_seq: number
           grn_seq: number
           transfer_seq: number
+          cycle_count_seq: number
           created_at: string
         }
         Insert: {
@@ -33,6 +34,7 @@ export type Database = {
           invoice_seq?: number
           grn_seq?: number
           transfer_seq?: number
+          cycle_count_seq?: number
           created_at?: string
         }
         Update: {
@@ -44,6 +46,7 @@ export type Database = {
           invoice_seq?: number
           grn_seq?: number
           transfer_seq?: number
+          cycle_count_seq?: number
           created_at?: string
         }
         Relationships: []
@@ -532,6 +535,60 @@ export type Database = {
           created_at?: string
         }
         Update: Partial<Database["public"]["Tables"]["stock_transfer_items"]["Insert"]>
+        Relationships: []
+      }
+      cycle_counts: {
+        Row: {
+          id: string
+          organization_id: string
+          count_number: string
+          warehouse_id: string
+          bin_id: string | null
+          status: Database["public"]["Enums"]["cycle_count_status"]
+          scheduled_date: string | null
+          notes: string | null
+          created_by: string | null
+          approved_by: string | null
+          approved_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          count_number: string
+          warehouse_id: string
+          bin_id?: string | null
+          status?: Database["public"]["Enums"]["cycle_count_status"]
+          scheduled_date?: string | null
+          notes?: string | null
+          created_by?: string | null
+          approved_by?: string | null
+          approved_at?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["cycle_counts"]["Insert"]>
+        Relationships: []
+      }
+      cycle_count_items: {
+        Row: {
+          id: string
+          organization_id: string
+          cycle_count_id: string
+          sku_id: string
+          system_qty: number
+          physical_qty: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          cycle_count_id: string
+          sku_id: string
+          system_qty?: number
+          physical_qty?: number | null
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["cycle_count_items"]["Insert"]>
         Relationships: []
       }
       packages: {
@@ -1038,12 +1095,14 @@ export type Database = {
       next_invoice_number: { Args: Record<PropertyKey, never>; Returns: string }
       next_grn_number: { Args: Record<PropertyKey, never>; Returns: string }
       next_transfer_number: { Args: Record<PropertyKey, never>; Returns: string }
+      next_cycle_count_number: { Args: Record<PropertyKey, never>; Returns: string }
     }
     Enums: {
       user_role: "admin" | "ops" | "finance"
       user_status: "pending" | "active"
       inventory_movement_type: "order_deduction" | "manual_adjustment" | "restock" | "return" | "damaged" | "transfer_out" | "transfer_in"
       transfer_status: "requested" | "approved" | "dispatched" | "in_transit" | "received" | "rejected"
+      cycle_count_status: "scheduled" | "counting" | "pending_approval" | "approved" | "rejected"
       order_status:
         | "new"
         | "confirmed"

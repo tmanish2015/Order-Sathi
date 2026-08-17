@@ -15,6 +15,7 @@ import Shipping from './pages/Shipping'
 import Ndr from './pages/Ndr'
 import Putaway from './pages/Putaway'
 import StockTransfer from './pages/StockTransfer'
+import CycleCount from './pages/CycleCount'
 import Invoices from './pages/Invoices'
 import Reconciliation from './pages/Reconciliation'
 import Returns from './pages/Returns'
@@ -44,6 +45,7 @@ export default function App() {
             <Route path="/ndr" element={<Ndr />} />
             <Route path="/putaway" element={<Putaway />} />
             <Route path="/stock-transfer" element={<StockTransfer />} />
+            <Route path="/cycle-count" element={<CycleCount />} />
             <Route path="/invoices" element={<Invoices />} />
             <Route path="/reconciliation" element={<Reconciliation />} />
             <Route path="/returns" element={<Returns />} />
