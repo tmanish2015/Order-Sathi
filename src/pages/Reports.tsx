@@ -16,9 +16,9 @@ type Shipment = Tables<'shipments'>
 type Return = Tables<'order_returns'>
 type SettlementTxn = Tables<'settlement_transactions'>
 type Warehouse = Tables<'warehouses'>
-type LedgerRow = { sku_id: string; warehouse_id: string; quantity_delta: number; created_at: string }
+type LedgerRow = { sku_id: string; warehouse_id: string; quantity_delta: number; created_at: string; movement_type: Enums<'inventory_movement_type'> }
 
-const TABS = ['Sales', 'Orders', 'Inventory', 'Ageing', 'Shipping', 'Returns', 'Reconciliation', 'Profitability'] as const
+const TABS = ['Sales', 'Orders', 'Inventory', 'Ageing', 'ABC/FSN', 'Shipping', 'Returns', 'Reconciliation', 'Profitability'] as const
 type Tab = (typeof TABS)[number]
 
 const TREND_DAYS = 30
@@ -49,7 +49,7 @@ export default function Reports() {
         supabase.from('order_line_items').select('*, skus(*)'),
         supabase.from('skus').select('*'),
         supabase.from('channels').select('*'),
-        supabase.from('inventory_ledger').select('sku_id, warehouse_id, quantity_delta, created_at'),
+        supabase.from('inventory_ledger').select('sku_id, warehouse_id, quantity_delta, created_at, movement_type'),
         supabase.from('warehouses').select('*'),
         supabase.from('shipments').select('*'),
         supabase.from('order_returns').select('*'),
@@ -96,6 +96,7 @@ export default function Reports() {
           {tab === 'Orders' && <OrdersReport orders={orders} />}
           {tab === 'Inventory' && <InventoryReport skus={skus} ledger={ledger} lineItems={lineItems} orders={orders} />}
           {tab === 'Ageing' && <AgeingReport skus={skus} ledger={ledger} warehouses={warehouses} />}
+          {tab === 'ABC/FSN' && <AbcFsnReport skus={skus} lineItems={lineItems} ledger={ledger} warehouses={warehouses} />}
           {tab === 'Shipping' && <ShippingReport shipments={shipments} />}
           {tab === 'Returns' && <ReturnsReport returns={returns} />}
           {tab === 'Reconciliation' && <ReconciliationReport settlements={settlements} />}
@@ -328,6 +329,107 @@ function AgeingReport({ skus, ledger, warehouses }: { skus: Sku[]; ledger: Ledge
           format(new Date(r.lastMovement), 'dd MMM yyyy'),
           r.bucket,
         ])}
+      />
+    </div>
+  )
+}
+
+const FSN_WINDOW_DAYS_DEFAULT = 30
+const FAST_MOVING_RATE = 1
+
+function AbcFsnReport({
+  skus,
+  lineItems,
+  ledger,
+  warehouses,
+}: {
+  skus: Sku[]
+  lineItems: LineItem[]
+  ledger: LedgerRow[]
+  warehouses: Warehouse[]
+}) {
+  const [warehouseFilter, setWarehouseFilter] = useState('')
+  const [windowDays, setWindowDays] = useState(FSN_WINDOW_DAYS_DEFAULT)
+
+  const cutoff = Date.now() - windowDays * 24 * 60 * 60 * 1000
+
+  // ABC: revenue contribution over the window, Pareto cut at 80% / 95%.
+  const revenueBySku: Record<string, number> = {}
+  for (const li of lineItems) {
+    if (warehouseFilter && li.warehouse_id !== warehouseFilter) continue
+    if (new Date(li.created_at).getTime() < cutoff) continue
+    revenueBySku[li.sku_id] = (revenueBySku[li.sku_id] ?? 0) + li.quantity * Number(li.unit_price)
+  }
+  const totalRevenue = Object.values(revenueBySku).reduce((a, b) => a + b, 0)
+  const rankedByRevenue = skus
+    .map((s) => ({ sku: s, revenue: revenueBySku[s.id] ?? 0 }))
+    .sort((a, b) => b.revenue - a.revenue)
+  let cumulative = 0
+  const abcBySku: Record<string, 'A' | 'B' | 'C'> = {}
+  for (const r of rankedByRevenue) {
+    cumulative += r.revenue
+    const cumPct = totalRevenue > 0 ? (cumulative / totalRevenue) * 100 : 100
+    abcBySku[r.sku.id] = r.revenue <= 0 ? 'C' : cumPct <= 80 ? 'A' : cumPct <= 95 ? 'B' : 'C'
+  }
+
+  // FSN: units sold per day over the window, from order_deduction movements only.
+  const unitsBySku: Record<string, number> = {}
+  for (const row of ledger) {
+    if (row.movement_type !== 'order_deduction') continue
+    if (warehouseFilter && row.warehouse_id !== warehouseFilter) continue
+    if (new Date(row.created_at).getTime() < cutoff) continue
+    unitsBySku[row.sku_id] = (unitsBySku[row.sku_id] ?? 0) + -row.quantity_delta
+  }
+  const fsnBySku: Record<string, 'Fast' | 'Slow' | 'Non'> = {}
+  for (const s of skus) {
+    const rate = (unitsBySku[s.id] ?? 0) / windowDays
+    fsnBySku[s.id] = rate >= FAST_MOVING_RATE ? 'Fast' : rate > 0 ? 'Slow' : 'Non'
+  }
+
+  const abcCounts = { A: 0, B: 0, C: 0 }
+  const fsnCounts = { Fast: 0, Slow: 0, Non: 0 }
+  for (const s of skus) {
+    abcCounts[abcBySku[s.id]]++
+    fsnCounts[fsnBySku[s.id]]++
+  }
+
+  const rows = skus
+    .map((s) => ({ sku: s, revenue: revenueBySku[s.id] ?? 0, units: unitsBySku[s.id] ?? 0, abc: abcBySku[s.id], fsn: fsnBySku[s.id] }))
+    .sort((a, b) => b.revenue - a.revenue)
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap gap-2">
+        {warehouses.length > 1 && (
+          <select value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5">
+            <option value="">All warehouses</option>
+            {warehouses.map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.name}
+              </option>
+            ))}
+          </select>
+        )}
+        <select value={windowDays} onChange={(e) => setWindowDays(Number(e.target.value))} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5">
+          <option value={30}>Last 30 days</option>
+          <option value={60}>Last 60 days</option>
+          <option value={90}>Last 90 days</option>
+        </select>
+        <span className="text-xs text-slate-400 self-center">Category/brand filters need the catalog fields from a later Phase 3 task.</span>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <Stat label="A (top 80% revenue)" value={abcCounts.A} />
+        <Stat label="B (next 15%)" value={abcCounts.B} />
+        <Stat label="C (remaining 5% + zero)" value={abcCounts.C} />
+        <Stat label="Fast moving" value={fsnCounts.Fast} />
+        <Stat label="Slow moving" value={fsnCounts.Slow} />
+        <Stat label="Non moving" value={fsnCounts.Non} />
+      </div>
+
+      <Table
+        headers={['SKU', 'Revenue', 'Units sold', 'ABC', 'FSN']}
+        rows={rows.map((r) => [r.sku.sku, formatINR(r.revenue), r.units, r.abc, r.fsn])}
       />
     </div>
   )
