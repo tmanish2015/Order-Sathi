@@ -12,6 +12,8 @@ const NAV = [
   { to: '/putaway', label: 'Put-away', icon: '📥', roles: ['admin', 'ops'] },
   { to: '/stock-transfer', label: 'Stock Transfers', icon: '🔀', roles: ['admin', 'ops'] },
   { to: '/cycle-count', label: 'Cycle Count', icon: '🔍', roles: ['admin', 'ops'] },
+  { to: '/customers', label: 'Customers', icon: '👤', roles: ['admin', 'ops', 'finance'] },
+  { to: '/forecast', label: 'Forecast', icon: '📈', roles: ['admin', 'ops'] },
   { to: '/picklist', label: 'Picklists', icon: '🧾', roles: ['admin', 'ops'] },
   { to: '/packing', label: 'Packing', icon: '📦', roles: ['admin', 'ops'] },
   { to: '/shipping', label: 'Shipping', icon: '🚚', roles: ['admin', 'ops'] },

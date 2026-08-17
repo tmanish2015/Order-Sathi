@@ -16,6 +16,8 @@ import Ndr from './pages/Ndr'
 import Putaway from './pages/Putaway'
 import StockTransfer from './pages/StockTransfer'
 import CycleCount from './pages/CycleCount'
+import Customers from './pages/Customers'
+import Forecast from './pages/Forecast'
 import Invoices from './pages/Invoices'
 import Reconciliation from './pages/Reconciliation'
 import Returns from './pages/Returns'
@@ -46,6 +48,8 @@ export default function App() {
             <Route path="/putaway" element={<Putaway />} />
             <Route path="/stock-transfer" element={<StockTransfer />} />
             <Route path="/cycle-count" element={<CycleCount />} />
+            <Route path="/customers" element={<Customers />} />
+            <Route path="/forecast" element={<Forecast />} />
             <Route path="/invoices" element={<Invoices />} />
             <Route path="/reconciliation" element={<Reconciliation />} />
             <Route path="/returns" element={<Returns />} />
