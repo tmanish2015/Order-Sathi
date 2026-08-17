@@ -10,6 +10,7 @@ const NAV = [
   { to: '/warehouses', label: 'Warehouses', icon: '🏭', roles: ['admin', 'ops'] },
   { to: '/grn', label: 'GRN / Inward', icon: '📦', roles: ['admin', 'ops'] },
   { to: '/putaway', label: 'Put-away', icon: '📥', roles: ['admin', 'ops'] },
+  { to: '/stock-transfer', label: 'Stock Transfers', icon: '🔀', roles: ['admin', 'ops'] },
   { to: '/picklist', label: 'Picklists', icon: '🧾', roles: ['admin', 'ops'] },
   { to: '/packing', label: 'Packing', icon: '📦', roles: ['admin', 'ops'] },
   { to: '/shipping', label: 'Shipping', icon: '🚚', roles: ['admin', 'ops'] },

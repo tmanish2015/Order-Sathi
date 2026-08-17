@@ -14,6 +14,7 @@ import Packing from './pages/Packing'
 import Shipping from './pages/Shipping'
 import Ndr from './pages/Ndr'
 import Putaway from './pages/Putaway'
+import StockTransfer from './pages/StockTransfer'
 import Invoices from './pages/Invoices'
 import Reconciliation from './pages/Reconciliation'
 import Returns from './pages/Returns'
@@ -42,6 +43,7 @@ export default function App() {
             <Route path="/shipping" element={<Shipping />} />
             <Route path="/ndr" element={<Ndr />} />
             <Route path="/putaway" element={<Putaway />} />
+            <Route path="/stock-transfer" element={<StockTransfer />} />
             <Route path="/invoices" element={<Invoices />} />
             <Route path="/reconciliation" element={<Reconciliation />} />
             <Route path="/returns" element={<Returns />} />

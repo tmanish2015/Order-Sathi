@@ -21,6 +21,7 @@ export type Database = {
           address: string | null
           invoice_seq: number
           grn_seq: number
+          transfer_seq: number
           created_at: string
         }
         Insert: {
@@ -31,6 +32,7 @@ export type Database = {
           address?: string | null
           invoice_seq?: number
           grn_seq?: number
+          transfer_seq?: number
           created_at?: string
         }
         Update: {
@@ -41,6 +43,7 @@ export type Database = {
           address?: string | null
           invoice_seq?: number
           grn_seq?: number
+          transfer_seq?: number
           created_at?: string
         }
         Relationships: []
@@ -465,6 +468,70 @@ export type Database = {
           created_at?: string
         }
         Update: Partial<Database["public"]["Tables"]["grn_line_items"]["Insert"]>
+        Relationships: []
+      }
+      stock_transfers: {
+        Row: {
+          id: string
+          organization_id: string
+          transfer_number: string
+          source_warehouse_id: string
+          destination_warehouse_id: string
+          status: Database["public"]["Enums"]["transfer_status"]
+          notes: string | null
+          requested_by: string | null
+          approved_by: string | null
+          approved_at: string | null
+          dispatched_by: string | null
+          dispatched_at: string | null
+          received_by: string | null
+          received_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          transfer_number: string
+          source_warehouse_id: string
+          destination_warehouse_id: string
+          status?: Database["public"]["Enums"]["transfer_status"]
+          notes?: string | null
+          requested_by?: string | null
+          approved_by?: string | null
+          approved_at?: string | null
+          dispatched_by?: string | null
+          dispatched_at?: string | null
+          received_by?: string | null
+          received_at?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["stock_transfers"]["Insert"]>
+        Relationships: []
+      }
+      stock_transfer_items: {
+        Row: {
+          id: string
+          organization_id: string
+          transfer_id: string
+          sku_id: string
+          requested_qty: number
+          dispatched_qty: number
+          received_qty: number
+          damaged_qty: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          transfer_id: string
+          sku_id: string
+          requested_qty?: number
+          dispatched_qty?: number
+          received_qty?: number
+          damaged_qty?: number
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["stock_transfer_items"]["Insert"]>
         Relationships: []
       }
       packages: {
@@ -970,11 +1037,13 @@ export type Database = {
       }
       next_invoice_number: { Args: Record<PropertyKey, never>; Returns: string }
       next_grn_number: { Args: Record<PropertyKey, never>; Returns: string }
+      next_transfer_number: { Args: Record<PropertyKey, never>; Returns: string }
     }
     Enums: {
       user_role: "admin" | "ops" | "finance"
       user_status: "pending" | "active"
-      inventory_movement_type: "order_deduction" | "manual_adjustment" | "restock" | "return" | "damaged"
+      inventory_movement_type: "order_deduction" | "manual_adjustment" | "restock" | "return" | "damaged" | "transfer_out" | "transfer_in"
+      transfer_status: "requested" | "approved" | "dispatched" | "in_transit" | "received" | "rejected"
       order_status:
         | "new"
         | "confirmed"
