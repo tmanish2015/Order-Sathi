@@ -6,6 +6,7 @@ import { useToast } from '../lib/Toast'
 import { reportError } from '../lib/errors'
 import Skeleton from '../components/Skeleton'
 import EmptyState from '../components/EmptyState'
+import BarcodeScanInput from '../components/BarcodeScanInput'
 import type { Tables, Enums } from '../lib/database.types'
 
 type Picklist = Tables<'picklists'>
@@ -34,6 +35,7 @@ export default function Picklist() {
   const [editValues, setEditValues] = useState<Record<string, string>>({})
   const [savingItemId, setSavingItemId] = useState<string | null>(null)
   const [transitioningId, setTransitioningId] = useState<string | null>(null)
+  const [scanFeedback, setScanFeedback] = useState<Record<string, { ok: boolean; message: string }>>({})
   const orgId = profile?.organization_id
   const canEdit = profile?.role === 'admin' || profile?.role === 'ops'
 
@@ -183,6 +185,35 @@ export default function Picklist() {
     }
   }
 
+  // Scan-to-pick: match the scanned barcode against this picklist's items
+  // only (that IS "the expected SKU" for an aggregated picklist), then
+  // reuse the exact same savePickedQty() the manual quantity box uses -
+  // no second engine, no bypass of the allocated-qty cap.
+  async function handleScan(pl: Picklist, code: string) {
+    const items = itemsByPicklist[pl.id] ?? []
+    const match = items.find((i) => i.skus?.barcode === code)
+    if (!match) {
+      setScanFeedback((m) => ({ ...m, [pl.id]: { ok: false, message: `Scanned barcode "${code}" does not match any item on this picklist — wrong item.` } }))
+      return
+    }
+    const currentQty = Number(editValues[match.id] ?? match.picked_qty)
+    if (currentQty >= match.total_quantity) {
+      setScanFeedback((m) => ({
+        ...m,
+        [pl.id]: { ok: false, message: `${match.skus?.sku}: already at required quantity (${match.total_quantity}).` },
+      }))
+      return
+    }
+    const newQty = currentQty + 1
+    setEditValues((m) => ({ ...m, [match.id]: String(newQty) }))
+    await savePickedQty(pl, match, newQty)
+    const remaining = match.total_quantity - newQty
+    setScanFeedback((m) => ({
+      ...m,
+      [pl.id]: { ok: true, message: `${match.skus?.sku} — picked ${newQty} of ${match.total_quantity} (${remaining} remaining).` },
+    }))
+  }
+
   async function markPicklistPicked(pl: Picklist) {
     setTransitioningId(pl.id)
     const { error } = await supabase.from('picklists').update({ status: 'picked' }).eq('id', pl.id)
@@ -278,6 +309,17 @@ export default function Picklist() {
                         <button onClick={() => startPicking(pl)} disabled={transitioningId === pl.id} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">
                           Start picking
                         </button>
+                      </div>
+                    )}
+                    {canEdit && pl.status === 'picking' && (
+                      <div className="px-4 py-3 border-b border-slate-100 bg-blue-50">
+                        <span className="text-xs text-slate-500 mb-1 block">📷 Scan barcode to pick (auto-increments)</span>
+                        <BarcodeScanInput onScan={(code) => handleScan(pl, code)} placeholder="Scan or type barcode, then Enter" />
+                        {scanFeedback[pl.id] && (
+                          <p className={`text-xs mt-1 ${scanFeedback[pl.id].ok ? 'text-emerald-600' : 'text-red-600 font-medium'}`}>
+                            {scanFeedback[pl.id].ok ? '✓' : '⚠ Mismatch —'} {scanFeedback[pl.id].message}
+                          </p>
+                        )}
                       </div>
                     )}
                     {loadingItems && !items ? (

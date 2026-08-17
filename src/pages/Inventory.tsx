@@ -34,6 +34,7 @@ interface SkuFormValues {
   safety_stock: string
   reorder_qty: string
   lead_time_days: string
+  barcode: string
 }
 
 function toFormValues(s: Sku): SkuFormValues {
@@ -50,6 +51,7 @@ function toFormValues(s: Sku): SkuFormValues {
     safety_stock: String(s.safety_stock),
     reorder_qty: String(s.reorder_qty),
     lead_time_days: String(s.lead_time_days),
+    barcode: s.barcode ?? '',
   }
 }
 
@@ -96,6 +98,7 @@ export default function Inventory() {
     safety_stock: '',
     reorder_qty: '',
     lead_time_days: '',
+    barcode: '',
   })
   const [savingEdit, setSavingEdit] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Sku | null>(null)
@@ -114,6 +117,7 @@ export default function Inventory() {
     safety_stock: '0',
     reorder_qty: '0',
     lead_time_days: '0',
+    barcode: '',
   })
   const [alertFilter, setAlertFilter] = useState<AlertKind | ''>('')
   const [savingSku, setSavingSku] = useState(false)
@@ -259,6 +263,7 @@ export default function Inventory() {
         safety_stock: Number(editForm.safety_stock) || 0,
         reorder_qty: Number(editForm.reorder_qty) || 0,
         lead_time_days: Number(editForm.lead_time_days) || 0,
+        barcode: editForm.barcode.trim() || null,
       })
       .eq('id', s.id)
     setSavingEdit(false)
@@ -304,6 +309,7 @@ export default function Inventory() {
       safety_stock: Number(newSku.safety_stock) || 0,
       reorder_qty: Number(newSku.reorder_qty) || 0,
       lead_time_days: Number(newSku.lead_time_days) || 0,
+      barcode: newSku.barcode.trim() || null,
     })
     setSavingSku(false)
     if (error) {
@@ -324,6 +330,7 @@ export default function Inventory() {
       safety_stock: '0',
       reorder_qty: '0',
       lead_time_days: '0',
+      barcode: '',
     })
     setShowAddSku(false)
     load()
@@ -583,6 +590,16 @@ export default function Inventory() {
               type="number"
               value={newSku.cost_price}
               onChange={(e) => setNewSku((f) => ({ ...f, cost_price: e.target.value }))}
+              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs text-slate-500">Barcode (optional)</span>
+            <input
+              type="text"
+              value={newSku.barcode}
+              onChange={(e) => setNewSku((f) => ({ ...f, barcode: e.target.value }))}
+              placeholder="Scan or type"
               className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
             />
           </label>
@@ -910,6 +927,10 @@ export default function Inventory() {
                             <label className="block">
                               <span className="text-xs text-slate-500">Lead time (days)</span>
                               <input type="number" value={editForm.lead_time_days} onChange={(e) => setEditForm((f) => ({ ...f, lead_time_days: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                            </label>
+                            <label className="block">
+                              <span className="text-xs text-slate-500">Barcode</span>
+                              <input type="text" value={editForm.barcode} onChange={(e) => setEditForm((f) => ({ ...f, barcode: e.target.value }))} placeholder="Scan or type" className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
                             </label>
                           </div>
                         </td>

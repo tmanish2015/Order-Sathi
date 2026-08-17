@@ -169,6 +169,29 @@ export default function StockTransfer() {
     setBusyId(t.id)
     try {
       const updates = items.map((i) => ({ id: i.id, dispatched_qty: Number(dispatchDraft[i.id] ?? i.requested_qty) || 0 }))
+
+      // Cannot dispatch more than what's actually available at the source
+      // warehouse right now - checked fresh at dispatch time, not just
+      // against the requested_qty entered when the transfer was created.
+      const { data: sourceLedger } = await supabase
+        .from('inventory_ledger')
+        .select('sku_id, quantity_delta')
+        .eq('warehouse_id', t.source_warehouse_id)
+      const availableBySku: Record<string, number> = {}
+      for (const row of sourceLedger ?? []) availableBySku[row.sku_id] = (availableBySku[row.sku_id] ?? 0) + row.quantity_delta
+      const shortages = updates.filter((u) => u.dispatched_qty > 0 && u.dispatched_qty > (availableBySku[items.find((i) => i.id === u.id)!.sku_id] ?? 0))
+      if (shortages.length > 0) {
+        const detail = shortages
+          .map((u) => {
+            const item = items.find((i) => i.id === u.id)!
+            return `${item.skus?.sku} (want ${u.dispatched_qty}, have ${availableBySku[item.sku_id] ?? 0})`
+          })
+          .join(', ')
+        setBusyId(null)
+        showError(`Insufficient stock at ${t.source?.name} to dispatch: ${detail}.`)
+        return
+      }
+
       for (const u of updates) {
         const { error } = await supabase.from('stock_transfer_items').update({ dispatched_qty: u.dispatched_qty }).eq('id', u.id)
         if (error) throw error

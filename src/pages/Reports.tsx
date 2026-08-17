@@ -278,31 +278,54 @@ function ageBucket(days: number): (typeof AGE_BUCKETS)[number] {
   return AGE_BUCKETS[5]
 }
 
+const INBOUND_MOVEMENT_TYPES: Enums<'inventory_movement_type'>[] = ['restock', 'transfer_in', 'return']
+type AgeSort = 'oldest' | 'value' | 'qty'
+
 function AgeingReport({ skus, ledger, warehouses }: { skus: Sku[]; ledger: LedgerRow[]; warehouses: Warehouse[] }) {
+  const [warehouseFilter, setWarehouseFilter] = useState('')
+  const [search, setSearch] = useState('')
+  const [bucketFilter, setBucketFilter] = useState('')
+  const [sortBy, setSortBy] = useState<AgeSort>('oldest')
+
   const skuById = new Map(skus.map((s) => [s.id, s]))
   const warehouseById = new Map(warehouses.map((w) => [w.id, w]))
 
-  const byPair = new Map<string, { skuId: string; warehouseId: string; qty: number; lastMovement: string }>()
+  // "Oldest stock date" is approximated as this SKU/warehouse pair's most
+  // recent INBOUND movement (restock / transfer-in / return) - the actual
+  // remaining units could be older if only part of that inbound has sold,
+  // but without per-lot/batch receipt tracking (a separate Phase 3 item)
+  // this is the best signal the existing ledger can give, and it's never
+  // reset by an outbound sale the way "any movement" would be.
+  const byPair = new Map<string, { skuId: string; warehouseId: string; qty: number; lastInbound: string | null }>()
   for (const row of ledger) {
     const key = `${row.sku_id}:${row.warehouse_id}`
-    const existing = byPair.get(key) ?? { skuId: row.sku_id, warehouseId: row.warehouse_id, qty: 0, lastMovement: row.created_at }
+    const existing = byPair.get(key) ?? { skuId: row.sku_id, warehouseId: row.warehouse_id, qty: 0, lastInbound: null }
     existing.qty += row.quantity_delta
-    if (row.created_at > existing.lastMovement) existing.lastMovement = row.created_at
+    if (INBOUND_MOVEMENT_TYPES.includes(row.movement_type) && (!existing.lastInbound || row.created_at > existing.lastInbound)) {
+      existing.lastInbound = row.created_at
+    }
     byPair.set(key, existing)
   }
 
   const now = Date.now()
-  const rows = Array.from(byPair.values())
-    .filter((p) => p.qty > 0)
+  let rows = Array.from(byPair.values())
+    .filter((p) => p.qty > 0 && p.lastInbound)
     .map((p) => {
       const sku = skuById.get(p.skuId)
       const warehouse = warehouseById.get(p.warehouseId)
-      const ageDays = Math.floor((now - new Date(p.lastMovement).getTime()) / (24 * 60 * 60 * 1000))
+      const ageDays = Math.floor((now - new Date(p.lastInbound!).getTime()) / (24 * 60 * 60 * 1000))
       const value = p.qty * Number(sku?.cost_price ?? 0)
-      return { sku, warehouse, qty: p.qty, value, ageDays, bucket: ageBucket(ageDays), lastMovement: p.lastMovement }
+      return { sku, warehouse, warehouseId: p.warehouseId, qty: p.qty, value, ageDays, bucket: ageBucket(ageDays), lastInbound: p.lastInbound! }
     })
-    .filter((r) => r.sku)
-    .sort((a, b) => b.ageDays - a.ageDays)
+    .filter((r): r is typeof r & { sku: Sku } => !!r.sku)
+
+  if (warehouseFilter) rows = rows.filter((r) => r.warehouseId === warehouseFilter)
+  if (bucketFilter) rows = rows.filter((r) => r.bucket === bucketFilter)
+  if (search.trim()) {
+    const q = search.trim().toLowerCase()
+    rows = rows.filter((r) => r.sku.sku.toLowerCase().includes(q) || r.sku.title.toLowerCase().includes(q))
+  }
+  rows = rows.sort((a, b) => (sortBy === 'oldest' ? b.ageDays - a.ageDays : sortBy === 'value' ? b.value - a.value : b.qty - a.qty))
 
   const bucketCounts: Record<string, number> = {}
   const bucketValue: Record<string, number> = {}
@@ -310,23 +333,65 @@ function AgeingReport({ skus, ledger, warehouses }: { skus: Sku[]; ledger: Ledge
     bucketCounts[r.bucket] = (bucketCounts[r.bucket] ?? 0) + 1
     bucketValue[r.bucket] = (bucketValue[r.bucket] ?? 0) + r.value
   }
+  const totalQty = rows.reduce((s, r) => s + r.qty, 0)
+  const totalValue = rows.reduce((s, r) => s + r.value, 0)
+  const oldest = rows.length > 0 ? Math.max(...rows.map((r) => r.ageDays)) : 0
+  const slowMoving = rows.filter((r) => r.bucket === AGE_BUCKETS[4] || r.bucket === AGE_BUCKETS[5]).length
 
   return (
     <div className="space-y-6">
+      <p className="text-xs text-slate-400">
+        Age is based on each SKU/warehouse pair's most recent inbound movement (restock / transfer-in / return), not SKU creation date.
+        Without per-lot receipt tracking this is an approximation of "oldest stock" — see the ageing note above.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search SKU or title…" className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 w-48" />
+        {warehouses.length > 1 && (
+          <select value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5">
+            <option value="">All warehouses</option>
+            {warehouses.map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.name}
+              </option>
+            ))}
+          </select>
+        )}
+        <select value={bucketFilter} onChange={(e) => setBucketFilter(e.target.value)} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5">
+          <option value="">All buckets</option>
+          {AGE_BUCKETS.map((b) => (
+            <option key={b} value={b}>
+              {b}
+            </option>
+          ))}
+        </select>
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value as AgeSort)} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5">
+          <option value="oldest">Sort: oldest first</option>
+          <option value="value">Sort: highest value</option>
+          <option value="qty">Sort: highest quantity</option>
+        </select>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Stat label="Total quantity" value={totalQty} />
+        <Stat label="Total inventory value" value={formatINR(totalValue)} />
+        <Stat label="Oldest inventory" value={`${oldest}d`} />
+        <Stat label="Slow-moving lines (181d+)" value={slowMoving} />
+      </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {AGE_BUCKETS.map((b) => (
           <Stat key={b} label={b} value={bucketCounts[b] ?? 0} sub={formatINR(bucketValue[b] ?? 0)} />
         ))}
       </div>
       <Table
-        headers={['SKU', 'Warehouse', 'Quantity', 'Stock value', 'Age (days)', 'Last movement', 'Bucket']}
+        headers={['SKU', 'Product', 'Warehouse', 'Quantity', 'Stock value', 'Age (days)', 'Last inbound', 'Bucket']}
         rows={rows.map((r) => [
-          r.sku!.sku,
+          r.sku.sku,
+          r.sku.title,
           r.warehouse?.name ?? '—',
           r.qty,
           formatINR(r.value),
           r.ageDays,
-          format(new Date(r.lastMovement), 'dd MMM yyyy'),
+          format(new Date(r.lastInbound), 'dd MMM yyyy'),
           r.bucket,
         ])}
       />

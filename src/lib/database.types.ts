@@ -127,6 +127,7 @@ export type Database = {
           organization_id: string
           sku: string
           asin: string | null
+          barcode: string | null
           title: string
           hsn_code: string | null
           gst_rate: number
@@ -149,6 +150,7 @@ export type Database = {
           organization_id: string
           sku: string
           asin?: string | null
+          barcode?: string | null
           title: string
           hsn_code?: string | null
           gst_rate?: number

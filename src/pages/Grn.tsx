@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { format } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/AuthContext'
@@ -6,6 +6,7 @@ import { useToast } from '../lib/Toast'
 import { reportError } from '../lib/errors'
 import Skeleton from '../components/Skeleton'
 import EmptyState from '../components/EmptyState'
+import BarcodeScanInput from '../components/BarcodeScanInput'
 import type { Tables, Enums } from '../lib/database.types'
 
 type GrnRow = Tables<'grns'> & { warehouses: Tables<'warehouses'> | null }
@@ -36,6 +37,7 @@ export default function Grn() {
   const [loading, setLoading] = useState(true)
   const [skus, setSkus] = useState<Sku[]>([])
   const [warehouses, setWarehouses] = useState<Warehouse[]>([])
+  const [ledger, setLedger] = useState<{ sku_id: string; warehouse_id: string; quantity_delta: number }[]>([])
   const [showNew, setShowNew] = useState(false)
   const [form, setForm] = useState({ warehouse_id: '', supplier_name: '', reference_po: '' })
   const [lines, setLines] = useState<DraftLine[]>([{ ...BLANK_LINE }])
@@ -43,6 +45,7 @@ export default function Grn() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [linesByGrn, setLinesByGrn] = useState<Record<string, GrnLineItem[]>>({})
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
+  const [scanFeedback, setScanFeedback] = useState<{ ok: boolean; message: string } | null>(null)
 
   const orgId = profile?.organization_id
   const canEdit = profile?.role === 'admin' || profile?.role === 'ops'
@@ -50,14 +53,16 @@ export default function Grn() {
   async function load() {
     if (!orgId) return
     setLoading(true)
-    const [{ data: g }, { data: s }, { data: w }] = await Promise.all([
+    const [{ data: g }, { data: s }, { data: w }, { data: l }] = await Promise.all([
       supabase.from('grns').select('*, warehouses(*)').order('created_at', { ascending: false }),
       supabase.from('skus').select('*').eq('active', true).order('sku'),
       supabase.from('warehouses').select('*').order('name'),
+      supabase.from('inventory_ledger').select('sku_id, warehouse_id, quantity_delta'),
     ])
     setGrns((g as unknown as GrnRow[]) ?? [])
     setSkus(s ?? [])
     setWarehouses(w ?? [])
+    setLedger(l ?? [])
     if (w && w.length > 0 && !form.warehouse_id) setForm((f) => ({ ...f, warehouse_id: w.find((x) => x.is_default)?.id ?? w[0].id }))
     setLoading(false)
   }
@@ -67,8 +72,45 @@ export default function Grn() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId])
 
+  // Current stock in the chosen warehouse, shown per line so the receiver
+  // can sanity-check what's scanned against what's already on hand.
+  const stockBySku = useMemo(() => {
+    const totals: Record<string, number> = {}
+    for (const row of ledger) {
+      if (row.warehouse_id !== form.warehouse_id) continue
+      totals[row.sku_id] = (totals[row.sku_id] ?? 0) + row.quantity_delta
+    }
+    return totals
+  }, [ledger, form.warehouse_id])
+
   function updateLine(i: number, patch: Partial<DraftLine>) {
     setLines((ls) => ls.map((l, idx) => (idx === i ? { ...l, ...patch } : l)))
+  }
+
+  // Scan-to-inward: find the SKU by barcode, increment its line if it's
+  // already on this GRN, otherwise add a new line. Never creates stock by
+  // itself - it only fills in the same draft line items submitGrn() already
+  // posts through the normal draft-then-confirm flow.
+  function handleScan(code: string) {
+    const sku = skus.find((s) => s.barcode === code)
+    if (!sku) {
+      setScanFeedback({ ok: false, message: `Barcode not found: ${code}` })
+      return
+    }
+    setLines((ls) => {
+      const idx = ls.findIndex((l) => l.sku_id === sku.id)
+      if (idx !== -1) {
+        const existing = ls[idx]
+        const nextReceived = (Number(existing.received_qty) || 0) + 1
+        const nextAccepted = (Number(existing.accepted_qty) || 0) + 1
+        return ls.map((l, i) => (i === idx ? { ...l, received_qty: String(nextReceived), accepted_qty: String(nextAccepted) } : l))
+      }
+      const blankIdx = ls.findIndex((l) => !l.sku_id)
+      const newLine: DraftLine = { ...BLANK_LINE, sku_id: sku.id, received_qty: '1', accepted_qty: '1' }
+      if (blankIdx !== -1) return ls.map((l, i) => (i === blankIdx ? newLine : l))
+      return [...ls, newLine]
+    })
+    setScanFeedback({ ok: true, message: `${sku.sku} — ${sku.title}` })
   }
 
   async function submitGrn() {
@@ -219,33 +261,53 @@ export default function Grn() {
             </label>
           </div>
 
+          <div className="mb-4">
+            <span className="text-xs text-slate-500 mb-1 block">📷 Scan barcode to add / increment a line</span>
+            <BarcodeScanInput onScan={handleScan} placeholder="Scan or type barcode, then Enter" />
+            {scanFeedback && (
+              <p className={`text-xs mt-1 ${scanFeedback.ok ? 'text-emerald-600' : 'text-red-600'}`}>
+                {scanFeedback.ok ? '✓' : '✕'} {scanFeedback.message}
+              </p>
+            )}
+          </div>
+
           <div className="text-xs text-slate-500 mb-2">Line items</div>
           <div className="space-y-2 mb-3">
-            {lines.map((l, i) => (
-              <div key={i} className="grid grid-cols-6 gap-2 items-center">
-                <select
-                  value={l.sku_id}
-                  onChange={(e) => updateLine(i, { sku_id: e.target.value })}
-                  className="col-span-2 text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
-                >
-                  <option value="">Select SKU…</option>
-                  {skus.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.sku} — {s.title}
-                    </option>
-                  ))}
-                </select>
-                <input type="number" placeholder="Ordered" value={l.ordered_qty} onChange={(e) => updateLine(i, { ordered_qty: e.target.value })} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5" />
-                <input type="number" placeholder="Received" value={l.received_qty} onChange={(e) => updateLine(i, { received_qty: e.target.value })} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5" />
-                <input type="number" placeholder="Accepted" value={l.accepted_qty} onChange={(e) => updateLine(i, { accepted_qty: e.target.value })} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5" />
-                <div className="flex items-center gap-1">
-                  <input type="number" placeholder="Rejected" value={l.rejected_qty} onChange={(e) => updateLine(i, { rejected_qty: e.target.value })} className="w-full text-sm rounded-lg border border-slate-300 px-2 py-1.5" />
-                  <button onClick={() => setLines((ls) => ls.filter((_, idx) => idx !== i))} disabled={lines.length === 1} className="text-xs text-slate-400 hover:text-red-600 disabled:opacity-30">
-                    ✕
-                  </button>
+            {lines.map((l, i) => {
+              const sku = skus.find((s) => s.id === l.sku_id)
+              return (
+              <div key={i}>
+                <div className="grid grid-cols-6 gap-2 items-center">
+                  <select
+                    value={l.sku_id}
+                    onChange={(e) => updateLine(i, { sku_id: e.target.value })}
+                    className="col-span-2 text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                  >
+                    <option value="">Select SKU…</option>
+                    {skus.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.sku} — {s.title}
+                      </option>
+                    ))}
+                  </select>
+                  <input type="number" placeholder="Ordered" value={l.ordered_qty} onChange={(e) => updateLine(i, { ordered_qty: e.target.value })} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5" />
+                  <input type="number" placeholder="Received" value={l.received_qty} onChange={(e) => updateLine(i, { received_qty: e.target.value })} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5" />
+                  <input type="number" placeholder="Accepted" value={l.accepted_qty} onChange={(e) => updateLine(i, { accepted_qty: e.target.value })} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5" />
+                  <div className="flex items-center gap-1">
+                    <input type="number" placeholder="Rejected" value={l.rejected_qty} onChange={(e) => updateLine(i, { rejected_qty: e.target.value })} className="w-full text-sm rounded-lg border border-slate-300 px-2 py-1.5" />
+                    <button onClick={() => setLines((ls) => ls.filter((_, idx) => idx !== i))} disabled={lines.length === 1} className="text-xs text-slate-400 hover:text-red-600 disabled:opacity-30">
+                      ✕
+                    </button>
+                  </div>
                 </div>
+                {sku && (
+                  <div className="text-[10px] text-slate-400 pl-1 mt-0.5">
+                    Barcode: {sku.barcode ?? '—'} · Current stock: {stockBySku[sku.id] ?? 0} · Unit: {sku.product_type ?? 'ea'}
+                  </div>
+                )}
               </div>
-            ))}
+              )
+            })}
             <button onClick={() => setLines((ls) => [...ls, { ...BLANK_LINE }])} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">
               + Add line item
             </button>
