@@ -557,6 +557,34 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["serials"]["Insert"]>
         Relationships: []
       }
+      sku_prices: {
+        Row: {
+          id: string
+          organization_id: string
+          sku_id: string
+          channel_id: string | null
+          warehouse_id: string | null
+          price: number
+          min_selling_price: number | null
+          effective_from: string
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          sku_id: string
+          channel_id?: string | null
+          warehouse_id?: string | null
+          price: number
+          min_selling_price?: number | null
+          effective_from?: string
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["sku_prices"]["Insert"]>
+        Relationships: []
+      }
       stock_transfers: {
         Row: {
           id: string

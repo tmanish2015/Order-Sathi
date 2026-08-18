@@ -21,6 +21,7 @@ const CycleCount = lazy(() => import('./pages/CycleCount'))
 const Customers = lazy(() => import('./pages/Customers'))
 const Forecast = lazy(() => import('./pages/Forecast'))
 const BatchSerial = lazy(() => import('./pages/BatchSerial'))
+const Pricing = lazy(() => import('./pages/Pricing'))
 const Invoices = lazy(() => import('./pages/Invoices'))
 const Reconciliation = lazy(() => import('./pages/Reconciliation'))
 const Returns = lazy(() => import('./pages/Returns'))
@@ -59,6 +60,7 @@ export default function App() {
               <Route path="/customers" element={<Customers />} />
               <Route path="/forecast" element={<Forecast />} />
               <Route path="/batch-serial" element={<BatchSerial />} />
+              <Route path="/pricing" element={<Pricing />} />
               <Route path="/invoices" element={<Invoices />} />
               <Route path="/reconciliation" element={<Reconciliation />} />
               <Route path="/returns" element={<Returns />} />
