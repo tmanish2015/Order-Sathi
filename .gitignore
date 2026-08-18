@@ -15,6 +15,9 @@ dist-ssr
 # Backup dumps - contain customer data, never committed
 backups/
 
+# Supabase CLI local state
+supabase/.temp/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
