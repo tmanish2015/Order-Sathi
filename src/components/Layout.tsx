@@ -33,6 +33,7 @@ const NAV = [
   { to: '/integrations', label: 'Integrations', icon: '🔌', roles: ['admin', 'finance'] },
   { to: '/accounting', label: 'Accounting', icon: '📒', roles: ['admin', 'finance'] },
   { to: '/exports', label: 'Exports', icon: '📤', roles: ['admin', 'ops', 'finance'] },
+  { to: '/imports', label: 'Imports', icon: '📥', roles: ['admin', 'ops'] },
   { to: '/team', label: 'Team', icon: '👥', roles: ['admin'] },
 ]
 

@@ -733,6 +733,32 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["accounting_mappings"]["Insert"]>
         Relationships: []
       }
+      import_batches: {
+        Row: {
+          id: string
+          organization_id: string
+          import_type: Database["public"]["Enums"]["import_type"]
+          filename: string
+          row_count: number
+          success_count: number
+          error_count: number
+          imported_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          import_type: Database["public"]["Enums"]["import_type"]
+          filename: string
+          row_count?: number
+          success_count?: number
+          error_count?: number
+          imported_by?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["import_batches"]["Insert"]>
+        Relationships: []
+      }
       stock_transfers: {
         Row: {
           id: string
@@ -1369,6 +1395,7 @@ export type Database = {
       notification_priority: "low" | "medium" | "high" | "critical"
       accounting_provider: "tally" | "busy"
       accounting_mapping_type: "sales" | "purchase" | "customer" | "supplier" | "tax" | "credit_note" | "debit_note" | "payment"
+      import_type: "products" | "opening_stock"
       serial_status: "in_stock" | "allocated" | "shipped" | "returned" | "damaged"
       order_status:
         | "new"
