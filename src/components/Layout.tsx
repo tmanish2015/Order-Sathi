@@ -4,40 +4,82 @@ import { useAuth } from '../lib/AuthContext'
 import { supabase } from '../lib/supabase'
 import GlobalSearch from './GlobalSearch'
 
-const NAV = [
-  { to: '/', label: 'Dashboard', icon: '📊', roles: ['admin', 'ops', 'finance'] },
-  { to: '/notifications', label: 'Notifications', icon: '🔔', roles: ['admin', 'ops', 'finance'] },
-  { to: '/orders', label: 'Orders', icon: '📦', roles: ['admin', 'ops', 'finance'] },
-  { to: '/inventory', label: 'Inventory', icon: '📋', roles: ['admin', 'ops', 'finance'] },
-  { to: '/sku-mapping', label: 'SKU Mapping', icon: '🔗', roles: ['admin', 'ops'] },
-  { to: '/warehouses', label: 'Warehouses', icon: '🏭', roles: ['admin', 'ops'] },
-  { to: '/grn', label: 'GRN / Inward', icon: '📦', roles: ['admin', 'ops'] },
-  { to: '/putaway', label: 'Put-away', icon: '📥', roles: ['admin', 'ops'] },
-  { to: '/stock-transfer', label: 'Stock Transfers', icon: '🔀', roles: ['admin', 'ops'] },
-  { to: '/cycle-count', label: 'Cycle Count', icon: '🔍', roles: ['admin', 'ops'] },
-  { to: '/batch-serial', label: 'Batch / Serial', icon: '🏷', roles: ['admin', 'ops'] },
-  { to: '/pricing', label: 'Pricing', icon: '💰', roles: ['admin', 'ops', 'finance'] },
-  { to: '/promotions', label: 'Promotions', icon: '🏷', roles: ['admin', 'ops'] },
-  { to: '/automation', label: 'Automation', icon: '⚡', roles: ['admin', 'ops'] },
-  { to: '/customers', label: 'Customers', icon: '👤', roles: ['admin', 'ops', 'finance'] },
-  { to: '/forecast', label: 'Forecast', icon: '📈', roles: ['admin', 'ops'] },
-  { to: '/picklist', label: 'Picklists', icon: '🧾', roles: ['admin', 'ops'] },
-  { to: '/packing', label: 'Packing', icon: '📦', roles: ['admin', 'ops'] },
-  { to: '/shipping', label: 'Shipping', icon: '🚚', roles: ['admin', 'ops'] },
-  { to: '/ndr', label: 'NDR', icon: '⚠️', roles: ['admin', 'ops'] },
-  { to: '/invoices', label: 'GST Invoices', icon: '🧾', roles: ['admin', 'finance'] },
-  { to: '/reconciliation', label: 'Reconciliation', icon: '🔄', roles: ['admin', 'finance'] },
-  { to: '/returns', label: 'Returns & RTO', icon: '↩️', roles: ['admin', 'ops', 'finance'] },
-  { to: '/profit', label: 'Profit & Loss', icon: '📊', roles: ['admin', 'finance'] },
-  { to: '/reports', label: 'Reports & Analytics', icon: '📈', roles: ['admin', 'ops', 'finance'] },
-  { to: '/sync-logs', label: 'Sync Logs', icon: '📡', roles: ['admin', 'ops', 'finance'] },
-  { to: '/audit-log', label: 'Audit Log', icon: '📜', roles: ['admin', 'finance'] },
-  { to: '/integrations', label: 'Integrations', icon: '🔌', roles: ['admin', 'finance'] },
-  { to: '/accounting', label: 'Accounting', icon: '📒', roles: ['admin', 'finance'] },
-  { to: '/exports', label: 'Exports', icon: '📤', roles: ['admin', 'ops', 'finance'] },
-  { to: '/imports', label: 'Imports', icon: '📥', roles: ['admin', 'ops'] },
-  { to: '/team', label: 'Team', icon: '👥', roles: ['admin'] },
-  { to: '/settings', label: 'Settings', icon: '⚙️', roles: ['admin'] },
+interface NavItem {
+  to: string
+  label: string
+  icon: string
+  roles: string[]
+}
+
+const NAV_SECTIONS: { section: string; items: NavItem[] }[] = [
+  {
+    section: 'Overview',
+    items: [
+      { to: '/', label: 'Dashboard', icon: '📊', roles: ['admin', 'ops', 'finance'] },
+      { to: '/notifications', label: 'Notifications', icon: '🔔', roles: ['admin', 'ops', 'finance'] },
+      { to: '/reports', label: 'Reports & Analytics', icon: '📈', roles: ['admin', 'ops', 'finance'] },
+    ],
+  },
+  {
+    section: 'Orders & Fulfilment',
+    items: [
+      { to: '/orders', label: 'Orders', icon: '📦', roles: ['admin', 'ops', 'finance'] },
+      { to: '/customers', label: 'Customers', icon: '👤', roles: ['admin', 'ops', 'finance'] },
+      { to: '/picklist', label: 'Picklists', icon: '🧾', roles: ['admin', 'ops'] },
+      { to: '/packing', label: 'Packing', icon: '📦', roles: ['admin', 'ops'] },
+      { to: '/shipping', label: 'Shipping', icon: '🚚', roles: ['admin', 'ops'] },
+      { to: '/ndr', label: 'NDR', icon: '⚠️', roles: ['admin', 'ops'] },
+      { to: '/returns', label: 'Returns & RTO', icon: '↩️', roles: ['admin', 'ops', 'finance'] },
+    ],
+  },
+  {
+    section: 'Inventory & Warehouse',
+    items: [
+      { to: '/inventory', label: 'Inventory', icon: '📋', roles: ['admin', 'ops', 'finance'] },
+      { to: '/sku-mapping', label: 'SKU Mapping', icon: '🔗', roles: ['admin', 'ops'] },
+      { to: '/warehouses', label: 'Warehouses', icon: '🏭', roles: ['admin', 'ops'] },
+      { to: '/grn', label: 'GRN / Inward', icon: '📦', roles: ['admin', 'ops'] },
+      { to: '/putaway', label: 'Put-away', icon: '📥', roles: ['admin', 'ops'] },
+      { to: '/stock-transfer', label: 'Stock Transfers', icon: '🔀', roles: ['admin', 'ops'] },
+      { to: '/cycle-count', label: 'Cycle Count', icon: '🔍', roles: ['admin', 'ops'] },
+      { to: '/batch-serial', label: 'Batch / Serial', icon: '🏷', roles: ['admin', 'ops'] },
+      { to: '/forecast', label: 'Forecast', icon: '📈', roles: ['admin', 'ops'] },
+    ],
+  },
+  {
+    section: 'Pricing & Promotions',
+    items: [
+      { to: '/pricing', label: 'Pricing', icon: '💰', roles: ['admin', 'ops', 'finance'] },
+      { to: '/promotions', label: 'Promotions', icon: '🏷', roles: ['admin', 'ops'] },
+      { to: '/automation', label: 'Automation', icon: '⚡', roles: ['admin', 'ops'] },
+    ],
+  },
+  {
+    section: 'Finance',
+    items: [
+      { to: '/invoices', label: 'GST Invoices', icon: '🧾', roles: ['admin', 'finance'] },
+      { to: '/reconciliation', label: 'Reconciliation', icon: '🔄', roles: ['admin', 'finance'] },
+      { to: '/profit', label: 'Profit & Loss', icon: '📊', roles: ['admin', 'finance'] },
+      { to: '/accounting', label: 'Accounting', icon: '📒', roles: ['admin', 'finance'] },
+    ],
+  },
+  {
+    section: 'Data',
+    items: [
+      { to: '/exports', label: 'Exports', icon: '📤', roles: ['admin', 'ops', 'finance'] },
+      { to: '/imports', label: 'Imports', icon: '📥', roles: ['admin', 'ops'] },
+      { to: '/sync-logs', label: 'Sync Logs', icon: '📡', roles: ['admin', 'ops', 'finance'] },
+      { to: '/audit-log', label: 'Audit Log', icon: '📜', roles: ['admin', 'finance'] },
+    ],
+  },
+  {
+    section: 'Admin',
+    items: [
+      { to: '/integrations', label: 'Integrations', icon: '🔌', roles: ['admin', 'finance'] },
+      { to: '/team', label: 'Team', icon: '👥', roles: ['admin'] },
+      { to: '/settings', label: 'Settings', icon: '⚙️', roles: ['admin'] },
+    ],
+  },
 ]
 
 export default function Layout() {
@@ -78,7 +120,9 @@ export default function Layout() {
   }
 
   const role = profile?.role ?? 'ops'
-  const visible = NAV.filter((n) => n.roles.includes(role))
+  const visibleSections = NAV_SECTIONS.map((s) => ({ ...s, items: s.items.filter((n) => n.roles.includes(role)) })).filter(
+    (s) => s.items.length > 0
+  )
 
   const sidebarContent = (
     <>
@@ -100,25 +144,32 @@ export default function Layout() {
       <div className="px-2 pt-3">
         <GlobalSearch onNavigate={() => setDrawerOpen(false)} />
       </div>
-      <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
-        {visible.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === '/'}
-            onClick={() => setDrawerOpen(false)}
-            className={({ isActive }) =>
-              `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                isActive ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white'
-              }`
-            }
-          >
-            <span className="text-base leading-none">{item.icon}</span>
-            {item.label}
-            {item.to === '/notifications' && unreadCount > 0 && (
-              <span className="ml-auto text-[10px] font-semibold bg-red-500 text-white rounded-full px-1.5 py-0.5 leading-none">{unreadCount}</span>
-            )}
-          </NavLink>
+      <nav className="flex-1 px-2 py-3 space-y-3 overflow-y-auto">
+        {visibleSections.map((s) => (
+          <div key={s.section}>
+            <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">{s.section}</div>
+            <div className="space-y-0.5">
+              {s.items.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.to === '/'}
+                  onClick={() => setDrawerOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      isActive ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                    }`
+                  }
+                >
+                  <span className="text-base leading-none">{item.icon}</span>
+                  {item.label}
+                  {item.to === '/notifications' && unreadCount > 0 && (
+                    <span className="ml-auto text-[10px] font-semibold bg-red-500 text-white rounded-full px-1.5 py-0.5 leading-none">{unreadCount}</span>
+                  )}
+                </NavLink>
+              ))}
+            </div>
+          </div>
         ))}
       </nav>
       <div className="px-2 py-3 border-t border-white/10">
