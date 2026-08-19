@@ -37,6 +37,7 @@ const SyncLogs = lazy(() => import('./pages/SyncLogs'))
 const AuditLog = lazy(() => import('./pages/AuditLog'))
 const Integrations = lazy(() => import('./pages/Integrations'))
 const Team = lazy(() => import('./pages/Team'))
+const Settings = lazy(() => import('./pages/Settings'))
 
 function PageFallback() {
   return <div className="p-6 text-sm text-slate-400">Loading…</div>
@@ -83,6 +84,7 @@ export default function App() {
               <Route path="/audit-log" element={<AuditLog />} />
               <Route path="/integrations" element={<Integrations />} />
               <Route path="/team" element={<Team />} />
+              <Route path="/settings" element={<Settings />} />
             </Route>
           </Routes>
         </Suspense>

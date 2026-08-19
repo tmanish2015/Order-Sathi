@@ -37,6 +37,7 @@ const NAV = [
   { to: '/exports', label: 'Exports', icon: '📤', roles: ['admin', 'ops', 'finance'] },
   { to: '/imports', label: 'Imports', icon: '📥', roles: ['admin', 'ops'] },
   { to: '/team', label: 'Team', icon: '👥', roles: ['admin'] },
+  { to: '/settings', label: 'Settings', icon: '⚙️', roles: ['admin'] },
 ]
 
 export default function Layout() {

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/AuthContext'
@@ -7,7 +8,6 @@ import { reportError } from '../lib/errors'
 import type { Tables, Enums } from '../lib/database.types'
 
 type Profile = Tables<'profiles'>
-type Organization = Tables<'organizations'>
 
 const ROLES: Enums<'user_role'>[] = ['admin', 'ops', 'finance']
 
@@ -17,48 +17,14 @@ export default function Team() {
   const [members, setMembers] = useState<Profile[]>([])
   const [roleChoice, setRoleChoice] = useState<Record<string, Enums<'user_role'>>>({})
   const [busyId, setBusyId] = useState<string | null>(null)
-  const [org, setOrg] = useState<Organization | null>(null)
-  const [orgForm, setOrgForm] = useState({ name: '', gst_number: '', state: '', address: '' })
-  const [savingOrg, setSavingOrg] = useState(false)
 
   async function load() {
     const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
     setMembers(data ?? [])
   }
 
-  async function loadOrg() {
-    if (!me?.organization_id) return
-    const { data } = await supabase.from('organizations').select('*').eq('id', me.organization_id).single()
-    if (data) {
-      setOrg(data)
-      setOrgForm({
-        name: data.name,
-        gst_number: data.gst_number ?? '',
-        state: data.state ?? '',
-        address: data.address ?? '',
-      })
-    }
-  }
-
-  async function saveOrg() {
-    if (!org) return
-    setSavingOrg(true)
-    const { error } = await supabase
-      .from('organizations')
-      .update({ name: orgForm.name, gst_number: orgForm.gst_number || null, state: orgForm.state || null, address: orgForm.address || null })
-      .eq('id', org.id)
-    setSavingOrg(false)
-    if (error) {
-      reportError(showError, 'Update organization', error, me?.organization_id, me?.id)
-      return
-    }
-    showSuccess('Organization details saved.')
-    loadOrg()
-  }
-
   useEffect(() => {
     load()
-    loadOrg()
   }, [me?.organization_id])
 
   async function approve(userId: string) {
@@ -105,32 +71,9 @@ export default function Team() {
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <h2 className="text-lg font-semibold text-slate-900 mb-1">Team</h2>
       <p className="text-xs text-slate-400 mb-6">
-        New signups land here as pending with no data access until an admin approves them and assigns a role.
+        New signups land here as pending with no data access until an admin approves them and assigns a role. Organization profile
+        (GSTIN, address) moved to <Link to="/settings" className="text-indigo-600 hover:underline">Settings</Link>.
       </p>
-
-      {me?.role === 'admin' && (
-        <>
-          <h3 className="text-xs font-semibold uppercase text-slate-500 mb-2">Organization</h3>
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6 space-y-3">
-            <p className="text-xs text-slate-400">
-              Used on generated GST invoices, and to tell CGST/SGST (same state as buyer) from IGST (different state).
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field label="Business name" value={orgForm.name} onChange={(v) => setOrgForm((f) => ({ ...f, name: v }))} />
-              <Field label="GSTIN" value={orgForm.gst_number} onChange={(v) => setOrgForm((f) => ({ ...f, gst_number: v }))} />
-              <Field label="State" value={orgForm.state} onChange={(v) => setOrgForm((f) => ({ ...f, state: v }))} placeholder="e.g. Rajasthan" />
-              <Field label="Address" value={orgForm.address} onChange={(v) => setOrgForm((f) => ({ ...f, address: v }))} />
-            </div>
-            <button
-              onClick={saveOrg}
-              disabled={savingOrg}
-              className="text-sm rounded-lg bg-indigo-600 text-white px-3 py-1.5 hover:bg-indigo-700 disabled:opacity-50"
-            >
-              {savingOrg ? 'Saving…' : 'Save'}
-            </button>
-          </div>
-        </>
-      )}
 
       {pending.length > 0 && (
         <>
@@ -211,20 +154,5 @@ export default function Team() {
         ))}
       </div>
     </div>
-  )
-}
-
-function Field({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
-  return (
-    <label className="block">
-      <span className="text-xs text-slate-500">{label}</span>
-      <input
-        type="text"
-        value={value}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-      />
-    </label>
   )
 }
