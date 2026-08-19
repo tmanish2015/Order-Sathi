@@ -585,6 +585,46 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["sku_prices"]["Insert"]>
         Relationships: []
       }
+      promotions: {
+        Row: {
+          id: string
+          organization_id: string
+          name: string
+          promotion_type: Database["public"]["Enums"]["promotion_type"]
+          discount_value: number | null
+          buy_qty: number | null
+          get_qty: number | null
+          sku_id: string | null
+          category: string | null
+          channel_id: string | null
+          min_order_value: number | null
+          start_date: string
+          end_date: string
+          active: boolean
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          name: string
+          promotion_type: Database["public"]["Enums"]["promotion_type"]
+          discount_value?: number | null
+          buy_qty?: number | null
+          get_qty?: number | null
+          sku_id?: string | null
+          category?: string | null
+          channel_id?: string | null
+          min_order_value?: number | null
+          start_date: string
+          end_date: string
+          active?: boolean
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["promotions"]["Insert"]>
+        Relationships: []
+      }
       stock_transfers: {
         Row: {
           id: string
@@ -1216,6 +1256,7 @@ export type Database = {
       transfer_status: "requested" | "approved" | "dispatched" | "in_transit" | "received" | "rejected"
       cycle_count_status: "scheduled" | "counting" | "pending_approval" | "approved" | "rejected"
       sku_tracking_mode: "none" | "batch" | "serial"
+      promotion_type: "percentage" | "fixed" | "bxgy"
       serial_status: "in_stock" | "allocated" | "shipped" | "returned" | "damaged"
       order_status:
         | "new"
