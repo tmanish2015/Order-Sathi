@@ -31,6 +31,7 @@ const NAV = [
   { to: '/profit', label: 'Profit & Loss', icon: '📊', roles: ['admin', 'finance'] },
   { to: '/reports', label: 'Reports & Analytics', icon: '📈', roles: ['admin', 'ops', 'finance'] },
   { to: '/sync-logs', label: 'Sync Logs', icon: '📡', roles: ['admin', 'ops', 'finance'] },
+  { to: '/audit-log', label: 'Audit Log', icon: '📜', roles: ['admin', 'finance'] },
   { to: '/integrations', label: 'Integrations', icon: '🔌', roles: ['admin', 'finance'] },
   { to: '/accounting', label: 'Accounting', icon: '📒', roles: ['admin', 'finance'] },
   { to: '/exports', label: 'Exports', icon: '📤', roles: ['admin', 'ops', 'finance'] },

@@ -34,6 +34,7 @@ const Returns = lazy(() => import('./pages/Returns'))
 const Profit = lazy(() => import('./pages/Profit'))
 const Reports = lazy(() => import('./pages/Reports'))
 const SyncLogs = lazy(() => import('./pages/SyncLogs'))
+const AuditLog = lazy(() => import('./pages/AuditLog'))
 const Integrations = lazy(() => import('./pages/Integrations'))
 const Team = lazy(() => import('./pages/Team'))
 
@@ -79,6 +80,7 @@ export default function App() {
               <Route path="/profit" element={<Profit />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/sync-logs" element={<SyncLogs />} />
+              <Route path="/audit-log" element={<AuditLog />} />
               <Route path="/integrations" element={<Integrations />} />
               <Route path="/team" element={<Team />} />
             </Route>
