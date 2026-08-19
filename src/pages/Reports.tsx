@@ -75,16 +75,16 @@ export default function Reports() {
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
-      <h2 className="text-lg font-semibold text-slate-900 mb-1">Reports &amp; Analytics</h2>
-      <p className="text-xs text-slate-400 mb-4">Every number below comes from live data — nothing here is a static placeholder.</p>
+      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">Reports &amp; Analytics</h2>
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">Every number below comes from live data — nothing here is a static placeholder.</p>
 
-      <div className="flex gap-1 mb-6 border-b border-slate-200 overflow-x-auto">
+      <div className="flex gap-1 mb-6 border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
         {TABS.map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={`px-3 py-2 text-sm font-medium whitespace-nowrap border-b-2 -mb-px ${
-              tab === t ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'
+              tab === t ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700'
             }`}
           >
             {t}
@@ -115,21 +115,21 @@ export default function Reports() {
 
 function Stat({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3.5">
-      <div className="text-xs text-slate-400">{label}</div>
-      <div className="text-lg font-semibold mt-1 text-slate-900">{value}</div>
-      {sub && <div className="text-[10px] text-slate-400 mt-0.5">{sub}</div>}
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-3.5">
+      <div className="text-xs text-slate-400 dark:text-slate-500">{label}</div>
+      <div className="text-lg font-semibold mt-1 text-slate-900 dark:text-slate-100">{value}</div>
+      {sub && <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">{sub}</div>}
     </div>
   )
 }
 
 function Table({ headers, rows }: { headers: string[]; rows: (string | number)[][] }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+            <tr className="text-left text-xs text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-700/60">
               {headers.map((h) => (
                 <th key={h} className="px-4 py-2 font-medium">
                   {h}
@@ -137,10 +137,10 @@ function Table({ headers, rows }: { headers: string[]; rows: (string | number)[]
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-50">
+          <tbody className="divide-y divide-slate-50 dark:divide-slate-700/60">
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={headers.length} className="px-4 py-6 text-center text-slate-400 text-sm">
+                <td colSpan={headers.length} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500 text-sm">
                   No data yet.
                 </td>
               </tr>
@@ -148,7 +148,7 @@ function Table({ headers, rows }: { headers: string[]; rows: (string | number)[]
               rows.map((row, i) => (
                 <tr key={i}>
                   {row.map((cell, j) => (
-                    <td key={j} className="px-4 py-2.5 text-slate-600">
+                    <td key={j} className="px-4 py-2.5 text-slate-600 dark:text-slate-400">
                       {cell}
                     </td>
                   ))}
@@ -199,8 +199,8 @@ function SalesReport({ orders, channels }: { orders: Order[]; channels: Channel[
           sub={growthPct == null ? 'No orders in the prior 30-day window to compare against' : undefined}
         />
       </div>
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-        <div className="text-xs font-semibold uppercase text-slate-500 mb-3">Sales trend (last 30 days)</div>
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4">
+        <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-3">Sales trend (last 30 days)</div>
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={trend}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -212,7 +212,7 @@ function SalesReport({ orders, channels }: { orders: Order[]; channels: Channel[
         </ResponsiveContainer>
       </div>
       <div>
-        <div className="text-xs font-semibold uppercase text-slate-500 mb-2">Sales by channel</div>
+        <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-2">Sales by channel</div>
         <Table headers={['Channel', 'Orders', 'Revenue', 'AOV']} rows={byChannel} />
       </div>
     </div>
@@ -240,7 +240,7 @@ function OrdersReport({ orders }: { orders: Order[] }) {
         <Stat label="SLA breaches (open orders)" value={breached} sub={withSla.length > 0 ? `${((breached / withSla.length) * 100).toFixed(1)}% of SLA orders` : undefined} />
       </div>
       <div>
-        <div className="text-xs font-semibold uppercase text-slate-500 mb-2">Order status breakdown</div>
+        <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-2">Order status breakdown</div>
         <Table headers={['Status', 'Count', '% of total']} rows={rows} />
       </div>
     </div>
@@ -361,14 +361,14 @@ function AgeingReport({ skus, ledger, warehouses }: { skus: Sku[]; ledger: Ledge
 
   return (
     <div className="space-y-6">
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-slate-400 dark:text-slate-500">
         Age is based on each SKU/warehouse pair's most recent inbound movement (restock / transfer-in / return), not SKU creation date.
         Without per-lot receipt tracking this is an approximation of "oldest stock" — see the ageing note above.
       </p>
       <div className="flex flex-wrap gap-2">
-        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search SKU or title…" className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 w-48" />
+        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search SKU or title…" className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 w-48 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
         {warehouses.length > 1 && (
-          <select value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5">
+          <select value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
             <option value="">All warehouses</option>
             {warehouses.map((w) => (
               <option key={w.id} value={w.id}>
@@ -377,7 +377,7 @@ function AgeingReport({ skus, ledger, warehouses }: { skus: Sku[]; ledger: Ledge
             ))}
           </select>
         )}
-        <select value={bucketFilter} onChange={(e) => setBucketFilter(e.target.value)} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5">
+        <select value={bucketFilter} onChange={(e) => setBucketFilter(e.target.value)} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
           <option value="">All buckets</option>
           {AGE_BUCKETS.map((b) => (
             <option key={b} value={b}>
@@ -385,7 +385,7 @@ function AgeingReport({ skus, ledger, warehouses }: { skus: Sku[]; ledger: Ledge
             </option>
           ))}
         </select>
-        <select value={sortBy} onChange={(e) => setSortBy(e.target.value as AgeSort)} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5">
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value as AgeSort)} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
           <option value="oldest">Sort: oldest first</option>
           <option value="value">Sort: highest value</option>
           <option value="qty">Sort: highest quantity</option>
@@ -424,14 +424,14 @@ const FSN_WINDOW_DAYS_DEFAULT = 30
 const FAST_MOVING_RATE = 1
 
 const ABC_COLOR: Record<'A' | 'B' | 'C', { chip: string; card: string; num: string }> = {
-  A: { chip: 'bg-indigo-100 text-indigo-700', card: 'border-indigo-200 bg-indigo-50', num: 'text-indigo-700' },
-  B: { chip: 'bg-amber-100 text-amber-700', card: 'border-amber-200 bg-amber-50', num: 'text-amber-700' },
-  C: { chip: 'bg-slate-200 text-slate-600', card: 'border-slate-300 bg-slate-100', num: 'text-slate-600' },
+  A: { chip: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300', card: 'border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/20', num: 'text-indigo-700' },
+  B: { chip: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300', card: 'border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20', num: 'text-amber-700' },
+  C: { chip: 'bg-slate-200 text-slate-600 dark:bg-slate-900/40 dark:text-slate-300', card: 'border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-700/60', num: 'text-slate-600 dark:text-slate-400' },
 }
 const FSN_COLOR: Record<'Fast' | 'Slow' | 'Non', { chip: string; card: string; num: string }> = {
-  Fast: { chip: 'bg-emerald-100 text-emerald-700', card: 'border-emerald-200 bg-emerald-50', num: 'text-emerald-700' },
-  Slow: { chip: 'bg-amber-100 text-amber-700', card: 'border-amber-200 bg-amber-50', num: 'text-amber-700' },
-  Non: { chip: 'bg-red-100 text-red-700', card: 'border-red-200 bg-red-50', num: 'text-red-700' },
+  Fast: { chip: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300', card: 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20', num: 'text-emerald-700' },
+  Slow: { chip: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300', card: 'border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20', num: 'text-amber-700' },
+  Non: { chip: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300', card: 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20', num: 'text-red-700' },
 }
 
 function AbcFsnReport({
@@ -505,7 +505,7 @@ function AbcFsnReport({
     <div className="space-y-6">
       <div className="flex flex-wrap gap-2">
         {warehouses.length > 1 && (
-          <select value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5">
+          <select value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
             <option value="">All warehouses</option>
             {warehouses.map((w) => (
               <option key={w.id} value={w.id}>
@@ -514,13 +514,13 @@ function AbcFsnReport({
             ))}
           </select>
         )}
-        <select value={windowDays} onChange={(e) => setWindowDays(Number(e.target.value))} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5">
+        <select value={windowDays} onChange={(e) => setWindowDays(Number(e.target.value))} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
           <option value={30}>Last 30 days</option>
           <option value={60}>Last 60 days</option>
           <option value={90}>Last 90 days</option>
         </select>
         {categories.length > 0 && (
-          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5">
+          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
             <option value="">All categories</option>
             {categories.map((c) => (
               <option key={c} value={c}>
@@ -529,7 +529,7 @@ function AbcFsnReport({
             ))}
           </select>
         )}
-        {categories.length === 0 && <span className="text-xs text-slate-400 self-center">No categories set yet — add them on the Inventory page.</span>}
+        {categories.length === 0 && <span className="text-xs text-slate-400 dark:text-slate-500 self-center">No categories set yet — add them on the Inventory page.</span>}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -541,11 +541,11 @@ function AbcFsnReport({
         <CategoryStat label="Non moving" value={fsnCounts.Non} color={FSN_COLOR.Non} />
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+              <tr className="text-left text-xs text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-700/60">
                 <th className="px-4 py-2 font-medium">SKU</th>
                 <th className="px-4 py-2 font-medium">Revenue</th>
                 <th className="px-4 py-2 font-medium">Units sold</th>
@@ -553,19 +553,19 @@ function AbcFsnReport({
                 <th className="px-4 py-2 font-medium">FSN</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-slate-50 dark:divide-slate-700/60">
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
+                  <td colSpan={5} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
                     No data for this window.
                   </td>
                 </tr>
               ) : (
                 rows.map((r) => (
                   <tr key={r.sku.id}>
-                    <td className="px-4 py-2.5 font-medium text-slate-700">{r.sku.sku}</td>
-                    <td className="px-4 py-2.5 text-slate-600">{formatINR(r.revenue)}</td>
-                    <td className="px-4 py-2.5 text-slate-600">{r.units}</td>
+                    <td className="px-4 py-2.5 font-medium text-slate-700 dark:text-slate-300">{r.sku.sku}</td>
+                    <td className="px-4 py-2.5 text-slate-600 dark:text-slate-400">{formatINR(r.revenue)}</td>
+                    <td className="px-4 py-2.5 text-slate-600 dark:text-slate-400">{r.units}</td>
                     <td className="px-4 py-2.5">
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded ${ABC_COLOR[r.abc].chip}`}>{r.abc}</span>
                     </td>
@@ -586,7 +586,7 @@ function AbcFsnReport({
 function CategoryStat({ label, value, color }: { label: string; value: number; color: { card: string; num: string } }) {
   return (
     <div className={`rounded-xl border shadow-sm p-3.5 ${color.card}`}>
-      <div className="text-xs text-slate-500">{label}</div>
+      <div className="text-xs text-slate-500 dark:text-slate-400">{label}</div>
       <div className={`text-lg font-semibold mt-1 ${color.num}`}>{value}</div>
     </div>
   )
@@ -668,11 +668,11 @@ function ShippingReport({ shipments, orders, trackingEvents }: { shipments: Ship
         <Stat label="NDR" value={ndr} />
       </div>
       <div>
-        <div className="text-xs font-semibold uppercase text-slate-500 mb-2">By courier — status breakdown</div>
+        <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-2">By courier — status breakdown</div>
         <Table headers={['Courier', 'Total', ...statuses.map((s) => s.replace(/_/g, ' '))]} rows={rows} />
       </div>
       <div>
-        <div className="text-xs font-semibold uppercase text-slate-500 mb-2">Courier performance</div>
+        <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-2">Courier performance</div>
         <Table
           headers={['Courier', 'Shipments', 'Delivery %', 'NDR %', 'RTO %', 'Avg delivery time', 'COD delivery %']}
           rows={courierPerf.map((c) => [
@@ -687,9 +687,9 @@ function ShippingReport({ shipments, orders, trackingEvents }: { shipments: Ship
         />
       </div>
       <div>
-        <div className="text-xs font-semibold uppercase text-slate-500 mb-2">
+        <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-2">
           Delivery intelligence by state
-          <span className="ml-2 text-[10px] normal-case text-slate-400 font-normal">
+          <span className="ml-2 text-[10px] normal-case text-slate-400 dark:text-slate-500 font-normal">
             (pincode-level not shown — orders only store a free-text address, no structured pincode field)
           </span>
         </div>
@@ -726,7 +726,7 @@ function ReturnsReport({ returns }: { returns: Return[] }) {
         <Stat label="RTO" value={rto} />
       </div>
       <div>
-        <div className="text-xs font-semibold uppercase text-slate-500 mb-2">QC outcome breakdown</div>
+        <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-2">QC outcome breakdown</div>
         <Table headers={['Outcome', 'Count']} rows={Object.entries(byOutcome).map(([k, v]) => [k.replace(/_/g, ' '), v])} />
       </div>
     </div>
@@ -753,7 +753,7 @@ function ReconciliationReport({ settlements }: { settlements: SettlementTxn[] })
         <Stat label="Net settlement" value={formatINR(net)} />
       </div>
       <div>
-        <div className="text-xs font-semibold uppercase text-slate-500 mb-2">Match status breakdown</div>
+        <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-2">Match status breakdown</div>
         <Table headers={['Status', 'Count']} rows={Object.entries(byStatus).map(([k, v]) => [k.replace(/_/g, ' '), v])} />
       </div>
     </div>
@@ -772,7 +772,7 @@ function ProfitabilityReport({ orders, lineItems }: { orders: Order[]; lineItems
         <Stat label="COGS" value={formatINR(cogs)} />
         <Stat label="Gross margin" value={formatINR(grossMargin)} sub={revenue > 0 ? `${((grossMargin / revenue) * 100).toFixed(1)}%` : undefined} />
       </div>
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-slate-400 dark:text-slate-500">
         Net profit (after Amazon fees, per order) is tracked in detail on the{' '}
         <Link to="/profit" className="text-indigo-600 hover:underline">
           Profit &amp; Loss
@@ -823,7 +823,7 @@ function ProductsReport({ skus, lineItems, returns }: { skus: Sku[]; lineItems: 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap gap-2">
-        <select value={sortBy} onChange={(e) => setSortBy(e.target.value as ProductSort)} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5">
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value as ProductSort)} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
           <option value="revenue">Top sellers (revenue)</option>
           <option value="units_asc">Slow movers (lowest units)</option>
           <option value="margin">Highest margin</option>
@@ -880,7 +880,7 @@ function WarehouseReport({ warehouses, lineItems, ledger }: { warehouses: Wareho
 
   return (
     <div className="space-y-6">
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-slate-400 dark:text-slate-500">
         Pick/pack/dispatch productivity isn't tracked per warehouse in the current schema (picklists, packages, and shipments aren't
         warehouse-tagged) — shown here is what's honestly derivable: orders allocated from each warehouse, stock movement volume, and
         current inventory value.

@@ -21,12 +21,12 @@ interface DraftLine {
 const BLANK_LINE: DraftLine = { sku_id: '', requested_qty: '' }
 
 const STATUS_COLOR: Record<Enums<'transfer_status'>, string> = {
-  requested: 'bg-slate-100 text-slate-600',
-  approved: 'bg-blue-100 text-blue-700',
-  dispatched: 'bg-indigo-100 text-indigo-700',
-  in_transit: 'bg-cyan-100 text-cyan-700',
-  received: 'bg-emerald-100 text-emerald-700',
-  rejected: 'bg-red-100 text-red-700',
+  requested: 'bg-slate-100 text-slate-600 dark:bg-slate-900/40 dark:text-slate-300',
+  approved: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  dispatched: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
+  in_transit: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300',
+  received: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+  rejected: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
 }
 
 export default function StockTransfer() {
@@ -297,24 +297,24 @@ export default function StockTransfer() {
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-1">
-        <h2 className="text-lg font-semibold text-slate-900">Stock Transfers</h2>
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Stock Transfers</h2>
         {canEdit && (
-          <button onClick={() => setShowNew((v) => !v)} className="text-sm rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50">
+          <button onClick={() => setShowNew((v) => !v)} className="text-sm rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/40">
             {showNew ? 'Cancel' : '+ New transfer'}
           </button>
         )}
       </div>
-      <p className="text-xs text-slate-400 mb-6">
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
         Requested → Approved → Dispatched (source stock deducted) → Received (destination stock added). Shortage/damage on receipt is
         tracked, never silently absorbed into either warehouse's count.
       </p>
 
       {showNew && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 mb-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
             <label className="block">
-              <span className="text-xs text-slate-500">Source warehouse</span>
-              <select value={form.source_warehouse_id} onChange={(e) => setForm((f) => ({ ...f, source_warehouse_id: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5">
+              <span className="text-xs text-slate-500 dark:text-slate-400">Source warehouse</span>
+              <select value={form.source_warehouse_id} onChange={(e) => setForm((f) => ({ ...f, source_warehouse_id: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
                 <option value="">Select…</option>
                 {warehouses.map((w) => (
                   <option key={w.id} value={w.id}>
@@ -324,8 +324,8 @@ export default function StockTransfer() {
               </select>
             </label>
             <label className="block">
-              <span className="text-xs text-slate-500">Destination warehouse</span>
-              <select value={form.destination_warehouse_id} onChange={(e) => setForm((f) => ({ ...f, destination_warehouse_id: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5">
+              <span className="text-xs text-slate-500 dark:text-slate-400">Destination warehouse</span>
+              <select value={form.destination_warehouse_id} onChange={(e) => setForm((f) => ({ ...f, destination_warehouse_id: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
                 <option value="">Select…</option>
                 {warehouses.map((w) => (
                   <option key={w.id} value={w.id}>
@@ -335,16 +335,16 @@ export default function StockTransfer() {
               </select>
             </label>
             <label className="block">
-              <span className="text-xs text-slate-500">Notes (optional)</span>
-              <input type="text" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+              <span className="text-xs text-slate-500 dark:text-slate-400">Notes (optional)</span>
+              <input type="text" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
             </label>
           </div>
 
-          <div className="text-xs text-slate-500 mb-2">Line items</div>
+          <div className="text-xs text-slate-500 dark:text-slate-400 mb-2">Line items</div>
           <div className="space-y-2 mb-3">
             {lines.map((l, i) => (
               <div key={i} className="grid grid-cols-4 gap-2 items-center">
-                <select value={l.sku_id} onChange={(e) => updateLine(i, { sku_id: e.target.value })} className="col-span-2 text-sm rounded-lg border border-slate-300 px-2.5 py-1.5">
+                <select value={l.sku_id} onChange={(e) => updateLine(i, { sku_id: e.target.value })} className="col-span-2 text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
                   <option value="">Select SKU…</option>
                   {skus.map((s) => (
                     <option key={s.id} value={s.id}>
@@ -352,8 +352,8 @@ export default function StockTransfer() {
                     </option>
                   ))}
                 </select>
-                <input type="number" placeholder="Qty" value={l.requested_qty} onChange={(e) => updateLine(i, { requested_qty: e.target.value })} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5" />
-                <button onClick={() => setLines((ls) => ls.filter((_, idx) => idx !== i))} disabled={lines.length === 1} className="text-xs text-slate-400 hover:text-red-600 disabled:opacity-30">
+                <input type="number" placeholder="Qty" value={l.requested_qty} onChange={(e) => updateLine(i, { requested_qty: e.target.value })} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
+                <button onClick={() => setLines((ls) => ls.filter((_, idx) => idx !== i))} disabled={lines.length === 1} className="text-xs text-slate-400 dark:text-slate-500 hover:text-red-600 disabled:opacity-30">
                   ✕ Remove
                 </button>
               </div>
@@ -370,29 +370,29 @@ export default function StockTransfer() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         {loading ? (
           <Skeleton rows={3} />
         ) : transfers.length === 0 ? (
           <EmptyState icon="🔀" title="No stock transfers yet." />
         ) : (
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-slate-50 dark:divide-slate-700/60">
             {transfers.map((t) => (
               <div key={t.id}>
-                <button onClick={() => expand(t)} className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-slate-50">
+                <button onClick={() => expand(t)} className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700/40">
                   <div>
-                    <div className="font-medium text-sm text-slate-900">
+                    <div className="font-medium text-sm text-slate-900 dark:text-slate-100">
                       {t.transfer_number} — {t.source?.name ?? '—'} → {t.destination?.name ?? '—'}
                     </div>
-                    <div className="text-xs text-slate-400">{format(new Date(t.created_at), 'dd MMM yyyy, HH:mm')}</div>
+                    <div className="text-xs text-slate-400 dark:text-slate-500">{format(new Date(t.created_at), 'dd MMM yyyy, HH:mm')}</div>
                   </div>
                   <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${STATUS_COLOR[t.status]}`}>{t.status.replace('_', ' ')}</span>
                 </button>
                 {expandedId === t.id && (
-                  <div className="border-t border-slate-100 px-4 py-3 bg-slate-50">
+                  <div className="border-t border-slate-100 dark:border-slate-700/60 px-4 py-3 bg-slate-50 dark:bg-slate-700/40">
                     <table className="w-full text-sm mb-3">
                       <thead>
-                        <tr className="text-left text-xs text-slate-400">
+                        <tr className="text-left text-xs text-slate-400 dark:text-slate-500">
                           <th className="py-1 font-medium">SKU</th>
                           <th className="py-1 font-medium text-right">Requested</th>
                           <th className="py-1 font-medium text-right">Dispatched</th>
@@ -403,42 +403,42 @@ export default function StockTransfer() {
                       <tbody>
                         {(itemsByTransfer[t.id] ?? []).map((i) => (
                           <tr key={i.id}>
-                            <td className="py-1 text-slate-700">{i.skus?.sku}</td>
-                            <td className="py-1 text-right text-slate-500">
+                            <td className="py-1 text-slate-700 dark:text-slate-300">{i.skus?.sku}</td>
+                            <td className="py-1 text-right text-slate-500 dark:text-slate-400">
                               {t.status === 'approved' && canEdit ? (
                                 <input
                                   type="number"
                                   value={dispatchDraft[i.id] ?? String(i.requested_qty)}
                                   onChange={(e) => setDispatchDraft((m) => ({ ...m, [i.id]: e.target.value }))}
-                                  className="w-16 text-right text-sm rounded border border-slate-300 px-1.5 py-0.5"
+                                  className="w-16 text-right text-sm rounded border border-slate-300 px-1.5 py-0.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
                                 />
                               ) : (
                                 i.requested_qty
                               )}
                             </td>
-                            <td className="py-1 text-right text-slate-500">{i.dispatched_qty}</td>
-                            <td className="py-1 text-right text-slate-500">
+                            <td className="py-1 text-right text-slate-500 dark:text-slate-400">{i.dispatched_qty}</td>
+                            <td className="py-1 text-right text-slate-500 dark:text-slate-400">
                               {t.status === 'dispatched' || t.status === 'in_transit' ? (
                                 canEdit && (
                                   <input
                                     type="number"
                                     value={receiveDraft[i.id]?.received ?? String(i.dispatched_qty)}
                                     onChange={(e) => setReceiveDraft((m) => ({ ...m, [i.id]: { received: e.target.value, damaged: m[i.id]?.damaged ?? '0' } }))}
-                                    className="w-16 text-right text-sm rounded border border-slate-300 px-1.5 py-0.5"
+                                    className="w-16 text-right text-sm rounded border border-slate-300 px-1.5 py-0.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
                                   />
                                 )
                               ) : (
                                 i.received_qty
                               )}
                             </td>
-                            <td className="py-1 text-right text-slate-500">
+                            <td className="py-1 text-right text-slate-500 dark:text-slate-400">
                               {t.status === 'dispatched' || t.status === 'in_transit' ? (
                                 canEdit && (
                                   <input
                                     type="number"
                                     value={receiveDraft[i.id]?.damaged ?? '0'}
                                     onChange={(e) => setReceiveDraft((m) => ({ ...m, [i.id]: { received: m[i.id]?.received ?? String(i.dispatched_qty), damaged: e.target.value } }))}
-                                    className="w-16 text-right text-sm rounded border border-slate-300 px-1.5 py-0.5"
+                                    className="w-16 text-right text-sm rounded border border-slate-300 px-1.5 py-0.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
                                   />
                                 )
                               ) : (

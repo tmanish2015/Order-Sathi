@@ -188,20 +188,20 @@ export default function ExportCentre() {
 
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto">
-      <h2 className="text-lg font-semibold text-slate-900 mb-1">Export Centre</h2>
-      <p className="text-xs text-slate-400 mb-6">
+      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">Export Centre</h2>
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
         CSV exports of live data (opens fine in Excel/Sheets). Date range applies to datasets with a natural date column; datasets without
         one (Inventory, Products) always export the current full snapshot.
       </p>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6 flex flex-wrap items-end gap-3">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 mb-6 flex flex-wrap items-end gap-3">
         <label className="block">
-          <span className="text-xs text-slate-500">From (optional)</span>
-          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="mt-1 text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+          <span className="text-xs text-slate-500 dark:text-slate-400">From (optional)</span>
+          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="mt-1 text-sm rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 px-2.5 py-1.5" />
         </label>
         <label className="block">
-          <span className="text-xs text-slate-500">To (optional)</span>
-          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="mt-1 text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+          <span className="text-xs text-slate-500 dark:text-slate-400">To (optional)</span>
+          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="mt-1 text-sm rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 px-2.5 py-1.5" />
         </label>
         {selected.size > 0 && (
           <button onClick={exportSelected} disabled={exporting != null} className="text-sm rounded-lg bg-indigo-600 text-white px-3 py-1.5 hover:bg-indigo-700 disabled:opacity-50">
@@ -210,11 +210,11 @@ export default function ExportCentre() {
         )}
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="divide-y divide-slate-50">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div className="divide-y divide-slate-50 dark:divide-slate-700/60">
           {DATASETS.map((ds) => (
             <div key={ds.key} className="px-4 py-3 flex items-center justify-between gap-3">
-              <label className="flex items-center gap-2 text-sm text-slate-700">
+              <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                 <input type="checkbox" checked={selected.has(ds.key)} onChange={() => toggle(ds.key)} />
                 {ds.label}
               </label>

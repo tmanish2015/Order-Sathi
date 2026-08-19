@@ -13,9 +13,9 @@ type NdrRecord = Tables<'ndr_records'> & { orders: Tables<'orders'> | null }
 const CONTACT_STATUS = ['not_contacted', 'contacted', 'unreachable']
 
 const OUTCOME_COLOR: Record<string, string> = {
-  pending: 'bg-amber-100 text-amber-700',
-  delivered: 'bg-emerald-100 text-emerald-700',
-  rto: 'bg-red-100 text-red-700',
+  pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  delivered: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+  rto: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
 }
 
 export default function Ndr() {
@@ -68,18 +68,18 @@ export default function Ndr() {
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between gap-3 mb-1">
-        <h2 className="text-lg font-semibold text-slate-900">NDR — Non-Delivery Reports</h2>
-        <label className="flex items-center gap-1.5 text-xs text-slate-500">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">NDR — Non-Delivery Reports</h2>
+        <label className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
           <input type="checkbox" checked={showResolved} onChange={(e) => setShowResolved(e.target.checked)} />
           Show resolved
         </label>
       </div>
-      <p className="text-xs text-slate-400 mb-6">
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
         A shipment marked NDR here creates a record automatically. Track contact attempts, then resolve to either
         Delivered (redelivery succeeded) or RTO (returning to origin).
       </p>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         {loading ? (
           <Skeleton />
         ) : visible.length === 0 ? (
@@ -88,7 +88,7 @@ export default function Ndr() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                <tr className="text-left text-xs text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-700/60">
                   <th className="px-4 py-2 font-medium">Order</th>
                   <th className="px-4 py-2 font-medium">AWB</th>
                   <th className="px-4 py-2 font-medium">NDR date</th>
@@ -99,13 +99,13 @@ export default function Ndr() {
                   <th className="px-4 py-2 font-medium">Outcome</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-700/60">
                 {visible.map((r) => (
                   <tr key={r.id}>
-                    <td className="px-4 py-2.5 font-medium text-slate-700">{r.orders?.amazon_order_id ?? '—'}</td>
-                    <td className="px-4 py-2.5 text-slate-500">{r.awb_number}</td>
-                    <td className="px-4 py-2.5 text-slate-500">{format(new Date(r.ndr_date), 'dd MMM yyyy')}</td>
-                    <td className="px-4 py-2.5 text-slate-500">
+                    <td className="px-4 py-2.5 font-medium text-slate-700 dark:text-slate-300">{r.orders?.amazon_order_id ?? '—'}</td>
+                    <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{r.awb_number}</td>
+                    <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{format(new Date(r.ndr_date), 'dd MMM yyyy')}</td>
+                    <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">
                       {canEdit ? (
                         <input
                           type="number"
@@ -113,20 +113,20 @@ export default function Ndr() {
                           value={r.attempt_number}
                           onChange={(e) => save(r, { attempt_number: Number(e.target.value) })}
                           disabled={savingId === r.id}
-                          className="w-14 text-sm rounded border border-slate-300 px-1.5 py-1"
+                          className="w-14 text-sm rounded border border-slate-300 dark:border-slate-600 px-1.5 py-1 dark:bg-slate-800 dark:text-slate-100"
                         />
                       ) : (
                         r.attempt_number
                       )}
                     </td>
-                    <td className="px-4 py-2.5 text-slate-500">
+                    <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">
                       {canEdit ? (
                         <input
                           type="text"
                           defaultValue={r.reason ?? ''}
                           onBlur={(e) => e.target.value !== (r.reason ?? '') && save(r, { reason: e.target.value || null })}
                           disabled={savingId === r.id}
-                          className="w-32 text-sm rounded border border-slate-300 px-1.5 py-1"
+                          className="w-32 text-sm rounded border border-slate-300 dark:border-slate-600 px-1.5 py-1 dark:bg-slate-800 dark:text-slate-100"
                         />
                       ) : (
                         r.reason ?? '—'
@@ -138,7 +138,7 @@ export default function Ndr() {
                           value={r.contact_status ?? 'not_contacted'}
                           onChange={(e) => save(r, { contact_status: e.target.value })}
                           disabled={savingId === r.id}
-                          className="text-xs rounded border border-slate-300 px-1.5 py-1"
+                          className="text-xs rounded border border-slate-300 dark:border-slate-600 px-1.5 py-1 dark:bg-slate-800 dark:text-slate-100"
                         >
                           {CONTACT_STATUS.map((s) => (
                             <option key={s} value={s}>
@@ -150,14 +150,14 @@ export default function Ndr() {
                         r.contact_status ?? '—'
                       )}
                     </td>
-                    <td className="px-4 py-2.5 text-slate-500">
+                    <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">
                       {canEdit ? (
                         <input
                           type="date"
                           defaultValue={r.next_attempt_date ?? ''}
                           onBlur={(e) => e.target.value !== (r.next_attempt_date ?? '') && save(r, { next_attempt_date: e.target.value || null })}
                           disabled={savingId === r.id}
-                          className="text-sm rounded border border-slate-300 px-1.5 py-1"
+                          className="text-sm rounded border border-slate-300 dark:border-slate-600 px-1.5 py-1 dark:bg-slate-800 dark:text-slate-100"
                         />
                       ) : (
                         r.next_attempt_date ?? '—'
@@ -166,10 +166,10 @@ export default function Ndr() {
                     <td className="px-4 py-2.5">
                       {(!r.outcome || r.outcome === 'pending') && canEdit ? (
                         <div className="flex gap-1.5">
-                          <button onClick={() => resolve(r, 'delivered')} disabled={savingId === r.id} className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 hover:bg-emerald-200">
+                          <button onClick={() => resolve(r, 'delivered')} disabled={savingId === r.id} className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300">
                             Delivered
                           </button>
-                          <button onClick={() => resolve(r, 'rto')} disabled={savingId === r.id} className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-red-100 text-red-700 hover:bg-red-200">
+                          <button onClick={() => resolve(r, 'rto')} disabled={savingId === r.id} className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/40 dark:text-red-300">
                             RTO
                           </button>
                         </div>

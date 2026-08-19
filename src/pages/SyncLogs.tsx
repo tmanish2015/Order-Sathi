@@ -11,10 +11,10 @@ type Channel = Tables<'channels'>
 const PAGE_SIZE = 25
 
 const STATUS_COLOR: Record<Log['status'], string> = {
-  running: 'bg-blue-100 text-blue-700',
-  success: 'bg-emerald-100 text-emerald-700',
-  failed: 'bg-red-100 text-red-700',
-  partial: 'bg-amber-100 text-amber-700',
+  running: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  success: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+  failed: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+  partial: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
 }
 
 const FAULT_LABEL: Record<NonNullable<Log['fault']>, string> = {
@@ -65,15 +65,15 @@ export default function SyncLogs() {
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
-      <h2 className="text-lg font-semibold text-slate-900 mb-1">Sync Logs</h2>
-      <p className="text-xs text-slate-400 mb-6">Every SP-API and MTR operation, with what failed, why, and who's responsible.</p>
+      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">Sync Logs</h2>
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">Every SP-API and MTR operation, with what failed, why, and who's responsible.</p>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-100 flex flex-wrap gap-2">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700/60 flex flex-wrap gap-2">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as Log['status'] | '')}
-            className="text-sm rounded-lg border border-slate-300 px-2 py-1.5"
+            className="text-sm rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 px-2 py-1.5"
           >
             <option value="">All statuses</option>
             <option value="running">Running</option>
@@ -84,7 +84,7 @@ export default function SyncLogs() {
           <select
             value={channelFilter}
             onChange={(e) => setChannelFilter(e.target.value)}
-            className="text-sm rounded-lg border border-slate-300 px-2 py-1.5"
+            className="text-sm rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 px-2 py-1.5"
           >
             <option value="">All channels</option>
             {channels.map((c) => (
@@ -96,7 +96,7 @@ export default function SyncLogs() {
           <select
             value={syncTypeFilter}
             onChange={(e) => setSyncTypeFilter(e.target.value)}
-            className="text-sm rounded-lg border border-slate-300 px-2 py-1.5"
+            className="text-sm rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 px-2 py-1.5"
           >
             <option value="">All sync types</option>
             <option value="order_import">Order import</option>
@@ -109,17 +109,17 @@ export default function SyncLogs() {
         ) : logs.length === 0 ? (
           <EmptyState icon="📡" title={statusFilter ? 'No logs match this filter.' : 'No sync activity yet.'} />
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-slate-100 dark:divide-slate-700/60">
             {logs.map((log) => (
               <div key={log.id} className="px-4 py-3">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <div className="font-medium text-sm text-slate-900">
+                  <div className="font-medium text-sm text-slate-900 dark:text-slate-100">
                     {log.operation}
-                    {log.sync_type && <span className="ml-2 text-[10px] uppercase tracking-wide bg-slate-100 text-slate-500 rounded px-1.5 py-0.5">{log.sync_type.replace('_', ' ')}</span>}
+                    {log.sync_type && <span className="ml-2 text-[10px] uppercase tracking-wide bg-slate-100 text-slate-500 dark:bg-slate-700/60 dark:text-slate-400 rounded px-1.5 py-0.5">{log.sync_type.replace('_', ' ')}</span>}
                   </div>
                   <div className="flex items-center gap-2">
                     {log.fault && (
-                      <span className="text-[10px] uppercase tracking-wide bg-slate-100 text-slate-600 rounded px-1.5 py-0.5">
+                      <span className="text-[10px] uppercase tracking-wide bg-slate-100 text-slate-600 dark:bg-slate-900/40 dark:text-slate-300 rounded px-1.5 py-0.5">
                         {FAULT_LABEL[log.fault]}
                       </span>
                     )}
@@ -128,20 +128,20 @@ export default function SyncLogs() {
                     </span>
                   </div>
                 </div>
-                <p className="text-sm text-slate-600 mt-1">{log.message}</p>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{log.message}</p>
                 {log.records_processed > 0 && (
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                     {log.records_processed} processed · {log.records_successful} successful · {log.records_failed} failed
                   </p>
                 )}
-                <p className="text-xs text-slate-400 mt-1">{format(new Date(log.started_at), 'dd MMM yyyy, HH:mm')}</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{format(new Date(log.started_at), 'dd MMM yyyy, HH:mm')}</p>
               </div>
             ))}
           </div>
         )}
 
         {!loading && hasMore && (
-          <div className="px-4 py-3 border-t border-slate-100 text-center">
+          <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-700/60 text-center">
             <button
               onClick={() => load(logs.length, false)}
               disabled={loadingMore}

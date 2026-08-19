@@ -58,17 +58,17 @@ export default function Invoices() {
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
-      <h2 className="text-lg font-semibold text-slate-900 mb-1">GST Invoices</h2>
-      <p className="text-xs text-slate-400 mb-6">One invoice generated per order, split CGST/SGST for intra-state or IGST for inter-state.</p>
+      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">GST Invoices</h2>
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">One invoice generated per order, split CGST/SGST for intra-state or IGST for inter-state.</p>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-100">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700/60">
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search invoice #…"
-            className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 w-56"
+            className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 w-56 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
           />
         </div>
         {loading ? (
@@ -81,7 +81,7 @@ export default function Invoices() {
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+              <tr className="text-left text-xs text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-700/60">
                 <th className="px-4 py-2 font-medium">Invoice #</th>
                 <th className="px-4 py-2 font-medium">Order</th>
                 <th className="px-4 py-2 font-medium">Type</th>
@@ -90,14 +90,14 @@ export default function Invoices() {
                 <th className="px-4 py-2 font-medium text-right">PDF</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-slate-50 dark:divide-slate-700/60">
               {invoices.map((inv) => (
                 <tr key={inv.id}>
-                  <td className="px-4 py-2.5 font-medium text-slate-700">{inv.invoice_number}</td>
-                  <td className="px-4 py-2.5 text-slate-500">{inv.orders?.amazon_order_id ?? '—'}</td>
-                  <td className="px-4 py-2.5 text-slate-500">{inv.invoice_type === 'intra_state' ? 'CGST+SGST' : 'IGST'}</td>
-                  <td className="px-4 py-2.5 text-slate-500">{format(new Date(inv.issued_at), 'dd MMM yyyy')}</td>
-                  <td className="px-4 py-2.5 text-right text-slate-700">{formatINR(Number(inv.total_amount))}</td>
+                  <td className="px-4 py-2.5 font-medium text-slate-700 dark:text-slate-300">{inv.invoice_number}</td>
+                  <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{inv.orders?.amazon_order_id ?? '—'}</td>
+                  <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{inv.invoice_type === 'intra_state' ? 'CGST+SGST' : 'IGST'}</td>
+                  <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{format(new Date(inv.issued_at), 'dd MMM yyyy')}</td>
+                  <td className="px-4 py-2.5 text-right text-slate-700 dark:text-slate-300">{formatINR(Number(inv.total_amount))}</td>
                   <td className="px-4 py-2.5 text-right">
                     <button
                       onClick={() => download(inv)}

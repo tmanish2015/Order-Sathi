@@ -40,7 +40,7 @@ export default function BarcodeScanInput({
         }
       }}
       placeholder={placeholder}
-      className="w-full text-sm rounded-lg border-2 border-indigo-300 focus:border-indigo-500 px-3 py-2 outline-none"
+      className="w-full text-sm rounded-lg border-2 border-indigo-300 focus:border-indigo-500 px-3 py-2 outline-none dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
     />
   )
 }

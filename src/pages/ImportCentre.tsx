@@ -175,17 +175,17 @@ export default function ImportCentre() {
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
-      <h2 className="text-lg font-semibold text-slate-900 mb-1">Import Centre</h2>
-      <p className="text-xs text-slate-400 mb-6">
+      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">Import Centre</h2>
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
         Template → Upload → Validate → Preview → Confirm. Nothing is written until you confirm, and invalid rows are skipped rather than
         corrupting the whole import — you'll see exactly which rows failed and why.
       </p>
 
       {canEdit && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 mb-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
             <label className="block">
-              <span className="text-xs text-slate-500">Import type</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Import type</span>
               <select
                 value={importType}
                 onChange={(e) => {
@@ -194,7 +194,7 @@ export default function ImportCentre() {
                   setRows([])
                   if (fileInputRef.current) fileInputRef.current.value = ''
                 }}
-                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                className="mt-1 w-full text-sm rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 px-2.5 py-1.5"
               >
                 <option value="products">Products (create/update SKUs)</option>
                 <option value="opening_stock">Opening stock</option>
@@ -202,8 +202,8 @@ export default function ImportCentre() {
             </label>
             {importType === 'opening_stock' && (
               <label className="block">
-                <span className="text-xs text-slate-500">Target warehouse</span>
-                <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5">
+                <span className="text-xs text-slate-500 dark:text-slate-400">Target warehouse</span>
+                <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} className="mt-1 w-full text-sm rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 px-2.5 py-1.5">
                   {warehouses.map((w) => (
                     <option key={w.id} value={w.id}>
                       {w.name}
@@ -213,7 +213,7 @@ export default function ImportCentre() {
               </label>
             )}
             <div className="flex items-end">
-              <button onClick={() => downloadTemplate(importType)} className="text-sm rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50">
+              <button onClick={() => downloadTemplate(importType)} className="text-sm rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/40">
                 Download template
               </button>
             </div>
@@ -224,7 +224,7 @@ export default function ImportCentre() {
             type="file"
             accept=".csv"
             onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
-            className="text-sm text-slate-500 mb-4"
+            className="text-sm text-slate-500 dark:text-slate-400 mb-4"
           />
 
           {rows.length > 0 && (
@@ -232,11 +232,11 @@ export default function ImportCentre() {
               <div className="flex gap-4 text-xs mb-2">
                 <span className="text-emerald-600 font-medium">{validRows.length} valid</span>
                 <span className="text-red-600 font-medium">{invalidRows.length} invalid</span>
-                <span className="text-slate-400">{rows.length} total rows</span>
+                <span className="text-slate-400 dark:text-slate-500">{rows.length} total rows</span>
               </div>
-              <div className="max-h-64 overflow-y-auto border border-slate-200 rounded-lg mb-3">
+              <div className="max-h-64 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-lg mb-3">
                 <table className="w-full text-xs">
-                  <tbody className="divide-y divide-slate-50">
+                  <tbody className="divide-y divide-slate-50 dark:divide-slate-700/60">
                     {rows.map((r, i) => (
                       <tr key={i} className={r.valid ? '' : 'bg-red-50'}>
                         <td className="px-2 py-1.5">{r.valid ? '✓' : '✕'}</td>
@@ -255,24 +255,24 @@ export default function ImportCentre() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-100 text-xs font-semibold uppercase text-slate-500">Import history</div>
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700/60 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Import history</div>
         {loading ? (
           <Skeleton rows={2} />
         ) : batches.length === 0 ? (
           <EmptyState icon="📥" title="No imports yet." />
         ) : (
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-slate-50 dark:divide-slate-700/60">
             {batches.map((b) => (
               <div key={b.id} className="px-4 py-2.5 flex items-center justify-between gap-3 text-sm">
                 <div>
-                  <span className="font-medium text-slate-700">{b.filename}</span>
-                  <span className="text-slate-400 ml-2 text-xs">{b.import_type.replace('_', ' ')}</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">{b.filename}</span>
+                  <span className="text-slate-400 dark:text-slate-500 ml-2 text-xs">{b.import_type.replace('_', ' ')}</span>
                 </div>
-                <div className="text-xs text-slate-500">
+                <div className="text-xs text-slate-500 dark:text-slate-400">
                   {b.success_count}/{b.row_count} succeeded
                   {b.error_count > 0 && <span className="text-red-600"> · {b.error_count} failed</span>}
-                  <span className="text-slate-400 ml-2">{format(new Date(b.created_at), 'dd MMM yyyy, HH:mm')}</span>
+                  <span className="text-slate-400 dark:text-slate-500 ml-2">{format(new Date(b.created_at), 'dd MMM yyyy, HH:mm')}</span>
                 </div>
               </div>
             ))}

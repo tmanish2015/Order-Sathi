@@ -14,11 +14,11 @@ type SerialRow = Tables<'serials'> & { skus: Tables<'skus'> | null; warehouses: 
 const EXPIRY_SOON_DAYS = 30
 
 const SERIAL_STATUS_COLOR: Record<Enums<'serial_status'>, string> = {
-  in_stock: 'bg-emerald-100 text-emerald-700',
-  allocated: 'bg-blue-100 text-blue-700',
-  shipped: 'bg-slate-100 text-slate-600',
-  returned: 'bg-amber-100 text-amber-700',
-  damaged: 'bg-red-100 text-red-700',
+  in_stock: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+  allocated: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  shipped: 'bg-slate-100 text-slate-600 dark:bg-slate-900/40 dark:text-slate-300',
+  returned: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  damaged: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
 }
 
 export default function BatchSerial() {
@@ -90,19 +90,19 @@ export default function BatchSerial() {
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
-      <h2 className="text-lg font-semibold text-slate-900 mb-1">Batch, Serial &amp; Expiry</h2>
-      <p className="text-xs text-slate-400 mb-6">
+      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">Batch, Serial &amp; Expiry</h2>
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
         Batch and serial numbers are captured on the GRN page when a SKU's tracking mode is set (Inventory → edit SKU → Catalog details).
         Batch quantities are receipt records for expiry visibility, not a second stock ledger — <code>inventory_ledger</code> stays the
         only source of truth for how much stock exists.
       </p>
 
-      <div className="flex gap-1 mb-4 border-b border-slate-200">
+      <div className="flex gap-1 mb-4 border-b border-slate-200 dark:border-slate-700">
         {(['batches', 'serials'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px ${tab === t ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+            className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px ${tab === t ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}
           >
             {t === 'batches' ? 'Batches / Expiry' : 'Serial numbers'}
           </button>
@@ -112,21 +112,21 @@ export default function BatchSerial() {
       {tab === 'batches' && (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3.5">
-              <div className="text-xs text-slate-400">Total batches</div>
-              <div className="text-lg font-semibold mt-1 text-slate-900">{batches.length}</div>
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-3.5">
+              <div className="text-xs text-slate-400 dark:text-slate-500">Total batches</div>
+              <div className="text-lg font-semibold mt-1 text-slate-900 dark:text-slate-100">{batches.length}</div>
             </div>
-            <div className={`rounded-xl border shadow-sm p-3.5 ${expiringSoonCount > 0 ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200'}`}>
-              <div className="text-xs text-slate-400">Expiring within {EXPIRY_SOON_DAYS}d</div>
-              <div className="text-lg font-semibold mt-1 text-amber-600">{expiringSoonCount}</div>
+            <div className={`rounded-xl border shadow-sm p-3.5 ${expiringSoonCount > 0 ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
+              <div className="text-xs text-slate-400 dark:text-slate-500">Expiring within {EXPIRY_SOON_DAYS}d</div>
+              <div className="text-lg font-semibold mt-1 text-amber-600 dark:text-amber-400">{expiringSoonCount}</div>
             </div>
-            <div className={`rounded-xl border shadow-sm p-3.5 ${expiredCount > 0 ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200'}`}>
-              <div className="text-xs text-slate-400">Expired</div>
-              <div className="text-lg font-semibold mt-1 text-red-600">{expiredCount}</div>
+            <div className={`rounded-xl border shadow-sm p-3.5 ${expiredCount > 0 ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
+              <div className="text-xs text-slate-400 dark:text-slate-500">Expired</div>
+              <div className="text-lg font-semibold mt-1 text-red-600 dark:text-red-400">{expiredCount}</div>
             </div>
           </div>
-          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search SKU or batch number…" className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 w-64 mb-3" />
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search SKU or batch number…" className="text-sm rounded-lg border border-slate-300 dark:border-slate-600 px-2.5 py-1.5 w-64 mb-3 dark:bg-slate-800 dark:text-slate-100" />
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
             {loading ? (
               <Skeleton rows={3} />
             ) : batchRows.length === 0 ? (
@@ -135,7 +135,7 @@ export default function BatchSerial() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                    <tr className="text-left text-xs text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-700/60">
                       <th className="px-4 py-2 font-medium">SKU</th>
                       <th className="px-4 py-2 font-medium">Batch</th>
                       <th className="px-4 py-2 font-medium">Warehouse</th>
@@ -145,19 +145,19 @@ export default function BatchSerial() {
                       <th className="px-4 py-2 font-medium">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50">
+                  <tbody className="divide-y divide-slate-50 dark:divide-slate-700/60">
                     {batchRows.map((b) => (
                       <tr key={b.id}>
-                        <td className="px-4 py-2.5 font-medium text-slate-700">{b.skus?.sku}</td>
-                        <td className="px-4 py-2.5 text-slate-500">{b.batch_number}</td>
-                        <td className="px-4 py-2.5 text-slate-500">{b.warehouses?.name ?? '—'}</td>
-                        <td className="px-4 py-2.5 text-right text-slate-500">{b.received_qty}</td>
-                        <td className="px-4 py-2.5 text-slate-500">{b.manufacturing_date ? format(new Date(b.manufacturing_date), 'dd MMM yyyy') : '—'}</td>
-                        <td className="px-4 py-2.5 text-slate-500">{b.expiry_date ? format(new Date(b.expiry_date), 'dd MMM yyyy') : '—'}</td>
+                        <td className="px-4 py-2.5 font-medium text-slate-700 dark:text-slate-300">{b.skus?.sku}</td>
+                        <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{b.batch_number}</td>
+                        <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{b.warehouses?.name ?? '—'}</td>
+                        <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">{b.received_qty}</td>
+                        <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{b.manufacturing_date ? format(new Date(b.manufacturing_date), 'dd MMM yyyy') : '—'}</td>
+                        <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{b.expiry_date ? format(new Date(b.expiry_date), 'dd MMM yyyy') : '—'}</td>
                         <td className="px-4 py-2.5">
                           <span
                             className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${
-                              b.status === 'expired' ? 'bg-red-100 text-red-700' : b.status === 'expiring soon' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'
+                              b.status === 'expired' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' : b.status === 'expiring soon' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400'
                             }`}
                           >
                             {b.status}
@@ -176,8 +176,8 @@ export default function BatchSerial() {
       {tab === 'serials' && (
         <>
           <div className="flex flex-wrap gap-2 mb-3">
-            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search serial or SKU…" className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 w-56" />
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as Enums<'serial_status'> | '')} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5">
+            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search serial or SKU…" className="text-sm rounded-lg border border-slate-300 dark:border-slate-600 px-2.5 py-1.5 w-56 dark:bg-slate-800 dark:text-slate-100" />
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as Enums<'serial_status'> | '')} className="text-sm rounded-lg border border-slate-300 dark:border-slate-600 px-2 py-1.5 dark:bg-slate-800 dark:text-slate-100">
               <option value="">All statuses</option>
               <option value="in_stock">In stock</option>
               <option value="allocated">Allocated</option>
@@ -186,7 +186,7 @@ export default function BatchSerial() {
               <option value="damaged">Damaged</option>
             </select>
           </div>
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
             {loading ? (
               <Skeleton rows={3} />
             ) : filteredSerials.length === 0 ? (
@@ -195,19 +195,19 @@ export default function BatchSerial() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                    <tr className="text-left text-xs text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-700/60">
                       <th className="px-4 py-2 font-medium">Serial number</th>
                       <th className="px-4 py-2 font-medium">SKU</th>
                       <th className="px-4 py-2 font-medium">Warehouse</th>
                       <th className="px-4 py-2 font-medium">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50">
+                  <tbody className="divide-y divide-slate-50 dark:divide-slate-700/60">
                     {filteredSerials.map((s) => (
                       <tr key={s.id}>
-                        <td className="px-4 py-2.5 font-mono text-slate-700">{s.serial_number}</td>
-                        <td className="px-4 py-2.5 text-slate-500">{s.skus?.sku}</td>
-                        <td className="px-4 py-2.5 text-slate-500">{s.warehouses?.name ?? '—'}</td>
+                        <td className="px-4 py-2.5 font-mono text-slate-700 dark:text-slate-300">{s.serial_number}</td>
+                        <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{s.skus?.sku}</td>
+                        <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{s.warehouses?.name ?? '—'}</td>
                         <td className="px-4 py-2.5">
                           {canEdit ? (
                             <select

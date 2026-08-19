@@ -192,14 +192,14 @@ export default function Automation() {
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between gap-3 mb-1">
-        <h2 className="text-lg font-semibold text-slate-900">Automation</h2>
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Automation</h2>
         {canEdit && (
-          <button onClick={() => setShowNew((v) => !v)} className="text-sm rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50">
+          <button onClick={() => setShowNew((v) => !v)} className="text-sm rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/40">
             {showNew ? 'Cancel' : '+ New rule'}
           </button>
         )}
       </div>
-      <p className="text-xs text-slate-400 mb-6">
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
         Deliberately small and honest: <strong>Inventory</strong> and <strong>Returns QC</strong> triggers are actually evaluated (live
         below / already enforced by the QC workflow). <strong>Order</strong> and <strong>Shipping</strong> triggers can be defined here
         for planning, but aren't wired into order creation or shipment assignment yet — that would touch already-stable mutation paths
@@ -207,15 +207,15 @@ export default function Automation() {
       </p>
 
       {showNew && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 mb-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             <label className="block">
-              <span className="text-xs text-slate-500">Rule name</span>
-              <input type="text" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+              <span className="text-xs text-slate-500 dark:text-slate-400">Rule name</span>
+              <input type="text" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
             </label>
             <label className="block">
-              <span className="text-xs text-slate-500">Trigger</span>
-              <select value={form.trigger_type} onChange={(e) => setForm((f) => ({ ...f, trigger_type: e.target.value as Enums<'automation_trigger'> }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5">
+              <span className="text-xs text-slate-500 dark:text-slate-400">Trigger</span>
+              <select value={form.trigger_type} onChange={(e) => setForm((f) => ({ ...f, trigger_type: e.target.value as Enums<'automation_trigger'> }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
                 {(Object.keys(TRIGGER_LABEL) as Enums<'automation_trigger'>[]).map((t) => (
                   <option key={t} value={t}>
                     {TRIGGER_LABEL[t]}
@@ -228,8 +228,8 @@ export default function Automation() {
           {form.trigger_type === 'order_value_channel' && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
               <label className="block">
-                <span className="text-xs text-slate-500">Channel</span>
-                <select value={form.channel_id} onChange={(e) => setForm((f) => ({ ...f, channel_id: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5">
+                <span className="text-xs text-slate-500 dark:text-slate-400">Channel</span>
+                <select value={form.channel_id} onChange={(e) => setForm((f) => ({ ...f, channel_id: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
                   <option value="">Select…</option>
                   {channels.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -239,12 +239,12 @@ export default function Automation() {
                 </select>
               </label>
               <label className="block">
-                <span className="text-xs text-slate-500">Min order value (₹)</span>
-                <input type="number" value={form.min_value} onChange={(e) => setForm((f) => ({ ...f, min_value: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+                <span className="text-xs text-slate-500 dark:text-slate-400">Min order value (₹)</span>
+                <input type="number" value={form.min_value} onChange={(e) => setForm((f) => ({ ...f, min_value: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
               </label>
               <label className="block">
-                <span className="text-xs text-slate-500">Assign warehouse</span>
-                <select value={form.warehouse_id} onChange={(e) => setForm((f) => ({ ...f, warehouse_id: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5">
+                <span className="text-xs text-slate-500 dark:text-slate-400">Assign warehouse</span>
+                <select value={form.warehouse_id} onChange={(e) => setForm((f) => ({ ...f, warehouse_id: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
                   <option value="">Select…</option>
                   {warehouses.map((w) => (
                     <option key={w.id} value={w.id}>
@@ -259,12 +259,12 @@ export default function Automation() {
           {form.trigger_type === 'shipping_cod_pincode' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
               <label className="block">
-                <span className="text-xs text-slate-500">Pincode prefix (e.g. 302)</span>
-                <input type="text" value={form.pincode_prefix} onChange={(e) => setForm((f) => ({ ...f, pincode_prefix: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+                <span className="text-xs text-slate-500 dark:text-slate-400">Pincode prefix (e.g. 302)</span>
+                <input type="text" value={form.pincode_prefix} onChange={(e) => setForm((f) => ({ ...f, pincode_prefix: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
               </label>
               <label className="block">
-                <span className="text-xs text-slate-500">Assign courier</span>
-                <select value={form.courier_id} onChange={(e) => setForm((f) => ({ ...f, courier_id: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5">
+                <span className="text-xs text-slate-500 dark:text-slate-400">Assign courier</span>
+                <select value={form.courier_id} onChange={(e) => setForm((f) => ({ ...f, courier_id: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
                   <option value="">Select…</option>
                   {couriers.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -277,7 +277,7 @@ export default function Automation() {
           )}
 
           {(form.trigger_type === 'inventory_low' || form.trigger_type === 'return_qc_resalable') && (
-            <p className="text-xs text-slate-400 mb-3">No extra conditions needed — this trigger applies globally.</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">No extra conditions needed — this trigger applies globally.</p>
           )}
 
           <button onClick={createRule} disabled={saving} className="text-sm rounded-lg bg-indigo-600 text-white px-3 py-1.5 hover:bg-indigo-700 disabled:opacity-50">
@@ -286,26 +286,26 @@ export default function Automation() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden mb-6">
         {loading ? (
           <Skeleton rows={3} />
         ) : rules.length === 0 ? (
           <EmptyState icon="⚡" title="No automation rules yet." />
         ) : (
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-slate-50 dark:divide-slate-700/60">
             {rules.map((r) => (
               <div key={r.id} className="px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
                 <div>
-                  <div className="font-medium text-sm text-slate-900">
+                  <div className="font-medium text-sm text-slate-900 dark:text-slate-100">
                     {r.name}
                     {!TRIGGER_EVALUATED[r.trigger_type] && (
-                      <span className="ml-2 text-[10px] uppercase tracking-wide bg-amber-100 text-amber-700 rounded px-1.5 py-0.5">Not wired yet</span>
+                      <span className="ml-2 text-[10px] uppercase tracking-wide bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 rounded px-1.5 py-0.5">Not wired yet</span>
                     )}
                   </div>
-                  <div className="text-xs text-slate-400 mt-0.5">{describeRule(r)}</div>
+                  <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{describeRule(r)}</div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${r.active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>
+                  <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${r.active ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-slate-100 text-slate-400 dark:bg-slate-900/40 dark:text-slate-300'}`}>
                     {r.active ? 'active' : 'inactive'}
                   </span>
                   {canEdit && (
@@ -313,7 +313,7 @@ export default function Automation() {
                       <button onClick={() => toggleActive(r)} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">
                         {r.active ? 'Deactivate' : 'Activate'}
                       </button>
-                      <button onClick={() => setDeleteTarget(r)} className="text-xs text-slate-400 hover:text-red-600">
+                      <button onClick={() => setDeleteTarget(r)} className="text-xs text-slate-400 dark:text-slate-500 hover:text-red-600">
                         Delete
                       </button>
                     </>
@@ -326,16 +326,16 @@ export default function Automation() {
       </div>
 
       {!loading && rules.some((r) => r.trigger_type === 'inventory_low' && r.active) && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-slate-100 text-xs font-semibold uppercase text-slate-500">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700/60 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
             Currently matching (Inventory: Available &lt; Reorder Level) — {matchingSkus.length} SKU(s)
           </div>
           {matchingSkus.length === 0 ? (
             <EmptyState icon="✅" title="No SKUs currently below reorder level." />
           ) : (
-            <div className="divide-y divide-slate-50">
+            <div className="divide-y divide-slate-50 dark:divide-slate-700/60">
               {matchingSkus.map((s) => (
-                <div key={s.id} className="px-4 py-2 text-sm text-slate-700">
+                <div key={s.id} className="px-4 py-2 text-sm text-slate-700 dark:text-slate-300">
                   {s.sku} — {s.title}
                 </div>
               ))}

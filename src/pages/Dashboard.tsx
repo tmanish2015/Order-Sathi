@@ -268,7 +268,7 @@ export default function Dashboard() {
   if (loading || !orderKpis || !opsKpis || !invKpis || !finKpis || !exceptions) {
     return (
       <div className="p-4 sm:p-6 max-w-7xl mx-auto">
-        <h2 className="text-xl font-semibold text-slate-900 mb-6">Dashboard</h2>
+        <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-6">Dashboard</h2>
         <Skeleton rows={6} />
       </div>
     )
@@ -277,8 +277,8 @@ export default function Dashboard() {
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-slate-900">Dashboard</h2>
-        <p className="text-xs text-slate-400 mt-0.5">{format(new Date(), 'EEEE, dd MMMM yyyy')}</p>
+        <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Dashboard</h2>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{format(new Date(), 'EEEE, dd MMMM yyyy')}</p>
       </div>
 
       <ExceptionsPanel exceptions={exceptions} />
@@ -329,38 +329,38 @@ export default function Dashboard() {
       </Section>
 
       <Section title="Channel performance">
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                <tr className="text-left text-xs text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-700/60">
                   <th className="px-4 py-2 font-medium">Channel</th>
                   <th className="px-4 py-2 font-medium text-right">Orders</th>
                   <th className="px-4 py-2 font-medium text-right">Revenue</th>
                   <th className="px-4 py-2 font-medium">Sync status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-700/60">
                 {channelPerf.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-6 text-center text-slate-400 text-sm">
+                    <td colSpan={4} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500 text-sm">
                       No channels connected yet.
                     </td>
                   </tr>
                 ) : (
                   channelPerf.map((c) => (
                     <tr key={c.channel}>
-                      <td className="px-4 py-2.5 font-medium text-slate-700">{c.channel}</td>
-                      <td className="px-4 py-2.5 text-right text-slate-500">{c.orders}</td>
-                      <td className="px-4 py-2.5 text-right text-slate-700">{formatINR(c.revenue)}</td>
+                      <td className="px-4 py-2.5 font-medium text-slate-700 dark:text-slate-300">{c.channel}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">{c.orders}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-700 dark:text-slate-300">{formatINR(c.revenue)}</td>
                       <td className="px-4 py-2.5">
                         <span
                           className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${
                             c.syncStatus === 'failed'
-                              ? 'bg-red-100 text-red-700'
+                              ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
                               : c.syncStatus === 'success'
-                              ? 'bg-emerald-100 text-emerald-700'
-                              : 'bg-slate-100 text-slate-500'
+                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+                              : 'bg-slate-100 text-slate-500 dark:bg-slate-900/40 dark:text-slate-400'
                           }`}
                         >
                           {c.syncStatus}
@@ -468,19 +468,19 @@ function ExceptionsPanel({ exceptions }: { exceptions: Exceptions }) {
 
   if (items.length === 0) {
     return (
-      <div className="mb-6 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-sm text-emerald-800">
+      <div className="mb-6 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl px-4 py-3 text-sm text-emerald-800">
         No open exceptions — stock, SLA, mapping, shipping, and reconciliation all clear.
       </div>
     )
   }
 
   return (
-    <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4">
+    <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
       <div className="text-xs font-semibold uppercase text-red-700 mb-3">Exceptions — needs attention</div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {items.map((i) => (
-          <Link key={i.label} to={i.to} className="bg-white rounded-lg border border-red-100 px-3 py-2 hover:border-red-300 transition-colors">
-            <div className="text-[11px] text-slate-500">{i.label}</div>
+          <Link key={i.label} to={i.to} className="bg-white dark:bg-slate-800 rounded-lg border border-red-100 px-3 py-2 hover:border-red-300 transition-colors">
+            <div className="text-[11px] text-slate-500 dark:text-slate-400">{i.label}</div>
             <div className="text-lg font-semibold text-red-600 mt-0.5">{i.value}</div>
           </Link>
         ))}
@@ -492,7 +492,7 @@ function ExceptionsPanel({ exceptions }: { exceptions: Exceptions }) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mb-6">
-      <h3 className="text-xs font-semibold uppercase text-slate-500 mb-2">{title}</h3>
+      <h3 className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-2">{title}</h3>
       {children}
     </div>
   )
@@ -516,18 +516,18 @@ const ACCENTS = {
 
 function Kpi({ label, value, accent, hint }: { label: string; value: string | number; accent?: keyof typeof ACCENTS; hint?: string }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3 relative overflow-hidden" title={hint}>
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-3 relative overflow-hidden" title={hint}>
       {accent && <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${ACCENTS[accent]}`} />}
-      <div className="text-[11px] text-slate-400">{label}</div>
-      <div className="text-lg font-semibold mt-0.5 text-slate-900">{value}</div>
+      <div className="text-[11px] text-slate-400 dark:text-slate-500">{label}</div>
+      <div className="text-lg font-semibold mt-0.5 text-slate-900 dark:text-slate-100">{value}</div>
     </div>
   )
 }
 
 function ChartCard({ title, children, full }: { title: string; children: React.ReactNode; full?: boolean }) {
   return (
-    <div className={`bg-white rounded-xl border border-slate-200 shadow-sm p-4 ${full ? 'lg:col-span-2' : ''}`}>
-      <div className="text-xs font-semibold uppercase text-slate-500 mb-3">{title}</div>
+    <div className={`bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 ${full ? 'lg:col-span-2' : ''}`}>
+      <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-3">{title}</div>
       {children}
     </div>
   )

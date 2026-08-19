@@ -15,11 +15,11 @@ type LineItem = Tables<'order_line_items'>
 type Profile = Tables<'profiles'>
 
 const STATUS_COLOR: Record<Enums<'picklist_status'>, string> = {
-  created: 'bg-slate-100 text-slate-600',
-  assigned: 'bg-amber-100 text-amber-700',
-  picking: 'bg-blue-100 text-blue-700',
-  picked: 'bg-purple-100 text-purple-700',
-  completed: 'bg-emerald-100 text-emerald-700',
+  created: 'bg-slate-100 text-slate-600 dark:bg-slate-900/40 dark:text-slate-300',
+  assigned: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  picking: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  picked: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
+  completed: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
 }
 
 export default function Picklist() {
@@ -239,10 +239,10 @@ export default function Picklist() {
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1">
-        <h2 className="text-lg font-semibold text-slate-900">Picklists</h2>
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Picklists</h2>
         {canEdit && (
           <div className="flex items-center gap-2">
-            <button onClick={() => window.print()} className="text-sm rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50">
+            <button onClick={() => window.print()} className="text-sm rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/40">
               🖨 Print
             </button>
             <button
@@ -255,7 +255,7 @@ export default function Picklist() {
           </div>
         )}
       </div>
-      <p className="text-xs text-slate-400 mb-6">
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
         Snapshots what's needed for every order Ready to Pick, aggregated by SKU. Created → Assigned → Picking → Picked → Completed. The
         picker can't enter more than the required quantity.
       </p>
@@ -271,27 +271,27 @@ export default function Picklist() {
             const pickedCount = items?.filter((i) => i.picked).length ?? 0
             const picker = team.find((t) => t.id === pl.assigned_to)
             return (
-              <div key={pl.id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <button onClick={() => expand(pl.id)} className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-slate-50">
+              <div key={pl.id} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+                <button onClick={() => expand(pl.id)} className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700/40">
                   <div>
-                    <div className="font-medium text-sm text-slate-900">
+                    <div className="font-medium text-sm text-slate-900 dark:text-slate-100">
                       {format(new Date(pl.created_at), 'dd MMM yyyy, HH:mm')} — {pl.order_count} order{pl.order_count === 1 ? '' : 's'}
-                      {picker && <span className="text-slate-400 font-normal"> · {picker.full_name ?? picker.email}</span>}
+                      {picker && <span className="text-slate-400 dark:text-slate-500 font-normal"> · {picker.full_name ?? picker.email}</span>}
                     </div>
-                    {items && <div className="text-xs text-slate-400">{pickedCount} of {items.length} SKUs picked</div>}
+                    {items && <div className="text-xs text-slate-400 dark:text-slate-500">{pickedCount} of {items.length} SKUs picked</div>}
                   </div>
                   <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${STATUS_COLOR[pl.status]}`}>{pl.status}</span>
                 </button>
                 {expandedId === pl.id && (
-                  <div className="border-t border-slate-100">
+                  <div className="border-t border-slate-100 dark:border-slate-700/60">
                     {canEdit && pl.status === 'created' && (
-                      <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2">
-                        <span className="text-xs text-slate-500">Assign to:</span>
+                      <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700/60 flex items-center gap-2">
+                        <span className="text-xs text-slate-500 dark:text-slate-400">Assign to:</span>
                         <select
                           onChange={(e) => e.target.value && assignPicker(pl, e.target.value)}
                           disabled={transitioningId === pl.id}
                           defaultValue=""
-                          className="text-sm rounded-lg border border-slate-300 px-2 py-1.5"
+                          className="text-sm rounded-lg border border-slate-300 dark:border-slate-600 px-2 py-1.5 dark:bg-slate-800 dark:text-slate-100"
                         >
                           <option value="" disabled>
                             Select picker…
@@ -305,15 +305,15 @@ export default function Picklist() {
                       </div>
                     )}
                     {canEdit && pl.status === 'assigned' && (
-                      <div className="px-4 py-3 border-b border-slate-100">
+                      <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700/60">
                         <button onClick={() => startPicking(pl)} disabled={transitioningId === pl.id} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">
                           Start picking
                         </button>
                       </div>
                     )}
                     {canEdit && pl.status === 'picking' && (
-                      <div className="px-4 py-3 border-b border-slate-100 bg-blue-50">
-                        <span className="text-xs text-slate-500 mb-1 block">📷 Scan barcode to pick (auto-increments)</span>
+                      <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700/60 bg-blue-50">
+                        <span className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">📷 Scan barcode to pick (auto-increments)</span>
                         <BarcodeScanInput onScan={(code) => handleScan(pl, code)} placeholder="Scan or type barcode, then Enter" />
                         {scanFeedback[pl.id] && (
                           <p className={`text-xs mt-1 ${scanFeedback[pl.id].ok ? 'text-emerald-600' : 'text-red-600 font-medium'}`}>
@@ -328,19 +328,19 @@ export default function Picklist() {
                       <>
                         <table className="w-full text-sm">
                           <thead>
-                            <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                            <tr className="text-left text-xs text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-700/60">
                               <th className="px-4 py-2 font-medium">SKU</th>
                               <th className="px-4 py-2 font-medium">Title</th>
                               <th className="px-4 py-2 font-medium text-right">Required</th>
                               <th className="px-4 py-2 font-medium text-right">Picked</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-slate-50">
+                          <tbody className="divide-y divide-slate-50 dark:divide-slate-700/60">
                             {(items ?? []).map((i) => (
-                              <tr key={i.id} className={i.picked ? 'bg-slate-50' : ''}>
-                                <td className={`px-4 py-2.5 font-medium ${i.picked ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{i.skus?.sku}</td>
-                                <td className={`px-4 py-2.5 ${i.picked ? 'text-slate-400 line-through' : 'text-slate-500'}`}>{i.skus?.title}</td>
-                                <td className="px-4 py-2.5 text-right text-slate-500">{i.total_quantity}</td>
+                              <tr key={i.id} className={i.picked ? 'bg-slate-50 dark:bg-slate-700/40' : ''}>
+                                <td className={`px-4 py-2.5 font-medium ${i.picked ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-700 dark:text-slate-300'}`}>{i.skus?.sku}</td>
+                                <td className={`px-4 py-2.5 ${i.picked ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-500 dark:text-slate-400'}`}>{i.skus?.title}</td>
+                                <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">{i.total_quantity}</td>
                                 <td className="px-4 py-2.5 text-right">
                                   {canEdit && pl.status === 'picking' ? (
                                     <div className="flex items-center justify-end gap-1.5">
@@ -350,7 +350,7 @@ export default function Picklist() {
                                         max={i.total_quantity}
                                         value={editValues[i.id] ?? String(i.picked_qty)}
                                         onChange={(e) => setEditValues((m) => ({ ...m, [i.id]: e.target.value }))}
-                                        className="w-16 text-sm text-right rounded-lg border border-slate-300 px-2 py-1"
+                                        className="w-16 text-sm text-right rounded-lg border border-slate-300 dark:border-slate-600 px-2 py-1 dark:bg-slate-800 dark:text-slate-100"
                                       />
                                       <button
                                         onClick={() => savePickedQty(pl, i, Number(editValues[i.id] ?? i.picked_qty))}
@@ -361,7 +361,7 @@ export default function Picklist() {
                                       </button>
                                     </div>
                                   ) : (
-                                    <span className={i.picked ? 'text-emerald-600 font-medium' : 'text-slate-700'}>{i.picked_qty}</span>
+                                    <span className={i.picked ? 'text-emerald-600 font-medium' : 'text-slate-700 dark:text-slate-300'}>{i.picked_qty}</span>
                                   )}
                                 </td>
                               </tr>
@@ -369,7 +369,7 @@ export default function Picklist() {
                           </tbody>
                         </table>
                         {canEdit && pl.status === 'picking' && (
-                          <div className="px-4 py-3 border-t border-slate-100">
+                          <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-700/60">
                             <button
                               onClick={() => markPicklistPicked(pl)}
                               disabled={transitioningId === pl.id || pickedCount < (items?.length ?? 0)}
@@ -381,7 +381,7 @@ export default function Picklist() {
                           </div>
                         )}
                         {canEdit && pl.status === 'picked' && (
-                          <div className="px-4 py-3 border-t border-slate-100">
+                          <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-700/60">
                             <button onClick={() => completePicklist(pl)} disabled={transitioningId === pl.id} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">
                               Complete
                             </button>

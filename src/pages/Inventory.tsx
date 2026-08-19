@@ -485,18 +485,18 @@ export default function Inventory() {
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-1">
-        <h2 className="text-lg font-semibold text-slate-900">Inventory</h2>
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Inventory</h2>
         {canEdit && (
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowAdjust((v) => !v)}
-              className="text-sm rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50"
+              className="text-sm rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/40"
             >
               {showAdjust ? 'Cancel' : '⇅ Adjust stock'}
             </button>
             <button
               onClick={() => setShowAddSku((v) => !v)}
-              className="text-sm rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50"
+              className="text-sm rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/40"
             >
               {showAddSku ? 'Cancel' : '+ Add SKU'}
             </button>
@@ -505,13 +505,13 @@ export default function Inventory() {
       </div>
 
       {showAdjust && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6 grid grid-cols-1 sm:grid-cols-6 gap-3 items-end">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 mb-6 grid grid-cols-1 sm:grid-cols-6 gap-3 items-end">
           <label className="block sm:col-span-2">
-            <span className="text-xs text-slate-500">SKU</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">SKU</span>
             <select
               value={adjustForm.sku_id}
               onChange={(e) => setAdjustForm((f) => ({ ...f, sku_id: e.target.value }))}
-              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
             >
               <option value="">Select SKU…</option>
               {skus.map((s) => (
@@ -522,11 +522,11 @@ export default function Inventory() {
             </select>
           </label>
           <label className="block">
-            <span className="text-xs text-slate-500">Warehouse</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">Warehouse</span>
             <select
               value={adjustForm.warehouse_id}
               onChange={(e) => setAdjustForm((f) => ({ ...f, warehouse_id: e.target.value, bin_id: '' }))}
-              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
             >
               {warehouses.length === 0 && <option value="">No warehouses yet</option>}
               {warehouses.map((w) => (
@@ -537,11 +537,11 @@ export default function Inventory() {
             </select>
           </label>
           <label className="block">
-            <span className="text-xs text-slate-500">Bin (optional)</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">Bin (optional)</span>
             <select
               value={adjustForm.bin_id}
               onChange={(e) => setAdjustForm((f) => ({ ...f, bin_id: e.target.value }))}
-              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
             >
               <option value="">No bin</option>
               {bins.filter((b) => b.warehouse_id === adjustForm.warehouse_id).map((b) => (
@@ -552,34 +552,34 @@ export default function Inventory() {
             </select>
           </label>
           <label className="block">
-            <span className="text-xs text-slate-500">Type</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">Type</span>
             <select
               value={adjustForm.movement_type}
               onChange={(e) => setAdjustForm((f) => ({ ...f, movement_type: e.target.value as 'restock' | 'manual_adjustment' }))}
-              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
             >
               <option value="restock">Restock</option>
               <option value="manual_adjustment">Manual adjustment</option>
             </select>
           </label>
           <label className="block">
-            <span className="text-xs text-slate-500">Quantity (+/-)</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">Quantity (+/-)</span>
             <input
               type="number"
               value={adjustForm.quantity}
               onChange={(e) => setAdjustForm((f) => ({ ...f, quantity: e.target.value }))}
               placeholder="e.g. 20 or -3"
-              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
             />
           </label>
           <label className="block sm:col-span-4">
-            <span className="text-xs text-slate-500">Note</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">Note</span>
             <input
               type="text"
               value={adjustForm.note}
               onChange={(e) => setAdjustForm((f) => ({ ...f, note: e.target.value }))}
               placeholder="e.g. New stock from supplier, invoice #123"
-              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
             />
           </label>
           <div>
@@ -595,108 +595,108 @@ export default function Inventory() {
       )}
 
       {showAddSku && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6 grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 mb-6 grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
           <label className="block">
-            <span className="text-xs text-slate-500">SKU code</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">SKU code</span>
             <input
               type="text"
               value={newSku.sku}
               onChange={(e) => setNewSku((f) => ({ ...f, sku: e.target.value }))}
-              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
             />
           </label>
           <label className="block">
-            <span className="text-xs text-slate-500">Title</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">Title</span>
             <input
               type="text"
               value={newSku.title}
               onChange={(e) => setNewSku((f) => ({ ...f, title: e.target.value }))}
-              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
             />
           </label>
           <label className="block">
-            <span className="text-xs text-slate-500">GST rate %</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">GST rate %</span>
             <input
               type="number"
               value={newSku.gst_rate}
               onChange={(e) => setNewSku((f) => ({ ...f, gst_rate: e.target.value }))}
-              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
             />
           </label>
           <label className="block">
-            <span className="text-xs text-slate-500">Buffer stock</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">Buffer stock</span>
             <input
               type="number"
               value={newSku.buffer_stock}
               onChange={(e) => setNewSku((f) => ({ ...f, buffer_stock: e.target.value }))}
-              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
             />
           </label>
           <label className="block">
-            <span className="text-xs text-slate-500">Cost price (₹/unit)</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">Cost price (₹/unit)</span>
             <input
               type="number"
               value={newSku.cost_price}
               onChange={(e) => setNewSku((f) => ({ ...f, cost_price: e.target.value }))}
-              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
             />
           </label>
           <label className="block">
-            <span className="text-xs text-slate-500">Barcode (optional)</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">Barcode (optional)</span>
             <input
               type="text"
               value={newSku.barcode}
               onChange={(e) => setNewSku((f) => ({ ...f, barcode: e.target.value }))}
               placeholder="Scan or type"
-              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
             />
           </label>
           <label className="block">
-            <span className="text-xs text-slate-500">Brand</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">Brand</span>
             <input
               type="text"
               value={newSku.brand}
               onChange={(e) => setNewSku((f) => ({ ...f, brand: e.target.value }))}
-              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
             />
           </label>
           <label className="block">
-            <span className="text-xs text-slate-500">Category</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">Category</span>
             <input
               type="text"
               value={newSku.category}
               onChange={(e) => setNewSku((f) => ({ ...f, category: e.target.value }))}
-              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
             />
           </label>
-          <label className="flex items-center gap-1.5 text-sm text-slate-600 pb-1.5">
+          <label className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-400 pb-1.5">
             <input type="checkbox" checked={newSku.is_bundle} onChange={(e) => setNewSku((f) => ({ ...f, is_bundle: e.target.checked }))} />
             Bundle (add components after saving)
           </label>
-          <div className="sm:col-span-5 text-xs font-semibold uppercase text-slate-500 -mb-1">Inventory planning</div>
+          <div className="sm:col-span-5 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 -mb-1">Inventory planning</div>
           <label className="block">
-            <span className="text-xs text-slate-500">Reorder level</span>
-            <input type="number" value={newSku.reorder_level} onChange={(e) => setNewSku((f) => ({ ...f, reorder_level: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+            <span className="text-xs text-slate-500 dark:text-slate-400">Reorder level</span>
+            <input type="number" value={newSku.reorder_level} onChange={(e) => setNewSku((f) => ({ ...f, reorder_level: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
           </label>
           <label className="block">
-            <span className="text-xs text-slate-500">Min stock</span>
-            <input type="number" value={newSku.min_stock} onChange={(e) => setNewSku((f) => ({ ...f, min_stock: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+            <span className="text-xs text-slate-500 dark:text-slate-400">Min stock</span>
+            <input type="number" value={newSku.min_stock} onChange={(e) => setNewSku((f) => ({ ...f, min_stock: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
           </label>
           <label className="block">
-            <span className="text-xs text-slate-500">Max stock</span>
-            <input type="number" value={newSku.max_stock} onChange={(e) => setNewSku((f) => ({ ...f, max_stock: e.target.value }))} placeholder="No cap" className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+            <span className="text-xs text-slate-500 dark:text-slate-400">Max stock</span>
+            <input type="number" value={newSku.max_stock} onChange={(e) => setNewSku((f) => ({ ...f, max_stock: e.target.value }))} placeholder="No cap" className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
           </label>
           <label className="block">
-            <span className="text-xs text-slate-500">Safety stock</span>
-            <input type="number" value={newSku.safety_stock} onChange={(e) => setNewSku((f) => ({ ...f, safety_stock: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+            <span className="text-xs text-slate-500 dark:text-slate-400">Safety stock</span>
+            <input type="number" value={newSku.safety_stock} onChange={(e) => setNewSku((f) => ({ ...f, safety_stock: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
           </label>
           <label className="block">
-            <span className="text-xs text-slate-500">Reorder qty</span>
-            <input type="number" value={newSku.reorder_qty} onChange={(e) => setNewSku((f) => ({ ...f, reorder_qty: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+            <span className="text-xs text-slate-500 dark:text-slate-400">Reorder qty</span>
+            <input type="number" value={newSku.reorder_qty} onChange={(e) => setNewSku((f) => ({ ...f, reorder_qty: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
           </label>
           <label className="block">
-            <span className="text-xs text-slate-500">Lead time (days)</span>
-            <input type="number" value={newSku.lead_time_days} onChange={(e) => setNewSku((f) => ({ ...f, lead_time_days: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+            <span className="text-xs text-slate-500 dark:text-slate-400">Lead time (days)</span>
+            <input type="number" value={newSku.lead_time_days} onChange={(e) => setNewSku((f) => ({ ...f, lead_time_days: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
           </label>
           <div className="sm:col-span-5">
             <button
@@ -716,7 +716,7 @@ export default function Inventory() {
             <select
               value={selectedChannel}
               onChange={(e) => setSelectedChannel(e.target.value)}
-              className="text-sm rounded-lg border border-slate-300 px-2 py-1.5"
+              className="text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
             >
               <option value="">Select channel…</option>
               {channels.map((c) => (
@@ -735,7 +735,7 @@ export default function Inventory() {
           </button>
         </div>
       )}
-      <p className="text-xs text-slate-400 mb-6">
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
         One central ledger per SKU. Stock = sum of every movement (order deduction, restock, return, manual adjustment) — never edited directly.
         Amazon needs each SKU's product type before quantity can push.
       </p>
@@ -754,18 +754,18 @@ export default function Inventory() {
           <button
             key={kind}
             onClick={() => setAlertFilter(alertFilter === kind ? '' : kind)}
-            className={`text-left bg-white rounded-lg border px-3 py-2 transition-colors ${
-              alertFilter === kind ? activeClass : 'border-slate-200 hover:border-slate-300'
+            className={`text-left bg-white dark:bg-slate-800 rounded-lg border px-3 py-2 transition-colors ${
+              alertFilter === kind ? activeClass : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
             }`}
           >
-            <div className="text-[11px] text-slate-500">{label}</div>
-            <div className="text-lg font-semibold text-slate-900 mt-0.5">{alertCounts[kind]}</div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400">{label}</div>
+            <div className="text-lg font-semibold text-slate-900 dark:text-slate-100 mt-0.5">{alertCounts[kind]}</div>
           </button>
         ))}
       </div>
 
       {reorderAlerts.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 mb-6">
           <div className="text-sm font-medium text-amber-800 mb-1.5">
             {reorderAlerts.length} SKU{reorderAlerts.length > 1 ? 's' : ''} hitting buffer stock soon
           </div>
@@ -780,20 +780,20 @@ export default function Inventory() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2 flex-wrap">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700/60 flex items-center gap-2 flex-wrap">
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search SKU or title…"
-            className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 w-56"
+            className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 w-56 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
           />
           {warehouses.length > 1 && (
             <select
               value={warehouseFilter}
               onChange={(e) => setWarehouseFilter(e.target.value)}
-              className="text-sm rounded-lg border border-slate-300 px-2 py-1.5"
+              className="text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
             >
               <option value="">Stock: all warehouses</option>
               {warehouses.map((w) => (
@@ -805,24 +805,24 @@ export default function Inventory() {
           )}
         </div>
         {selectedIds.size > 0 && (
-          <div className="px-4 py-2.5 border-b border-slate-100 bg-indigo-50 flex items-center gap-3 flex-wrap">
+          <div className="px-4 py-2.5 border-b border-slate-100 dark:border-slate-700/60 bg-indigo-50 flex items-center gap-3 flex-wrap">
             <span className="text-xs font-medium text-indigo-700">{selectedIds.size} selected</span>
             {showLabelPanel ? (
               <>
-                <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                <label className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
                   Copies per SKU
                   <input
                     type="number"
                     min="1"
                     value={labelCopies}
                     onChange={(e) => setLabelCopies(e.target.value)}
-                    className="w-16 text-sm rounded-lg border border-slate-300 px-2 py-1"
+                    className="w-16 text-sm rounded-lg border border-slate-300 px-2 py-1 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
                   />
                 </label>
                 <button onClick={printLabels} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">
                   Generate PDF
                 </button>
-                <button onClick={() => setShowLabelPanel(false)} className="text-xs text-slate-400 hover:text-slate-600">
+                <button onClick={() => setShowLabelPanel(false)} className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600">
                   Cancel
                 </button>
               </>
@@ -831,7 +831,7 @@ export default function Inventory() {
                 🏷 Print labels
               </button>
             )}
-            <button onClick={() => setSelectedIds(new Set())} className="text-xs text-slate-400 hover:text-slate-600">
+            <button onClick={() => setSelectedIds(new Set())} className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600">
               Clear
             </button>
           </div>
@@ -844,7 +844,7 @@ export default function Inventory() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                <tr className="text-left text-xs text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-700/60">
                   <th className="px-4 py-2 font-medium w-8">
                     <input
                       type="checkbox"
@@ -863,7 +863,7 @@ export default function Inventory() {
                   <th className="px-4 py-2 font-medium text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-700/60">
                 {filteredSkus.map((s) => {
                   const stock = s.is_bundle ? bundleAvailable(s.id) : stockBySku[s.id] ?? 0
                   const available = s.is_bundle ? stock : Math.max(stock - s.buffer_stock, 0)
@@ -875,7 +875,7 @@ export default function Inventory() {
                       <td className="px-4 py-2.5">
                         <input type="checkbox" checked={selectedIds.has(s.id)} onChange={() => toggleSelected(s.id)} />
                       </td>
-                      <td className="px-4 py-2.5 font-medium text-slate-700">{s.sku}</td>
+                      <td className="px-4 py-2.5 font-medium text-slate-700 dark:text-slate-300">{s.sku}</td>
                       {isEditing ? (
                         <>
                           <td className="px-4 py-2.5">
@@ -883,7 +883,7 @@ export default function Inventory() {
                               type="text"
                               value={editForm.title}
                               onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
-                              className="w-full text-sm rounded-lg border border-slate-300 px-2 py-1"
+                              className="w-full text-sm rounded-lg border border-slate-300 px-2 py-1 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
                             />
                           </td>
                           <td className="px-4 py-2.5">
@@ -892,9 +892,9 @@ export default function Inventory() {
                               value={editForm.product_type}
                               onChange={(e) => setEditForm((f) => ({ ...f, product_type: e.target.value }))}
                               placeholder="e.g. LUGGAGE"
-                              className="w-28 text-sm rounded-lg border border-slate-300 px-2 py-1 mb-1"
+                              className="w-28 text-sm rounded-lg border border-slate-300 px-2 py-1 mb-1 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
                             />
-                            <label className="flex items-center gap-1 text-xs text-slate-500">
+                            <label className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
                               <input type="checkbox" checked={editForm.is_bundle} onChange={(e) => setEditForm((f) => ({ ...f, is_bundle: e.target.checked }))} />
                               Bundle
                             </label>
@@ -904,7 +904,7 @@ export default function Inventory() {
                               type="number"
                               value={editForm.cost_price}
                               onChange={(e) => setEditForm((f) => ({ ...f, cost_price: e.target.value }))}
-                              className="w-20 text-sm text-right rounded-lg border border-slate-300 px-2 py-1"
+                              className="w-20 text-sm text-right rounded-lg border border-slate-300 px-2 py-1 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
                             />
                           </td>
                           <td className="px-4 py-2.5 text-right">
@@ -912,37 +912,37 @@ export default function Inventory() {
                               type="number"
                               value={editForm.buffer_stock}
                               onChange={(e) => setEditForm((f) => ({ ...f, buffer_stock: e.target.value }))}
-                              className="w-16 text-sm text-right rounded-lg border border-slate-300 px-2 py-1"
+                              className="w-16 text-sm text-right rounded-lg border border-slate-300 px-2 py-1 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
                             />
                           </td>
-                          <td className="px-4 py-2.5 text-right text-slate-400">{stock}</td>
-                          <td className="px-4 py-2.5 text-right text-slate-400">{available}</td>
-                          <td className="px-4 py-2.5 text-right text-slate-400">—</td>
+                          <td className="px-4 py-2.5 text-right text-slate-400 dark:text-slate-500">{stock}</td>
+                          <td className="px-4 py-2.5 text-right text-slate-400 dark:text-slate-500">{available}</td>
+                          <td className="px-4 py-2.5 text-right text-slate-400 dark:text-slate-500">—</td>
                           <td className="px-4 py-2.5 text-right whitespace-nowrap">
                             <button onClick={() => saveEdit(s)} disabled={savingEdit} className="text-xs font-medium text-indigo-600 hover:text-indigo-700 mr-2 disabled:opacity-50">
                               {savingEdit ? '…' : 'Save'}
                             </button>
-                            <button onClick={() => setEditingId(null)} className="text-xs text-slate-400 hover:text-slate-600">
+                            <button onClick={() => setEditingId(null)} className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600">
                               Cancel
                             </button>
                           </td>
                         </>
                       ) : (
                         <>
-                          <td className="px-4 py-2.5 text-slate-500">
+                          <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">
                             {s.title}
                             {(s.brand || s.category) && (
-                              <div className="text-[10px] text-slate-400">{[s.brand, s.category].filter(Boolean).join(' · ')}</div>
+                              <div className="text-[10px] text-slate-400 dark:text-slate-500">{[s.brand, s.category].filter(Boolean).join(' · ')}</div>
                             )}
                           </td>
-                          <td className="px-4 py-2.5 text-slate-500">
+                          <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">
                             {s.is_bundle ? <span className="text-[10px] uppercase tracking-wide bg-purple-50 text-purple-600 rounded px-1.5 py-0.5">🎁 Bundle</span> : s.product_type ?? '—'}
                           </td>
-                          <td className="px-4 py-2.5 text-right text-slate-500">{formatINR(s.cost_price)}</td>
-                          <td className="px-4 py-2.5 text-right text-slate-500">{s.is_bundle ? '—' : s.buffer_stock}</td>
-                          <td className={`px-4 py-2.5 text-right font-medium ${low ? 'text-red-600' : 'text-slate-700'}`}>{stock}</td>
-                          <td className="px-4 py-2.5 text-right text-slate-500">{available}</td>
-                          <td className={`px-4 py-2.5 text-right ${(daysToBuffer(s) ?? Infinity) <= REORDER_ALERT_DAYS ? 'text-amber-600 font-medium' : 'text-slate-500'}`}>
+                          <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">{formatINR(s.cost_price)}</td>
+                          <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">{s.is_bundle ? '—' : s.buffer_stock}</td>
+                          <td className={`px-4 py-2.5 text-right font-medium ${low ? 'text-red-600' : 'text-slate-700 dark:text-slate-300'}`}>{stock}</td>
+                          <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">{available}</td>
+                          <td className={`px-4 py-2.5 text-right ${(daysToBuffer(s) ?? Infinity) <= REORDER_ALERT_DAYS ? 'text-amber-600 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
                             {s.is_bundle
                               ? '—'
                               : (() => {
@@ -962,7 +962,7 @@ export default function Inventory() {
                               </button>
                             )}
                             {canDelete && (
-                              <button onClick={() => setDeleteTarget(s)} className="text-xs text-slate-400 hover:text-red-600">
+                              <button onClick={() => setDeleteTarget(s)} className="text-xs text-slate-400 dark:text-slate-500 hover:text-red-600">
                                 Delete
                               </button>
                             )}
@@ -972,82 +972,82 @@ export default function Inventory() {
                     </tr>
                     {isEditing && (
                       <tr>
-                        <td colSpan={10} className="px-4 py-3 bg-slate-50">
-                          <div className="text-xs font-semibold uppercase text-slate-500 mb-2">Inventory planning</div>
+                        <td colSpan={10} className="px-4 py-3 bg-slate-50 dark:bg-slate-700/40">
+                          <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-2">Inventory planning</div>
                           <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
                             <label className="block">
-                              <span className="text-xs text-slate-500">Reorder level</span>
-                              <input type="number" value={editForm.reorder_level} onChange={(e) => setEditForm((f) => ({ ...f, reorder_level: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                              <span className="text-xs text-slate-500 dark:text-slate-400">Reorder level</span>
+                              <input type="number" value={editForm.reorder_level} onChange={(e) => setEditForm((f) => ({ ...f, reorder_level: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
                             </label>
                             <label className="block">
-                              <span className="text-xs text-slate-500">Min stock</span>
-                              <input type="number" value={editForm.min_stock} onChange={(e) => setEditForm((f) => ({ ...f, min_stock: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                              <span className="text-xs text-slate-500 dark:text-slate-400">Min stock</span>
+                              <input type="number" value={editForm.min_stock} onChange={(e) => setEditForm((f) => ({ ...f, min_stock: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
                             </label>
                             <label className="block">
-                              <span className="text-xs text-slate-500">Max stock</span>
-                              <input type="number" value={editForm.max_stock} onChange={(e) => setEditForm((f) => ({ ...f, max_stock: e.target.value }))} placeholder="No cap" className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                              <span className="text-xs text-slate-500 dark:text-slate-400">Max stock</span>
+                              <input type="number" value={editForm.max_stock} onChange={(e) => setEditForm((f) => ({ ...f, max_stock: e.target.value }))} placeholder="No cap" className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
                             </label>
                             <label className="block">
-                              <span className="text-xs text-slate-500">Safety stock</span>
-                              <input type="number" value={editForm.safety_stock} onChange={(e) => setEditForm((f) => ({ ...f, safety_stock: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                              <span className="text-xs text-slate-500 dark:text-slate-400">Safety stock</span>
+                              <input type="number" value={editForm.safety_stock} onChange={(e) => setEditForm((f) => ({ ...f, safety_stock: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
                             </label>
                             <label className="block">
-                              <span className="text-xs text-slate-500">Reorder qty</span>
-                              <input type="number" value={editForm.reorder_qty} onChange={(e) => setEditForm((f) => ({ ...f, reorder_qty: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                              <span className="text-xs text-slate-500 dark:text-slate-400">Reorder qty</span>
+                              <input type="number" value={editForm.reorder_qty} onChange={(e) => setEditForm((f) => ({ ...f, reorder_qty: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
                             </label>
                             <label className="block">
-                              <span className="text-xs text-slate-500">Lead time (days)</span>
-                              <input type="number" value={editForm.lead_time_days} onChange={(e) => setEditForm((f) => ({ ...f, lead_time_days: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                              <span className="text-xs text-slate-500 dark:text-slate-400">Lead time (days)</span>
+                              <input type="number" value={editForm.lead_time_days} onChange={(e) => setEditForm((f) => ({ ...f, lead_time_days: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
                             </label>
                             <label className="block">
-                              <span className="text-xs text-slate-500">Barcode</span>
-                              <input type="text" value={editForm.barcode} onChange={(e) => setEditForm((f) => ({ ...f, barcode: e.target.value }))} placeholder="Scan or type" className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                              <span className="text-xs text-slate-500 dark:text-slate-400">Barcode</span>
+                              <input type="text" value={editForm.barcode} onChange={(e) => setEditForm((f) => ({ ...f, barcode: e.target.value }))} placeholder="Scan or type" className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
                             </label>
                           </div>
 
-                          <div className="text-xs font-semibold uppercase text-slate-500 mb-2 mt-4">Catalog details</div>
+                          <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-2 mt-4">Catalog details</div>
                           <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 mb-2">
                             <label className="block">
-                              <span className="text-xs text-slate-500">Brand</span>
-                              <input type="text" value={editForm.brand} onChange={(e) => setEditForm((f) => ({ ...f, brand: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                              <span className="text-xs text-slate-500 dark:text-slate-400">Brand</span>
+                              <input type="text" value={editForm.brand} onChange={(e) => setEditForm((f) => ({ ...f, brand: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
                             </label>
                             <label className="block">
-                              <span className="text-xs text-slate-500">Category</span>
-                              <input type="text" value={editForm.category} onChange={(e) => setEditForm((f) => ({ ...f, category: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                              <span className="text-xs text-slate-500 dark:text-slate-400">Category</span>
+                              <input type="text" value={editForm.category} onChange={(e) => setEditForm((f) => ({ ...f, category: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
                             </label>
                             <label className="block">
-                              <span className="text-xs text-slate-500">Subcategory</span>
-                              <input type="text" value={editForm.subcategory} onChange={(e) => setEditForm((f) => ({ ...f, subcategory: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                              <span className="text-xs text-slate-500 dark:text-slate-400">Subcategory</span>
+                              <input type="text" value={editForm.subcategory} onChange={(e) => setEditForm((f) => ({ ...f, subcategory: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
                             </label>
                             <label className="block">
-                              <span className="text-xs text-slate-500">Weight (kg)</span>
-                              <input type="number" value={editForm.weight_kg} onChange={(e) => setEditForm((f) => ({ ...f, weight_kg: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                              <span className="text-xs text-slate-500 dark:text-slate-400">Weight (kg)</span>
+                              <input type="number" value={editForm.weight_kg} onChange={(e) => setEditForm((f) => ({ ...f, weight_kg: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
                             </label>
                             <label className="block">
-                              <span className="text-xs text-slate-500">Dimensions L×W×H (cm)</span>
+                              <span className="text-xs text-slate-500 dark:text-slate-400">Dimensions L×W×H (cm)</span>
                               <div className="flex gap-1 mt-1">
-                                <input type="number" value={editForm.length_cm} onChange={(e) => setEditForm((f) => ({ ...f, length_cm: e.target.value }))} placeholder="L" className="w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
-                                <input type="number" value={editForm.width_cm} onChange={(e) => setEditForm((f) => ({ ...f, width_cm: e.target.value }))} placeholder="W" className="w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
-                                <input type="number" value={editForm.height_cm} onChange={(e) => setEditForm((f) => ({ ...f, height_cm: e.target.value }))} placeholder="H" className="w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                                <input type="number" value={editForm.length_cm} onChange={(e) => setEditForm((f) => ({ ...f, length_cm: e.target.value }))} placeholder="L" className="w-full text-sm rounded-lg border border-slate-300 px-2 py-1 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
+                                <input type="number" value={editForm.width_cm} onChange={(e) => setEditForm((f) => ({ ...f, width_cm: e.target.value }))} placeholder="W" className="w-full text-sm rounded-lg border border-slate-300 px-2 py-1 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
+                                <input type="number" value={editForm.height_cm} onChange={(e) => setEditForm((f) => ({ ...f, height_cm: e.target.value }))} placeholder="H" className="w-full text-sm rounded-lg border border-slate-300 px-2 py-1 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
                               </div>
                             </label>
                             <label className="block">
-                              <span className="text-xs text-slate-500">Image URL</span>
-                              <input type="text" value={editForm.image_url} onChange={(e) => setEditForm((f) => ({ ...f, image_url: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                              <span className="text-xs text-slate-500 dark:text-slate-400">Image URL</span>
+                              <input type="text" value={editForm.image_url} onChange={(e) => setEditForm((f) => ({ ...f, image_url: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
                             </label>
                           </div>
                           <label className="block mb-2">
-                            <span className="text-xs text-slate-500">Description</span>
-                            <textarea value={editForm.description} onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))} rows={2} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                            <span className="text-xs text-slate-500 dark:text-slate-400">Description</span>
+                            <textarea value={editForm.description} onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))} rows={2} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
                           </label>
 
-                          <div className="text-xs font-semibold uppercase text-slate-500 mb-2 mt-4">Batch / serial tracking</div>
+                          <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-2 mt-4">Batch / serial tracking</div>
                           <label className="block max-w-xs">
-                            <span className="text-xs text-slate-500">Tracking mode</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400">Tracking mode</span>
                             <select
                               value={editForm.tracking_mode}
                               onChange={(e) => setEditForm((f) => ({ ...f, tracking_mode: e.target.value as Enums<'sku_tracking_mode'> }))}
-                              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1"
+                              className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
                             >
                               <option value="none">None</option>
                               <option value="batch">Batch (batch number, mfg/expiry date)</option>
@@ -1055,7 +1055,7 @@ export default function Inventory() {
                             </select>
                           </label>
                           {editForm.tracking_mode !== 'none' && (
-                            <p className="text-[10px] text-slate-400 mt-1">
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
                               Save this first, then capture {editForm.tracking_mode === 'batch' ? 'batch/expiry' : 'serial numbers'} the
                               next time this SKU is received on a GRN.
                             </p>
@@ -1065,10 +1065,10 @@ export default function Inventory() {
                     )}
                     {s.is_bundle && expandedBundleId === s.id && (
                       <tr>
-                        <td colSpan={10} className="px-4 py-3 bg-slate-50">
-                          <div className="text-xs font-semibold uppercase text-slate-500 mb-2">Components</div>
+                        <td colSpan={10} className="px-4 py-3 bg-slate-50 dark:bg-slate-700/40">
+                          <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-2">Components</div>
                           {bundleComponents.filter((c) => c.bundle_sku_id === s.id).length === 0 ? (
-                            <p className="text-xs text-slate-400 mb-2">No components yet — this bundle can't be sold until you add some.</p>
+                            <p className="text-xs text-slate-400 dark:text-slate-500 mb-2">No components yet — this bundle can't be sold until you add some.</p>
                           ) : (
                             <div className="space-y-1 mb-2">
                               {bundleComponents
@@ -1077,11 +1077,11 @@ export default function Inventory() {
                                   const compSku = skus.find((sk) => sk.id === c.component_sku_id)
                                   return (
                                     <div key={c.id} className="flex items-center gap-2 text-sm">
-                                      <span className="text-slate-700">
+                                      <span className="text-slate-700 dark:text-slate-300">
                                         {c.quantity} × {compSku?.sku ?? '—'} ({compSku?.title ?? 'unknown'})
                                       </span>
                                       {canEdit && (
-                                        <button onClick={() => removeComponent(c.id)} className="text-xs text-slate-400 hover:text-red-600">
+                                        <button onClick={() => removeComponent(c.id)} className="text-xs text-slate-400 dark:text-slate-500 hover:text-red-600">
                                           Remove
                                         </button>
                                       )}
@@ -1095,7 +1095,7 @@ export default function Inventory() {
                               <select
                                 value={newComponent.component_sku_id}
                                 onChange={(e) => setNewComponent((f) => ({ ...f, component_sku_id: e.target.value }))}
-                                className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                                className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
                               >
                                 <option value="">Select component SKU…</option>
                                 {skus.filter((sk) => sk.id !== s.id && !sk.is_bundle).map((sk) => (
@@ -1109,7 +1109,7 @@ export default function Inventory() {
                                 min="1"
                                 value={newComponent.quantity}
                                 onChange={(e) => setNewComponent((f) => ({ ...f, quantity: e.target.value }))}
-                                className="w-16 text-sm rounded-lg border border-slate-300 px-2 py-1.5"
+                                className="w-16 text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
                               />
                               <button
                                 onClick={() => addComponent(s.id)}

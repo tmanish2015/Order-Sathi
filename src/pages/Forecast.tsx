@@ -136,21 +136,21 @@ export default function Forecast() {
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
-      <h2 className="text-lg font-semibold text-slate-900 mb-1">Demand Forecast &amp; Reorder Suggestions</h2>
-      <p className="text-xs text-slate-400 mb-6">
+      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">Demand Forecast &amp; Reorder Suggestions</h2>
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
         A moving-average heuristic — 14-day sell-through rate projected forward against lead time and current stock. Not a machine-learning
         model. Suggestions never move stock by themselves; "Create draft GRN" only pre-fills a purchase suggestion you still confirm on
         the GRN page once goods actually arrive.
       </p>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         {canEdit && selectedIds.size > 0 && (
-          <div className="px-4 py-2.5 border-b border-slate-100 bg-indigo-50 flex items-center gap-3 flex-wrap">
+          <div className="px-4 py-2.5 border-b border-slate-100 dark:border-slate-700/60 bg-indigo-50 flex items-center gap-3 flex-wrap">
             <span className="text-xs font-medium text-indigo-700">{selectedIds.size} selected</span>
             <button onClick={createDraftGrn} disabled={creating} className="text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50">
               {creating ? 'Creating…' : '📦 Create draft GRN'}
             </button>
-            <button onClick={() => setSelectedIds(new Set())} className="text-xs text-slate-400 hover:text-slate-600">
+            <button onClick={() => setSelectedIds(new Set())} className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600">
               Clear
             </button>
           </div>
@@ -163,7 +163,7 @@ export default function Forecast() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                <tr className="text-left text-xs text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-700/60">
                   {canEdit && (
                     <th className="px-4 py-2 font-medium w-8">
                       <input
@@ -181,7 +181,7 @@ export default function Forecast() {
                   <th className="px-4 py-2 font-medium text-right">Suggested reorder qty</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-700/60">
                 {forecast.map((f) => (
                   <tr key={f.sku.id}>
                     {canEdit && (
@@ -189,14 +189,14 @@ export default function Forecast() {
                         <input type="checkbox" checked={selectedIds.has(f.sku.id)} onChange={() => toggleSelected(f.sku.id)} />
                       </td>
                     )}
-                    <td className="px-4 py-2.5 font-medium text-slate-700">
-                      {f.sku.sku} <span className="text-slate-400 font-normal">— {f.sku.title}</span>
+                    <td className="px-4 py-2.5 font-medium text-slate-700 dark:text-slate-300">
+                      {f.sku.sku} <span className="text-slate-400 dark:text-slate-500 font-normal">— {f.sku.title}</span>
                     </td>
-                    <td className="px-4 py-2.5 text-right text-slate-500">{f.stock}</td>
-                    <td className="px-4 py-2.5 text-right text-slate-500">{f.rate.toFixed(1)}/day</td>
+                    <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">{f.stock}</td>
+                    <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">{f.rate.toFixed(1)}/day</td>
                     <td className="px-4 py-2.5 text-right text-amber-600 font-medium">{f.daysToStockout != null ? `~${Math.round(f.daysToStockout)}d` : '—'}</td>
-                    <td className="px-4 py-2.5 text-right text-slate-500">{f.sku.lead_time_days}d</td>
-                    <td className="px-4 py-2.5 text-right text-slate-700 font-medium">{f.suggestedQty}</td>
+                    <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">{f.sku.lead_time_days}d</td>
+                    <td className="px-4 py-2.5 text-right text-slate-700 dark:text-slate-300 font-medium">{f.suggestedQty}</td>
                   </tr>
                 ))}
               </tbody>

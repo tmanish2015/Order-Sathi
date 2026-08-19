@@ -16,12 +16,12 @@ type ReturnRow = Tables<'order_returns'> & { orders: Tables<'orders'> | null; sk
 const MISMATCH_THRESHOLD = 2
 
 const STATUS_COLOR: Record<ReturnRow['status'], string> = {
-  initiated: 'bg-amber-100 text-amber-700',
-  in_transit: 'bg-indigo-100 text-indigo-700',
-  received: 'bg-blue-100 text-blue-700',
-  qc_pending: 'bg-amber-100 text-amber-700',
-  qc_complete: 'bg-slate-100 text-slate-600',
-  refunded: 'bg-emerald-100 text-emerald-700',
+  initiated: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  in_transit: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
+  received: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  qc_pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  qc_complete: 'bg-slate-100 text-slate-600 dark:bg-slate-900/40 dark:text-slate-300',
+  refunded: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
 }
 
 const TYPE_LABEL: Record<Enums<'return_type'>, string> = {
@@ -308,28 +308,28 @@ export default function Returns() {
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
-      <h2 className="text-lg font-semibold text-slate-900 mb-1">Returns &amp; RTO</h2>
-      <p className="text-xs text-slate-400 mb-6">
+      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">Returns &amp; RTO</h2>
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
         Track customer returns and RTO per SKU. Receiving goods never restocks by itself — stock only moves after QC assigns an
         outcome (resalable/partial restock, damaged goes to the audit log with no sellable increase, missing/wrong/rejected stay
         exceptions with no stock movement). Refund mismatches are flagged, never silently accepted.
       </p>
 
       {canEdit && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6">
-          <div className="text-xs font-semibold uppercase text-slate-500 mb-3">Record a return</div>
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 mb-6">
+          <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-3">Record a return</div>
           <div className="flex items-end gap-2 mb-3">
             <label className="block">
-              <span className="text-xs text-slate-500">Order ID</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Order ID</span>
               <input
                 type="text"
                 value={orderIdInput}
                 onChange={(e) => setOrderIdInput(e.target.value)}
                 placeholder="TEST-001"
-                className="mt-1 text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 w-48"
+                className="mt-1 text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 w-48 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
               />
             </label>
-            <button onClick={findOrder} disabled={finding} className="text-sm rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50 disabled:opacity-50">
+            <button onClick={findOrder} disabled={finding} className="text-sm rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/40 disabled:opacity-50">
               {finding ? 'Finding…' : 'Find order'}
             </button>
           </div>
@@ -337,11 +337,11 @@ export default function Returns() {
           {foundOrder && (
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <label className="block sm:col-span-2">
-                <span className="text-xs text-slate-500">Line item</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">Line item</span>
                 <select
                   value={returnForm.order_line_item_id}
                   onChange={(e) => selectLineItem(e.target.value)}
-                  className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                  className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
                 >
                   <option value="">Select item…</option>
                   {foundLineItems.map((li) => (
@@ -352,42 +352,42 @@ export default function Returns() {
                 </select>
               </label>
               <label className="block">
-                <span className="text-xs text-slate-500">Quantity returned</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">Quantity returned</span>
                 <input
                   type="number"
                   min="1"
                   value={returnForm.quantity}
                   onChange={(e) => setReturnForm((f) => ({ ...f, quantity: e.target.value }))}
-                  className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                  className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
                 />
               </label>
               <label className="block">
-                <span className="text-xs text-slate-500">Type</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">Type</span>
                 <select
                   value={returnForm.return_type}
                   onChange={(e) => setReturnForm((f) => ({ ...f, return_type: e.target.value as Enums<'return_type'> }))}
-                  className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                  className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
                 >
                   <option value="customer_return">Customer return</option>
                   <option value="rto">RTO</option>
                 </select>
               </label>
               <label className="block sm:col-span-2">
-                <span className="text-xs text-slate-500">Reason (optional)</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">Reason (optional)</span>
                 <input
                   type="text"
                   value={returnForm.reason}
                   onChange={(e) => setReturnForm((f) => ({ ...f, reason: e.target.value }))}
-                  className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                  className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
                 />
               </label>
               <label className="block">
-                <span className="text-xs text-slate-500">Expected refund</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">Expected refund</span>
                 <input
                   type="number"
                   value={returnForm.expected_refund}
                   onChange={(e) => setReturnForm((f) => ({ ...f, expected_refund: e.target.value }))}
-                  className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                  className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
                 />
               </label>
               <div className="sm:col-span-4">
@@ -405,13 +405,13 @@ export default function Returns() {
       )}
 
       {mismatches.length > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 text-sm text-red-800">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-6 text-sm text-red-800">
           {mismatches.length} return{mismatches.length > 1 ? 's' : ''} with a refund mismatch — needs manual review.
         </div>
       )}
 
       {canEdit && selectedIds.size > 0 && (
-        <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 mb-3">
+        <div className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg px-3 py-2 mb-3">
           <span className="text-xs font-medium text-indigo-700">{selectedIds.size} selected</span>
           <button
             onClick={bulkMarkReceived}
@@ -423,7 +423,7 @@ export default function Returns() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         {loading ? (
           <Skeleton />
         ) : returns.length === 0 ? (
@@ -432,7 +432,7 @@ export default function Returns() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                <tr className="text-left text-xs text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-700/60">
                   {canEdit && (
                     <th className="px-4 py-2 font-medium">
                       <input type="checkbox" checked={receivableIds.length > 0 && selectedIds.size === receivableIds.length} onChange={toggleSelectAll} />
@@ -450,7 +450,7 @@ export default function Returns() {
                   <th className="px-4 py-2 font-medium text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-700/60">
                 {returns.map((r) => {
                   const mismatch = r.actual_refund != null && Math.abs(Number(r.actual_refund) - Number(r.expected_refund)) > MISMATCH_THRESHOLD
                   return (
@@ -463,11 +463,11 @@ export default function Returns() {
                           )}
                         </td>
                       )}
-                      <td className="px-4 py-2.5 font-medium text-slate-700">{r.orders?.amazon_order_id ?? '—'}</td>
-                      <td className="px-4 py-2.5 text-slate-500">{r.skus?.sku ?? '—'}</td>
-                      <td className="px-4 py-2.5 text-slate-500">{TYPE_LABEL[r.return_type]}</td>
-                      <td className="px-4 py-2.5 text-right text-slate-500">{r.quantity}</td>
-                      <td className="px-4 py-2.5 text-right text-slate-700">{formatINR(Number(r.expected_refund))}</td>
+                      <td className="px-4 py-2.5 font-medium text-slate-700 dark:text-slate-300">{r.orders?.amazon_order_id ?? '—'}</td>
+                      <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{r.skus?.sku ?? '—'}</td>
+                      <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{TYPE_LABEL[r.return_type]}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">{r.quantity}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-700 dark:text-slate-300">{formatINR(Number(r.expected_refund))}</td>
                       <td className="px-4 py-2.5 text-right">
                         {editingId === r.id ? (
                           <div className="flex items-center justify-end gap-1.5">
@@ -476,17 +476,17 @@ export default function Returns() {
                               autoFocus
                               value={editValue}
                               onChange={(e) => setEditValue(e.target.value)}
-                              className="w-24 text-right text-sm rounded-lg border border-slate-300 px-2 py-1"
+                              className="w-24 text-right text-sm rounded-lg border border-slate-300 px-2 py-1 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
                             />
                             <button onClick={() => saveActualRefund(r)} disabled={savingId === r.id} className="text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50">
                               {savingId === r.id ? '…' : 'Save'}
                             </button>
-                            <button onClick={() => setEditingId(null)} className="text-xs text-slate-400 hover:text-slate-600">
+                            <button onClick={() => setEditingId(null)} className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600">
                               Cancel
                             </button>
                           </div>
                         ) : (
-                          <button onClick={() => canEdit && startEdit(r)} disabled={!canEdit} className={`${canEdit ? 'hover:underline' : ''} ${mismatch ? 'text-red-600 font-medium' : 'text-slate-500'}`}>
+                          <button onClick={() => canEdit && startEdit(r)} disabled={!canEdit} className={`${canEdit ? 'hover:underline' : ''} ${mismatch ? 'text-red-600 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
                             {r.actual_refund != null ? formatINR(Number(r.actual_refund)) : canEdit ? 'Enter…' : '—'}
                           </button>
                         )}
@@ -494,8 +494,8 @@ export default function Returns() {
                       <td className="px-4 py-2.5">
                         <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${STATUS_COLOR[r.status]}`}>{r.status.replace('_', ' ')}</span>
                       </td>
-                      <td className="px-4 py-2.5 text-xs text-slate-500">{r.qc_outcome ? QC_OUTCOME_LABEL[r.qc_outcome] : '—'}</td>
-                      <td className="px-4 py-2.5 text-slate-500">{format(new Date(r.created_at), 'dd MMM yyyy')}</td>
+                      <td className="px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400">{r.qc_outcome ? QC_OUTCOME_LABEL[r.qc_outcome] : '—'}</td>
+                      <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{format(new Date(r.created_at), 'dd MMM yyyy')}</td>
                       <td className="px-4 py-2.5 text-right">
                         {r.status === 'initiated' && canEdit && (
                           <button
@@ -512,7 +512,7 @@ export default function Returns() {
                           </button>
                         )}
                         {r.status === 'qc_complete' && (
-                          <span className={`text-xs ${r.restocked ? 'text-emerald-600' : 'text-slate-400'}`}>{r.restocked ? 'Restocked' : 'No stock movement'}</span>
+                          <span className={`text-xs ${r.restocked ? 'text-emerald-600' : 'text-slate-400 dark:text-slate-500'}`}>{r.restocked ? 'Restocked' : 'No stock movement'}</span>
                         )}
                       </td>
                     </tr>
@@ -521,11 +521,11 @@ export default function Returns() {
                         <td colSpan={canEdit ? 11 : 10} className="px-4 py-3 bg-amber-50">
                           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
                             <label className="block sm:col-span-2">
-                              <span className="text-xs text-slate-500">QC outcome</span>
+                              <span className="text-xs text-slate-500 dark:text-slate-400">QC outcome</span>
                               <select
                                 value={qcOutcome}
                                 onChange={(e) => setQcOutcome(e.target.value as Enums<'return_qc_outcome'>)}
-                                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
                               >
                                 {(Object.keys(QC_OUTCOME_LABEL) as Enums<'return_qc_outcome'>[]).map((o) => (
                                   <option key={o} value={o}>
@@ -536,24 +536,24 @@ export default function Returns() {
                             </label>
                             {qcOutcome === 'partial' && (
                               <label className="block">
-                                <span className="text-xs text-slate-500">Resalable qty (of {r.quantity})</span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400">Resalable qty (of {r.quantity})</span>
                                 <input
                                   type="number"
                                   min="1"
                                   max={r.quantity}
                                   value={qcQty}
                                   onChange={(e) => setQcQty(e.target.value)}
-                                  className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                                  className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
                                 />
                               </label>
                             )}
                             <label className="block sm:col-span-2">
-                              <span className="text-xs text-slate-500">QC notes (optional)</span>
+                              <span className="text-xs text-slate-500 dark:text-slate-400">QC notes (optional)</span>
                               <input
                                 type="text"
                                 value={qcNotes}
                                 onChange={(e) => setQcNotes(e.target.value)}
-                                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
                               />
                             </label>
                             <div className="flex gap-2">
@@ -564,7 +564,7 @@ export default function Returns() {
                               >
                                 {qcSavingId === r.id ? 'Saving…' : 'Complete QC'}
                               </button>
-                              <button onClick={() => setQcId(null)} className="text-sm rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50">
+                              <button onClick={() => setQcId(null)} className="text-sm rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/40">
                                 Cancel
                               </button>
                             </div>

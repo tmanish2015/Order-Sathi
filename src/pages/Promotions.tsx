@@ -77,10 +77,10 @@ export default function Promotions() {
   }
 
   const STATUS_COLOR: Record<string, string> = {
-    active: 'bg-emerald-100 text-emerald-700',
-    upcoming: 'bg-blue-100 text-blue-700',
-    expired: 'bg-slate-100 text-slate-500',
-    inactive: 'bg-slate-100 text-slate-400',
+    active: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+    upcoming: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+    expired: 'bg-slate-100 text-slate-500 dark:bg-slate-900/40 dark:text-slate-300',
+    inactive: 'bg-slate-100 text-slate-400 dark:bg-slate-900/40 dark:text-slate-300',
   }
 
   async function createPromotion() {
@@ -149,28 +149,28 @@ export default function Promotions() {
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between gap-3 mb-1">
-        <h2 className="text-lg font-semibold text-slate-900">Promotions &amp; Discounts</h2>
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Promotions &amp; Discounts</h2>
         {canEdit && (
-          <button onClick={() => setShowNew((v) => !v)} className="text-sm rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50">
+          <button onClick={() => setShowNew((v) => !v)} className="text-sm rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/40">
             {showNew ? 'Cancel' : '+ New promotion'}
           </button>
         )}
       </div>
-      <p className="text-xs text-slate-400 mb-6">
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
         Order Sathi is an OMS, not a storefront — there's no live cart to auto-apply these to. This is a reference catalog of what's
         running (or scheduled), for planning and reporting.
       </p>
 
       {showNew && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 mb-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
             <label className="block sm:col-span-2">
-              <span className="text-xs text-slate-500">Name</span>
-              <input type="text" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+              <span className="text-xs text-slate-500 dark:text-slate-400">Name</span>
+              <input type="text" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
             </label>
             <label className="block">
-              <span className="text-xs text-slate-500">Type</span>
-              <select value={form.promotion_type} onChange={(e) => setForm((f) => ({ ...f, promotion_type: e.target.value as Enums<'promotion_type'> }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5">
+              <span className="text-xs text-slate-500 dark:text-slate-400">Type</span>
+              <select value={form.promotion_type} onChange={(e) => setForm((f) => ({ ...f, promotion_type: e.target.value as Enums<'promotion_type'> }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
                 <option value="percentage">% off</option>
                 <option value="fixed">Flat amount off</option>
                 <option value="bxgy">Buy X Get Y</option>
@@ -180,24 +180,24 @@ export default function Promotions() {
             {form.promotion_type === 'bxgy' ? (
               <>
                 <label className="block">
-                  <span className="text-xs text-slate-500">Buy qty</span>
-                  <input type="number" value={form.buy_qty} onChange={(e) => setForm((f) => ({ ...f, buy_qty: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+                  <span className="text-xs text-slate-500 dark:text-slate-400">Buy qty</span>
+                  <input type="number" value={form.buy_qty} onChange={(e) => setForm((f) => ({ ...f, buy_qty: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
                 </label>
                 <label className="block">
-                  <span className="text-xs text-slate-500">Get qty (free)</span>
-                  <input type="number" value={form.get_qty} onChange={(e) => setForm((f) => ({ ...f, get_qty: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+                  <span className="text-xs text-slate-500 dark:text-slate-400">Get qty (free)</span>
+                  <input type="number" value={form.get_qty} onChange={(e) => setForm((f) => ({ ...f, get_qty: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
                 </label>
               </>
             ) : (
               <label className="block">
-                <span className="text-xs text-slate-500">{form.promotion_type === 'percentage' ? 'Discount %' : 'Discount amount (₹)'}</span>
-                <input type="number" value={form.discount_value} onChange={(e) => setForm((f) => ({ ...f, discount_value: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+                <span className="text-xs text-slate-500 dark:text-slate-400">{form.promotion_type === 'percentage' ? 'Discount %' : 'Discount amount (₹)'}</span>
+                <input type="number" value={form.discount_value} onChange={(e) => setForm((f) => ({ ...f, discount_value: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
               </label>
             )}
 
             <label className="block">
-              <span className="text-xs text-slate-500">SKU (optional)</span>
-              <select value={form.sku_id} onChange={(e) => setForm((f) => ({ ...f, sku_id: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5">
+              <span className="text-xs text-slate-500 dark:text-slate-400">SKU (optional)</span>
+              <select value={form.sku_id} onChange={(e) => setForm((f) => ({ ...f, sku_id: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
                 <option value="">All SKUs</option>
                 {skus.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -207,12 +207,12 @@ export default function Promotions() {
               </select>
             </label>
             <label className="block">
-              <span className="text-xs text-slate-500">Category (optional)</span>
-              <input type="text" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+              <span className="text-xs text-slate-500 dark:text-slate-400">Category (optional)</span>
+              <input type="text" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
             </label>
             <label className="block">
-              <span className="text-xs text-slate-500">Channel (optional)</span>
-              <select value={form.channel_id} onChange={(e) => setForm((f) => ({ ...f, channel_id: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5">
+              <span className="text-xs text-slate-500 dark:text-slate-400">Channel (optional)</span>
+              <select value={form.channel_id} onChange={(e) => setForm((f) => ({ ...f, channel_id: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
                 <option value="">All channels</option>
                 {channels.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -223,16 +223,16 @@ export default function Promotions() {
             </label>
 
             <label className="block">
-              <span className="text-xs text-slate-500">Min order value (optional)</span>
-              <input type="number" value={form.min_order_value} onChange={(e) => setForm((f) => ({ ...f, min_order_value: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+              <span className="text-xs text-slate-500 dark:text-slate-400">Min order value (optional)</span>
+              <input type="number" value={form.min_order_value} onChange={(e) => setForm((f) => ({ ...f, min_order_value: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
             </label>
             <label className="block">
-              <span className="text-xs text-slate-500">Start date</span>
-              <input type="date" value={form.start_date} onChange={(e) => setForm((f) => ({ ...f, start_date: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+              <span className="text-xs text-slate-500 dark:text-slate-400">Start date</span>
+              <input type="date" value={form.start_date} onChange={(e) => setForm((f) => ({ ...f, start_date: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
             </label>
             <label className="block">
-              <span className="text-xs text-slate-500">End date</span>
-              <input type="date" value={form.end_date} onChange={(e) => setForm((f) => ({ ...f, end_date: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+              <span className="text-xs text-slate-500 dark:text-slate-400">End date</span>
+              <input type="date" value={form.end_date} onChange={(e) => setForm((f) => ({ ...f, end_date: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
             </label>
           </div>
           <button onClick={createPromotion} disabled={saving} className="text-sm rounded-lg bg-indigo-600 text-white px-3 py-1.5 hover:bg-indigo-700 disabled:opacity-50">
@@ -241,21 +241,21 @@ export default function Promotions() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         {loading ? (
           <Skeleton rows={3} />
         ) : promotions.length === 0 ? (
           <EmptyState icon="🏷" title="No promotions yet." />
         ) : (
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-slate-50 dark:divide-slate-700/60">
             {promotions.map((p) => (
               <div key={p.id} className="px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
                 <div>
-                  <div className="font-medium text-sm text-slate-900">
+                  <div className="font-medium text-sm text-slate-900 dark:text-slate-100">
                     {p.name}
-                    <span className="ml-2 text-[10px] uppercase tracking-wide bg-slate-100 text-slate-500 rounded px-1.5 py-0.5">{TYPE_LABEL[p.promotion_type]}</span>
+                    <span className="ml-2 text-[10px] uppercase tracking-wide bg-slate-100 text-slate-500 dark:bg-slate-700/60 dark:text-slate-400 rounded px-1.5 py-0.5">{TYPE_LABEL[p.promotion_type]}</span>
                   </div>
-                  <div className="text-xs text-slate-400 mt-0.5">
+                  <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                     {p.promotion_type === 'bxgy' ? `Buy ${p.buy_qty} Get ${p.get_qty}` : p.promotion_type === 'percentage' ? `${p.discount_value}% off` : `₹${p.discount_value} off`}
                     {p.sku_id && p.skus ? ` · ${p.skus.sku}` : p.category ? ` · ${p.category}` : ' · all SKUs'}
                     {p.channels ? ` · ${p.channels.display_name}` : ' · all channels'}
@@ -271,7 +271,7 @@ export default function Promotions() {
                       <button onClick={() => toggleActive(p)} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">
                         {p.active ? 'Deactivate' : 'Activate'}
                       </button>
-                      <button onClick={() => setDeleteTarget(p)} className="text-xs text-slate-400 hover:text-red-600">
+                      <button onClick={() => setDeleteTarget(p)} className="text-xs text-slate-400 dark:text-slate-500 hover:text-red-600">
                         Delete
                       </button>
                     </>

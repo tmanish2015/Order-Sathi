@@ -48,8 +48,8 @@ function serialLines(s: string): string[] {
 }
 
 const STATUS_COLOR: Record<Enums<'grn_status'>, string> = {
-  draft: 'bg-amber-100 text-amber-700',
-  confirmed: 'bg-emerald-100 text-emerald-700',
+  draft: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  confirmed: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
 }
 
 export default function Grn() {
@@ -289,26 +289,26 @@ export default function Grn() {
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-1">
-        <h2 className="text-lg font-semibold text-slate-900">GRN / Inward</h2>
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">GRN / Inward</h2>
         {canEdit && (
-          <button onClick={() => setShowNew((v) => !v)} className="text-sm rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50">
+          <button onClick={() => setShowNew((v) => !v)} className="text-sm rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/40">
             {showNew ? 'Cancel' : '+ New GRN'}
           </button>
         )}
       </div>
-      <p className="text-xs text-slate-400 mb-6">
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
         Draft GRNs don't touch stock. Confirming a GRN adds its accepted quantity to physical stock and queues it in Put-away.
       </p>
 
       {showNew && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 mb-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
             <label className="block">
-              <span className="text-xs text-slate-500">Warehouse</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Warehouse</span>
               <select
                 value={form.warehouse_id}
                 onChange={(e) => setForm((f) => ({ ...f, warehouse_id: e.target.value }))}
-                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
               >
                 {warehouses.length === 0 && <option value="">No warehouses yet</option>}
                 {warehouses.map((w) => (
@@ -319,27 +319,27 @@ export default function Grn() {
               </select>
             </label>
             <label className="block">
-              <span className="text-xs text-slate-500">Supplier</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Supplier</span>
               <input
                 type="text"
                 value={form.supplier_name}
                 onChange={(e) => setForm((f) => ({ ...f, supplier_name: e.target.value }))}
-                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
               />
             </label>
             <label className="block">
-              <span className="text-xs text-slate-500">Reference / PO</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Reference / PO</span>
               <input
                 type="text"
                 value={form.reference_po}
                 onChange={(e) => setForm((f) => ({ ...f, reference_po: e.target.value }))}
-                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
               />
             </label>
           </div>
 
           <div className="mb-4">
-            <span className="text-xs text-slate-500 mb-1 block">📷 Scan barcode to add / increment a line</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">📷 Scan barcode to add / increment a line</span>
             <BarcodeScanInput onScan={handleScan} placeholder="Scan or type barcode, then Enter" />
             {scanFeedback && (
               <p className={`text-xs mt-1 ${scanFeedback.ok ? 'text-emerald-600' : 'text-red-600'}`}>
@@ -348,7 +348,7 @@ export default function Grn() {
             )}
           </div>
 
-          <div className="text-xs text-slate-500 mb-2">Line items</div>
+          <div className="text-xs text-slate-500 dark:text-slate-400 mb-2">Line items</div>
           <div className="space-y-2 mb-3">
             {lines.map((l, i) => {
               const sku = skus.find((s) => s.id === l.sku_id)
@@ -358,7 +358,7 @@ export default function Grn() {
                   <select
                     value={l.sku_id}
                     onChange={(e) => updateLine(i, { sku_id: e.target.value })}
-                    className="col-span-2 text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                    className="col-span-2 text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
                   >
                     <option value="">Select SKU…</option>
                     {skus.map((s) => (
@@ -367,37 +367,37 @@ export default function Grn() {
                       </option>
                     ))}
                   </select>
-                  <input type="number" placeholder="Ordered" value={l.ordered_qty} onChange={(e) => updateLine(i, { ordered_qty: e.target.value })} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5" />
-                  <input type="number" placeholder="Received" value={l.received_qty} onChange={(e) => updateLine(i, { received_qty: e.target.value })} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5" />
-                  <input type="number" placeholder="Accepted" value={l.accepted_qty} onChange={(e) => updateLine(i, { accepted_qty: e.target.value })} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5" />
+                  <input type="number" placeholder="Ordered" value={l.ordered_qty} onChange={(e) => updateLine(i, { ordered_qty: e.target.value })} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
+                  <input type="number" placeholder="Received" value={l.received_qty} onChange={(e) => updateLine(i, { received_qty: e.target.value })} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
+                  <input type="number" placeholder="Accepted" value={l.accepted_qty} onChange={(e) => updateLine(i, { accepted_qty: e.target.value })} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
                   <div className="flex items-center gap-1">
-                    <input type="number" placeholder="Rejected" value={l.rejected_qty} onChange={(e) => updateLine(i, { rejected_qty: e.target.value })} className="w-full text-sm rounded-lg border border-slate-300 px-2 py-1.5" />
-                    <button onClick={() => setLines((ls) => ls.filter((_, idx) => idx !== i))} disabled={lines.length === 1} className="text-xs text-slate-400 hover:text-red-600 disabled:opacity-30">
+                    <input type="number" placeholder="Rejected" value={l.rejected_qty} onChange={(e) => updateLine(i, { rejected_qty: e.target.value })} className="w-full text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
+                    <button onClick={() => setLines((ls) => ls.filter((_, idx) => idx !== i))} disabled={lines.length === 1} className="text-xs text-slate-400 dark:text-slate-500 hover:text-red-600 disabled:opacity-30">
                       ✕
                     </button>
                   </div>
                 </div>
                 {sku && (
-                  <div className="text-[10px] text-slate-400 pl-1 mt-0.5">
+                  <div className="text-[10px] text-slate-400 dark:text-slate-500 pl-1 mt-0.5">
                     Barcode: {sku.barcode ?? '—'} · Current stock: {stockBySku[sku.id] ?? 0} · Unit: {sku.product_type ?? 'ea'}
                   </div>
                 )}
                 {sku?.tracking_mode === 'batch' && (
                   <div className="grid grid-cols-3 gap-2 mt-1.5 pl-1">
-                    <input type="text" placeholder="Batch number *" value={l.batch} onChange={(e) => updateLine(i, { batch: e.target.value })} className="text-sm rounded-lg border border-slate-300 px-2 py-1" />
-                    <label className="flex items-center gap-1 text-xs text-slate-500">
+                    <input type="text" placeholder="Batch number *" value={l.batch} onChange={(e) => updateLine(i, { batch: e.target.value })} className="text-sm rounded-lg border border-slate-300 px-2 py-1 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
+                    <label className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
                       Mfg
-                      <input type="date" value={l.manufacturing_date} onChange={(e) => updateLine(i, { manufacturing_date: e.target.value })} className="flex-1 text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                      <input type="date" value={l.manufacturing_date} onChange={(e) => updateLine(i, { manufacturing_date: e.target.value })} className="flex-1 text-sm rounded-lg border border-slate-300 px-2 py-1 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
                     </label>
-                    <label className="flex items-center gap-1 text-xs text-slate-500">
+                    <label className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
                       Expiry
-                      <input type="date" value={l.expiry} onChange={(e) => updateLine(i, { expiry: e.target.value })} className="flex-1 text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                      <input type="date" value={l.expiry} onChange={(e) => updateLine(i, { expiry: e.target.value })} className="flex-1 text-sm rounded-lg border border-slate-300 px-2 py-1 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
                     </label>
                   </div>
                 )}
                 {sku?.tracking_mode === 'serial' && (
                   <div className="mt-1.5 pl-1">
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
                       Serial numbers — one per line, must total {Number(l.accepted_qty) || Number(l.received_qty) || 0} ({serialLines(l.serials).length} entered)
                     </span>
                     <textarea
@@ -405,7 +405,7 @@ export default function Grn() {
                       onChange={(e) => updateLine(i, { serials: e.target.value })}
                       rows={3}
                       placeholder={'SN00123\nSN00124\n...'}
-                      className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1 font-mono"
+                      className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1 font-mono dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
                     />
                   </div>
                 )}
@@ -423,30 +423,30 @@ export default function Grn() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         {loading ? (
           <Skeleton rows={3} />
         ) : grns.length === 0 ? (
           <EmptyState icon="📦" title="No GRNs yet." />
         ) : (
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-slate-50 dark:divide-slate-700/60">
             {grns.map((g) => (
               <div key={g.id}>
-                <button onClick={() => expand(g)} className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-slate-50">
+                <button onClick={() => expand(g)} className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700/40">
                   <div>
-                    <div className="font-medium text-sm text-slate-900">
+                    <div className="font-medium text-sm text-slate-900 dark:text-slate-100">
                       {g.grn_number} — {g.warehouses?.name ?? '—'}
-                      {g.supplier_name && <span className="text-slate-400 font-normal"> · {g.supplier_name}</span>}
+                      {g.supplier_name && <span className="text-slate-400 dark:text-slate-500 font-normal"> · {g.supplier_name}</span>}
                     </div>
-                    <div className="text-xs text-slate-400">{format(new Date(g.created_at), 'dd MMM yyyy, HH:mm')}</div>
+                    <div className="text-xs text-slate-400 dark:text-slate-500">{format(new Date(g.created_at), 'dd MMM yyyy, HH:mm')}</div>
                   </div>
                   <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${STATUS_COLOR[g.status]}`}>{g.status}</span>
                 </button>
                 {expandedId === g.id && (
-                  <div className="border-t border-slate-100 px-4 py-3 bg-slate-50">
+                  <div className="border-t border-slate-100 dark:border-slate-700/60 px-4 py-3 bg-slate-50 dark:bg-slate-700/40">
                     <table className="w-full text-sm mb-3">
                       <thead>
-                        <tr className="text-left text-xs text-slate-400">
+                        <tr className="text-left text-xs text-slate-400 dark:text-slate-500">
                           <th className="py-1 font-medium">SKU</th>
                           <th className="py-1 font-medium text-right">Ordered</th>
                           <th className="py-1 font-medium text-right">Received</th>
@@ -458,12 +458,12 @@ export default function Grn() {
                       <tbody>
                         {(linesByGrn[g.id] ?? []).map((l) => (
                           <tr key={l.id}>
-                            <td className="py-1 text-slate-700">{l.skus?.sku}</td>
-                            <td className="py-1 text-right text-slate-500">{l.ordered_qty}</td>
-                            <td className="py-1 text-right text-slate-500">{l.received_qty}</td>
+                            <td className="py-1 text-slate-700 dark:text-slate-300">{l.skus?.sku}</td>
+                            <td className="py-1 text-right text-slate-500 dark:text-slate-400">{l.ordered_qty}</td>
+                            <td className="py-1 text-right text-slate-500 dark:text-slate-400">{l.received_qty}</td>
                             <td className="py-1 text-right text-emerald-600 font-medium">{l.accepted_qty}</td>
                             <td className="py-1 text-right text-red-500">{l.rejected_qty}</td>
-                            <td className="py-1 text-slate-500">
+                            <td className="py-1 text-slate-500 dark:text-slate-400">
                               {l.batch ? `${l.batch}${l.expiry ? ` · exp ${format(new Date(l.expiry), 'dd MMM yyyy')}` : ''}` : l.serials ? `${serialLines(l.serials).length} serial(s)` : '—'}
                             </td>
                           </tr>

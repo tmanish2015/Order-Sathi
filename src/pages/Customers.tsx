@@ -107,8 +107,8 @@ export default function Customers() {
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
-      <h2 className="text-lg font-semibold text-slate-900 mb-1">Customer Intelligence</h2>
-      <p className="text-xs text-slate-400 mb-1">
+      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">Customer Intelligence</h2>
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-1">
         Operational customer analytics derived from order history — not a CRM. Grouped by buyer name on the order, which Amazon often
         withholds without a PII data-access grant (same limitation already noted in the SP-API sync connector) — those orders are grouped
         under "Unidentified" rather than guessed at.
@@ -117,30 +117,30 @@ export default function Customers() {
         <p className="text-xs text-amber-600 mb-4">{unidentifiedOrders} order(s) have no buyer name available and can't be attributed to a customer.</p>
       )}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3.5">
-          <div className="text-xs text-slate-400">Identified customers</div>
-          <div className="text-lg font-semibold mt-1 text-slate-900">{identifiedCount}</div>
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-3.5">
+          <div className="text-xs text-slate-400 dark:text-slate-500">Identified customers</div>
+          <div className="text-lg font-semibold mt-1 text-slate-900 dark:text-slate-100">{identifiedCount}</div>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3.5">
-          <div className="text-xs text-slate-400">Total orders</div>
-          <div className="text-lg font-semibold mt-1 text-slate-900">{orders.length}</div>
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-3.5">
+          <div className="text-xs text-slate-400 dark:text-slate-500">Total orders</div>
+          <div className="text-lg font-semibold mt-1 text-slate-900 dark:text-slate-100">{orders.length}</div>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3.5">
-          <div className="text-xs text-slate-400">Total revenue</div>
-          <div className="text-lg font-semibold mt-1 text-slate-900">{formatINR(orders.reduce((s, o) => s + Number(o.gross_amount), 0))}</div>
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-3.5">
+          <div className="text-xs text-slate-400 dark:text-slate-500">Total revenue</div>
+          <div className="text-lg font-semibold mt-1 text-slate-900 dark:text-slate-100">{formatINR(orders.reduce((s, o) => s + Number(o.gross_amount), 0))}</div>
         </div>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-3">
-        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search customer name…" className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 w-56" />
-        <select value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5">
+        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search customer name…" className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 w-56 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
           <option value="spend">Sort: highest spend (LTV)</option>
           <option value="orders">Sort: most orders</option>
           <option value="recent">Sort: most recent order</option>
         </select>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         {loading ? (
           <Skeleton rows={3} />
         ) : customers.length === 0 ? (
@@ -149,7 +149,7 @@ export default function Customers() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                <tr className="text-left text-xs text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-700/60">
                   <th className="px-4 py-2 font-medium">Customer</th>
                   <th className="px-4 py-2 font-medium text-right">Orders</th>
                   <th className="px-4 py-2 font-medium text-right">Total spend (LTV)</th>
@@ -161,18 +161,18 @@ export default function Customers() {
                   <th className="px-4 py-2 font-medium">Preferred channel</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-700/60">
                 {customers.map((c) => (
-                  <tr key={c.key} className={c.key === UNIDENTIFIED_KEY ? 'text-slate-400' : ''}>
-                    <td className="px-4 py-2.5 font-medium text-slate-700">{c.name}</td>
-                    <td className="px-4 py-2.5 text-right text-slate-500">{c.orderCount}</td>
-                    <td className="px-4 py-2.5 text-right text-slate-700 font-medium">{formatINR(c.totalSpend)}</td>
-                    <td className="px-4 py-2.5 text-right text-slate-500">{formatINR(c.aov)}</td>
-                    <td className="px-4 py-2.5 text-slate-500">{format(new Date(c.lastOrderDate), 'dd MMM yyyy')}</td>
-                    <td className="px-4 py-2.5 text-right text-slate-500">{c.returns}</td>
-                    <td className="px-4 py-2.5 text-right text-slate-500">{c.rto}</td>
-                    <td className="px-4 py-2.5 text-right text-slate-500">{c.cancellations}</td>
-                    <td className="px-4 py-2.5 text-slate-500">{c.preferredChannel}</td>
+                  <tr key={c.key} className={c.key === UNIDENTIFIED_KEY ? 'text-slate-400 dark:text-slate-500' : ''}>
+                    <td className="px-4 py-2.5 font-medium text-slate-700 dark:text-slate-300">{c.name}</td>
+                    <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">{c.orderCount}</td>
+                    <td className="px-4 py-2.5 text-right text-slate-700 dark:text-slate-300 font-medium">{formatINR(c.totalSpend)}</td>
+                    <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">{formatINR(c.aov)}</td>
+                    <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{format(new Date(c.lastOrderDate), 'dd MMM yyyy')}</td>
+                    <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">{c.returns}</td>
+                    <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">{c.rto}</td>
+                    <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">{c.cancellations}</td>
+                    <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{c.preferredChannel}</td>
                   </tr>
                 ))}
               </tbody>

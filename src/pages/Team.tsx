@@ -69,8 +69,8 @@ export default function Team() {
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
-      <h2 className="text-lg font-semibold text-slate-900 mb-1">Team</h2>
-      <p className="text-xs text-slate-400 mb-6">
+      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">Team</h2>
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
         New signups land here as pending with no data access until an admin approves them and assigns a role. Organization profile
         (GSTIN, address) moved to <Link to="/settings" className="text-indigo-600 hover:underline">Settings</Link>.
       </p>
@@ -78,12 +78,12 @@ export default function Team() {
       {pending.length > 0 && (
         <>
           <h3 className="text-xs font-semibold uppercase text-amber-600 mb-2">Pending approval ({pending.length})</h3>
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm divide-y divide-slate-100 mb-6">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm divide-y divide-slate-100 dark:divide-slate-700/60 mb-6">
             {pending.map((p) => (
               <div key={p.id} className="px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
                 <div>
-                  <div className="font-medium text-sm text-slate-900">{p.full_name || p.email}</div>
-                  <div className="text-xs text-slate-400">
+                  <div className="font-medium text-sm text-slate-900 dark:text-slate-100">{p.full_name || p.email}</div>
+                  <div className="text-xs text-slate-400 dark:text-slate-500">
                     {p.email} · signed up {format(new Date(p.created_at), 'dd MMM yyyy')}
                   </div>
                 </div>
@@ -91,7 +91,7 @@ export default function Team() {
                   <select
                     value={roleChoice[p.id] ?? 'ops'}
                     onChange={(e) => setRoleChoice((r) => ({ ...r, [p.id]: e.target.value as Enums<'user_role'> }))}
-                    className="text-sm rounded-lg border border-slate-300 px-2 py-1.5"
+                    className="text-sm rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 px-2 py-1.5"
                   >
                     {ROLES.map((r) => (
                       <option key={r} value={r}>
@@ -113,15 +113,15 @@ export default function Team() {
         </>
       )}
 
-      <h3 className="text-xs font-semibold uppercase text-slate-500 mb-2">Active team ({active.length})</h3>
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm divide-y divide-slate-100">
+      <h3 className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-2">Active team ({active.length})</h3>
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm divide-y divide-slate-100 dark:divide-slate-700/60">
         {active.map((p) => (
           <div key={p.id} className="px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
             <div>
-              <div className="font-medium text-sm text-slate-900">
-                {p.full_name || p.email} {p.id === me?.id && <span className="text-xs text-slate-400">(you)</span>}
+              <div className="font-medium text-sm text-slate-900 dark:text-slate-100">
+                {p.full_name || p.email} {p.id === me?.id && <span className="text-xs text-slate-400 dark:text-slate-500">(you)</span>}
               </div>
-              <div className="text-xs text-slate-400">{p.email}</div>
+              <div className="text-xs text-slate-400 dark:text-slate-500">{p.email}</div>
             </div>
             {me?.role === 'admin' && p.id !== me?.id ? (
               <div className="flex items-center gap-2">
@@ -129,7 +129,7 @@ export default function Team() {
                   value={p.role}
                   disabled={busyId === p.id}
                   onChange={(e) => changeRole(p.id, e.target.value as Enums<'user_role'>)}
-                  className="text-sm rounded-lg border border-slate-300 px-2 py-1.5 disabled:opacity-50"
+                  className="text-sm rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 px-2 py-1.5 disabled:opacity-50"
                 >
                   {ROLES.map((r) => (
                     <option key={r} value={r}>
@@ -146,7 +146,7 @@ export default function Team() {
                 </button>
               </div>
             ) : (
-              <span className="text-[10px] uppercase tracking-wide bg-indigo-50 text-indigo-600 rounded px-1.5 py-0.5">
+              <span className="text-[10px] uppercase tracking-wide bg-indigo-50 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-300 rounded px-1.5 py-0.5">
                 {p.role}
               </span>
             )}

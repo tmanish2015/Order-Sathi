@@ -16,11 +16,11 @@ type Channel = Tables<'channels'>
 type SettlementTxn = Tables<'settlement_transactions'> & { orders: Tables<'orders'> | null }
 
 const STATUS_COLOR: Record<Entry['status'], string> = {
-  matched: 'bg-emerald-100 text-emerald-700',
-  mismatch: 'bg-red-100 text-red-700',
-  pending_review: 'bg-amber-100 text-amber-700',
-  resolved: 'bg-slate-100 text-slate-600',
-  ignored: 'bg-slate-100 text-slate-400',
+  matched: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+  mismatch: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+  pending_review: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  resolved: 'bg-slate-100 text-slate-600 dark:bg-slate-900/40 dark:text-slate-300',
+  ignored: 'bg-slate-100 text-slate-400 dark:bg-slate-900/40 dark:text-slate-500',
 }
 
 // Bank credits round differently than the paise-precise settlement math -
@@ -344,22 +344,22 @@ export default function Reconciliation() {
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
-      <h2 className="text-lg font-semibold text-slate-900 mb-1">MTR Reconciliation</h2>
-      <p className="text-xs text-slate-400 mb-6">
+      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">MTR Reconciliation</h2>
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
         Gross sales feed the revenue ledger. Actual settlement is tracked separately — the two never get merged directly. Any mismatch is flagged for manual review, never silently accepted.
       </p>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6">
-        <div className="text-xs font-semibold uppercase text-slate-500 mb-3">Import MTR file</div>
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 mb-6">
+        <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-3">Import MTR file</div>
         {channels.length === 0 ? (
-          <p className="text-sm text-slate-400">No channel connected yet — connect Amazon under Integrations first.</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500">No channel connected yet — connect Amazon under Integrations first.</p>
         ) : (
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             {channels.length > 1 && (
               <select
                 value={selectedChannel}
                 onChange={(e) => setSelectedChannel(e.target.value)}
-                className="text-sm rounded-lg border border-slate-300 px-2 py-1.5"
+                className="text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
               >
                 <option value="">Select channel…</option>
                 {channels.map((c) => (
@@ -375,16 +375,16 @@ export default function Reconciliation() {
               accept=".csv"
               disabled={!selectedChannel || importing}
               onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
-              className="text-sm text-slate-500 disabled:opacity-50"
+              className="text-sm text-slate-500 dark:text-slate-400 disabled:opacity-50"
             />
-            {importing && <span className="text-xs text-slate-400">Importing…</span>}
+            {importing && <span className="text-xs text-slate-400 dark:text-slate-500">Importing…</span>}
           </div>
         )}
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6">
-        <div className="text-xs font-semibold uppercase text-slate-500 mb-1">Import bank settlement statement</div>
-        <p className="text-xs text-slate-400 mb-3">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 mb-6">
+        <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-1">Import bank settlement statement</div>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">
           Bulk-fills actual settlement for every order in the file, matched by Order ID. Requires MTR already imported for those orders.
         </p>
         <div className="flex items-center gap-3">
@@ -394,27 +394,27 @@ export default function Reconciliation() {
             accept=".csv"
             disabled={importingBank}
             onChange={(e) => e.target.files?.[0] && handleBankFile(e.target.files[0])}
-            className="text-sm text-slate-500 disabled:opacity-50"
+            className="text-sm text-slate-500 dark:text-slate-400 disabled:opacity-50"
           />
-          {importingBank && <span className="text-xs text-slate-400">Importing…</span>}
+          {importingBank && <span className="text-xs text-slate-400 dark:text-slate-500">Importing…</span>}
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6">
-        <div className="text-xs font-semibold uppercase text-slate-500 mb-1">Import settlement file</div>
-        <p className="text-xs text-slate-400 mb-3">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 mb-6">
+        <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-1">Import settlement file</div>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">
           Matches each settlement row to an order by channel order ID, then compares net settlement against the MTR expected
           amount. Anything unmatched or off goes straight to the exception queue below — never silently accepted.
         </p>
         {channels.length === 0 ? (
-          <p className="text-sm text-slate-400">No channel connected yet — connect Amazon under Integrations first.</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500">No channel connected yet — connect Amazon under Integrations first.</p>
         ) : (
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             {channels.length > 1 && (
               <select
                 value={settlementChannel}
                 onChange={(e) => setSettlementChannel(e.target.value)}
-                className="text-sm rounded-lg border border-slate-300 px-2 py-1.5"
+                className="text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
               >
                 <option value="">Select channel…</option>
                 {channels.map((c) => (
@@ -430,15 +430,15 @@ export default function Reconciliation() {
               accept=".csv"
               disabled={!settlementChannel || importingSettlement}
               onChange={(e) => e.target.files?.[0] && handleSettlementFile(e.target.files[0])}
-              className="text-sm text-slate-500 disabled:opacity-50"
+              className="text-sm text-slate-500 dark:text-slate-400 disabled:opacity-50"
             />
-            {importingSettlement && <span className="text-xs text-slate-400">Importing…</span>}
+            {importingSettlement && <span className="text-xs text-slate-400 dark:text-slate-500">Importing…</span>}
           </div>
         )}
       </div>
 
       {settlements.filter((t) => t.match_status === 'mismatch' || t.match_status === 'pending_review').length > 0 && (
-        <div className="bg-white rounded-xl border border-red-200 shadow-sm p-4 mb-6">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-red-200 shadow-sm p-4 mb-6">
           <div className="text-xs font-semibold uppercase text-red-600 mb-3">
             Reconciliation exception queue — {settlements.filter((t) => t.match_status === 'mismatch' || t.match_status === 'pending_review').length} open
           </div>
@@ -446,20 +446,20 @@ export default function Reconciliation() {
             {settlements
               .filter((t) => t.match_status === 'mismatch' || t.match_status === 'pending_review')
               .map((t) => (
-                <div key={t.id} className="border border-slate-100 rounded-lg p-3">
+                <div key={t.id} className="border border-slate-100 dark:border-slate-700/60 rounded-lg p-3">
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     <div className="text-sm">
-                      <span className="font-medium text-slate-700">{t.channel_order_id}</span>{' '}
+                      <span className="font-medium text-slate-700 dark:text-slate-300">{t.channel_order_id}</span>{' '}
                       <span className={`ml-2 text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${STATUS_COLOR[t.match_status]}`}>
                         {t.match_status.replace('_', ' ')}
                       </span>
                     </div>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-xs text-slate-500 dark:text-slate-400">
                       Net {formatINR(Number(t.net_amount))} · Fees {formatINR(Number(t.fees))} · Taxes {formatINR(Number(t.taxes))} · Refunds{' '}
                       {formatINR(Number(t.refunds))}
                     </div>
                   </div>
-                  {t.match_note && <p className="text-xs text-slate-500 mt-1">{t.match_note}</p>}
+                  {t.match_note && <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{t.match_note}</p>}
                   {canEdit && (
                     <div className="flex items-center gap-2 mt-2">
                       <input
@@ -468,12 +468,12 @@ export default function Reconciliation() {
                         value={resolvingId === t.id ? resolveNote : ''}
                         onFocus={() => setResolvingId(t.id)}
                         onChange={(e) => setResolveNote(e.target.value)}
-                        className="flex-1 text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                        className="flex-1 text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
                       />
                       <button onClick={() => resolveSettlement(t, 'resolved')} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">
                         Resolve
                       </button>
-                      <button onClick={() => resolveSettlement(t, 'ignored')} className="text-xs font-medium text-slate-400 hover:text-slate-600">
+                      <button onClick={() => resolveSettlement(t, 'ignored')} className="text-xs font-medium text-slate-400 dark:text-slate-500 hover:text-slate-600">
                         Ignore
                       </button>
                     </div>
@@ -485,17 +485,17 @@ export default function Reconciliation() {
       )}
 
       {mismatches.length > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 text-sm text-red-800">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-6 text-sm text-red-800">
           {mismatches.length} order{mismatches.length > 1 ? 's' : ''} with a settlement mismatch — needs manual review.
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-100">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700/60">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as Entry['status'] | '')}
-            className="text-sm rounded-lg border border-slate-300 px-2 py-1.5"
+            className="text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
           >
             <option value="">All statuses</option>
             <option value="pending_review">Pending review</option>
@@ -515,7 +515,7 @@ export default function Reconciliation() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                <tr className="text-left text-xs text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-700/60">
                   <th className="px-4 py-2 font-medium">Order</th>
                   <th className="px-4 py-2 font-medium text-right">Gross sales</th>
                   <th className="px-4 py-2 font-medium text-right">Commission</th>
@@ -526,18 +526,18 @@ export default function Reconciliation() {
                   <th className="px-4 py-2 font-medium">Reconciliation status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-700/60">
                 {visibleEntries.map((e) => (
                   <tr key={e.id}>
-                    <td className="px-4 py-2.5 font-medium text-slate-700">{e.orders?.amazon_order_id ?? '—'}</td>
-                    <td className="px-4 py-2.5 text-right text-slate-700">{formatINR(Number(e.gross_sales))}</td>
-                    <td className="px-4 py-2.5 text-right text-slate-500">{formatINR(Number(e.commission))}</td>
-                    <td className="px-4 py-2.5 text-right text-slate-500">
+                    <td className="px-4 py-2.5 font-medium text-slate-700 dark:text-slate-300">{e.orders?.amazon_order_id ?? '—'}</td>
+                    <td className="px-4 py-2.5 text-right text-slate-700 dark:text-slate-300">{formatINR(Number(e.gross_sales))}</td>
+                    <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">{formatINR(Number(e.commission))}</td>
+                    <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">
                       {formatINR(Number(e.tcs_cgst) + Number(e.tcs_sgst) + Number(e.tcs_igst))}
                     </td>
-                    <td className="px-4 py-2.5 text-right text-slate-500">{formatINR(Number(e.tds_194o))}</td>
-                    <td className="px-4 py-2.5 text-right text-slate-500">{formatINR(Number(e.expected_settlement))}</td>
-                    <td className="px-4 py-2.5 text-right text-slate-500">
+                    <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">{formatINR(Number(e.tds_194o))}</td>
+                    <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">{formatINR(Number(e.expected_settlement))}</td>
+                    <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">
                       {editingId === e.id ? (
                         <div className="flex items-center justify-end gap-1.5">
                           <input
@@ -545,7 +545,7 @@ export default function Reconciliation() {
                             autoFocus
                             value={editValue}
                             onChange={(ev) => setEditValue(ev.target.value)}
-                            className="w-24 text-right text-sm rounded-lg border border-slate-300 px-2 py-1"
+                            className="w-24 text-right text-sm rounded-lg border border-slate-300 px-2 py-1 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
                           />
                           <button
                             onClick={() => saveActualSettlement(e)}
@@ -554,7 +554,7 @@ export default function Reconciliation() {
                           >
                             {savingId === e.id ? '…' : 'Save'}
                           </button>
-                          <button onClick={() => setEditingId(null)} className="text-xs text-slate-400 hover:text-slate-600">
+                          <button onClick={() => setEditingId(null)} className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600">
                             Cancel
                           </button>
                         </div>

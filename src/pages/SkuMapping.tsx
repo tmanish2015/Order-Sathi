@@ -108,23 +108,23 @@ export default function SkuMapping() {
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-1">
-        <h2 className="text-lg font-semibold text-slate-900">SKU / Channel Mapping</h2>
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">SKU / Channel Mapping</h2>
         {canEdit && (
-          <button onClick={() => setShowAdd((v) => !v)} className="text-sm rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50">
+          <button onClick={() => setShowAdd((v) => !v)} className="text-sm rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/40">
             {showAdd ? 'Cancel' : '+ Add mapping'}
           </button>
         )}
       </div>
-      <p className="text-xs text-slate-400 mb-6">
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
         One internal SKU can have a different code on each channel. Orders whose channel SKU has no mapping don't get silently dropped —
         they land in the exception list below.
       </p>
 
       {showAdd && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6 grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 mb-6 grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
           <label className="block">
-            <span className="text-xs text-slate-500">Internal SKU</span>
-            <select value={form.sku_id} onChange={(e) => setForm((f) => ({ ...f, sku_id: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5">
+            <span className="text-xs text-slate-500 dark:text-slate-400">Internal SKU</span>
+            <select value={form.sku_id} onChange={(e) => setForm((f) => ({ ...f, sku_id: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
               <option value="">Select SKU…</option>
               {skus.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -134,8 +134,8 @@ export default function SkuMapping() {
             </select>
           </label>
           <label className="block">
-            <span className="text-xs text-slate-500">Channel</span>
-            <select value={form.channel_id} onChange={(e) => setForm((f) => ({ ...f, channel_id: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5">
+            <span className="text-xs text-slate-500 dark:text-slate-400">Channel</span>
+            <select value={form.channel_id} onChange={(e) => setForm((f) => ({ ...f, channel_id: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
               <option value="">Select channel…</option>
               {channels.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -145,12 +145,12 @@ export default function SkuMapping() {
             </select>
           </label>
           <label className="block">
-            <span className="text-xs text-slate-500">Channel SKU</span>
-            <input type="text" value={form.channel_sku} onChange={(e) => setForm((f) => ({ ...f, channel_sku: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+            <span className="text-xs text-slate-500 dark:text-slate-400">Channel SKU</span>
+            <input type="text" value={form.channel_sku} onChange={(e) => setForm((f) => ({ ...f, channel_sku: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
           </label>
           <label className="block">
-            <span className="text-xs text-slate-500">Channel product ID (optional)</span>
-            <input type="text" value={form.channel_product_id} onChange={(e) => setForm((f) => ({ ...f, channel_product_id: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+            <span className="text-xs text-slate-500 dark:text-slate-400">Channel product ID (optional)</span>
+            <input type="text" value={form.channel_product_id} onChange={(e) => setForm((f) => ({ ...f, channel_product_id: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
           </label>
           <button onClick={addMapping} disabled={saving} className="text-sm rounded-lg bg-indigo-600 text-white px-3 py-1.5 hover:bg-indigo-700 disabled:opacity-50">
             {saving ? 'Saving…' : 'Add'}
@@ -159,18 +159,18 @@ export default function SkuMapping() {
       )}
 
       {exceptions.length > 0 && (
-        <div className="bg-white rounded-xl border border-red-200 shadow-sm overflow-hidden mb-6">
-          <div className="px-4 py-3 border-b border-red-100 bg-red-50 text-xs font-semibold uppercase text-red-700">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-red-200 shadow-sm overflow-hidden mb-6">
+          <div className="px-4 py-3 border-b border-red-100 bg-red-50 text-xs font-semibold uppercase text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300">
             Unmapped SKU exceptions ({exceptions.length})
           </div>
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-slate-50 dark:divide-slate-700/60">
             {exceptions.map((exc) => (
               <div key={exc.id} className="px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
                 <div>
-                  <div className="text-sm text-slate-900">
+                  <div className="text-sm text-slate-900 dark:text-slate-100">
                     <strong>{exc.channel_sku}</strong> on {exc.channels?.display_name ?? 'unknown channel'} — order {exc.channel_order_id}
                   </div>
-                  <div className="text-xs text-slate-400">{format(new Date(exc.created_at), 'dd MMM yyyy, HH:mm')}</div>
+                  <div className="text-xs text-slate-400 dark:text-slate-500">{format(new Date(exc.created_at), 'dd MMM yyyy, HH:mm')}</div>
                 </div>
                 {canEdit && (
                   <button onClick={() => resolveException(exc)} disabled={resolvingId === exc.id} className="text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50">
@@ -183,7 +183,7 @@ export default function SkuMapping() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         {loading ? (
           <Skeleton />
         ) : mappings.length === 0 ? (
@@ -191,7 +191,7 @@ export default function SkuMapping() {
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+              <tr className="text-left text-xs text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-700/60">
                 <th className="px-4 py-2 font-medium">Internal SKU</th>
                 <th className="px-4 py-2 font-medium">Channel</th>
                 <th className="px-4 py-2 font-medium">Channel SKU</th>
@@ -199,16 +199,16 @@ export default function SkuMapping() {
                 <th className="px-4 py-2 font-medium text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-slate-50 dark:divide-slate-700/60">
               {mappings.map((m) => (
                 <tr key={m.id}>
-                  <td className="px-4 py-2.5 font-medium text-slate-700">{m.skus?.sku}</td>
-                  <td className="px-4 py-2.5 text-slate-500">{m.channels?.display_name}</td>
-                  <td className="px-4 py-2.5 text-slate-500">{m.channel_sku}</td>
-                  <td className="px-4 py-2.5 text-slate-500">{m.channel_product_id ?? '—'}</td>
+                  <td className="px-4 py-2.5 font-medium text-slate-700 dark:text-slate-300">{m.skus?.sku}</td>
+                  <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{m.channels?.display_name}</td>
+                  <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{m.channel_sku}</td>
+                  <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{m.channel_product_id ?? '—'}</td>
                   <td className="px-4 py-2.5 text-right">
                     {canEdit && (
-                      <button onClick={() => setDeleteTarget(m)} className="text-xs text-slate-400 hover:text-red-600">
+                      <button onClick={() => setDeleteTarget(m)} className="text-xs text-slate-400 dark:text-slate-500 hover:text-red-600">
                         Delete
                       </button>
                     )}

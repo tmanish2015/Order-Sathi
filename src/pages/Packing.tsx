@@ -104,8 +104,8 @@ export default function Packing() {
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
-      <h2 className="text-lg font-semibold text-slate-900 mb-1">Packing</h2>
-      <p className="text-xs text-slate-400 mb-6">
+      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">Packing</h2>
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
         Orders that have been fully picked, waiting to be packed. Packing is blocked until every line's picked quantity covers what was
         allocated.
       </p>
@@ -120,17 +120,17 @@ export default function Packing() {
             const lines = linesByOrder[order.id] ?? []
             const form = formFor(order.id)
             return (
-              <div key={order.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+              <div key={order.id} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <div className="font-medium text-sm text-slate-900">{order.amazon_order_id}</div>
-                    {order.customer_name && <div className="text-xs text-slate-400">{order.customer_name}</div>}
+                    <div className="font-medium text-sm text-slate-900 dark:text-slate-100">{order.amazon_order_id}</div>
+                    {order.customer_name && <div className="text-xs text-slate-400 dark:text-slate-500">{order.customer_name}</div>}
                   </div>
                 </div>
 
                 <table className="w-full text-sm mb-3">
                   <thead>
-                    <tr className="text-left text-xs text-slate-400">
+                    <tr className="text-left text-xs text-slate-400 dark:text-slate-500">
                       <th className="py-1 font-medium">SKU</th>
                       <th className="py-1 font-medium">Title</th>
                       <th className="py-1 font-medium text-right">Ordered</th>
@@ -140,9 +140,9 @@ export default function Packing() {
                   <tbody>
                     {lines.map((l) => (
                       <tr key={l.id}>
-                        <td className="py-1 text-slate-700">{l.skus?.sku}</td>
-                        <td className="py-1 text-slate-500">{l.skus?.title}</td>
-                        <td className="py-1 text-right text-slate-500">{l.quantity}</td>
+                        <td className="py-1 text-slate-700 dark:text-slate-300">{l.skus?.sku}</td>
+                        <td className="py-1 text-slate-500 dark:text-slate-400">{l.skus?.title}</td>
+                        <td className="py-1 text-right text-slate-500 dark:text-slate-400">{l.quantity}</td>
                         <td className="py-1 text-right text-emerald-600 font-medium">{l.picked_qty}</td>
                       </tr>
                     ))}
@@ -152,24 +152,24 @@ export default function Packing() {
                 {canEdit && (
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 items-end">
                     <label className="block">
-                      <span className="text-xs text-slate-500">Packages</span>
-                      <input type="number" min="1" value={form.package_count} onChange={(e) => updateForm(order.id, { package_count: e.target.value })} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1.5" />
+                      <span className="text-xs text-slate-500 dark:text-slate-400">Packages</span>
+                      <input type="number" min="1" value={form.package_count} onChange={(e) => updateForm(order.id, { package_count: e.target.value })} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
                     </label>
                     <label className="block">
-                      <span className="text-xs text-slate-500">Weight (kg)</span>
-                      <input type="number" step="0.01" value={form.weight_kg} onChange={(e) => updateForm(order.id, { weight_kg: e.target.value })} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1.5" />
+                      <span className="text-xs text-slate-500 dark:text-slate-400">Weight (kg)</span>
+                      <input type="number" step="0.01" value={form.weight_kg} onChange={(e) => updateForm(order.id, { weight_kg: e.target.value })} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
                     </label>
                     <label className="block">
-                      <span className="text-xs text-slate-500">L (cm)</span>
-                      <input type="number" value={form.length_cm} onChange={(e) => updateForm(order.id, { length_cm: e.target.value })} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1.5" />
+                      <span className="text-xs text-slate-500 dark:text-slate-400">L (cm)</span>
+                      <input type="number" value={form.length_cm} onChange={(e) => updateForm(order.id, { length_cm: e.target.value })} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
                     </label>
                     <label className="block">
-                      <span className="text-xs text-slate-500">W (cm)</span>
-                      <input type="number" value={form.width_cm} onChange={(e) => updateForm(order.id, { width_cm: e.target.value })} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1.5" />
+                      <span className="text-xs text-slate-500 dark:text-slate-400">W (cm)</span>
+                      <input type="number" value={form.width_cm} onChange={(e) => updateForm(order.id, { width_cm: e.target.value })} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
                     </label>
                     <label className="block">
-                      <span className="text-xs text-slate-500">H (cm)</span>
-                      <input type="number" value={form.height_cm} onChange={(e) => updateForm(order.id, { height_cm: e.target.value })} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1.5" />
+                      <span className="text-xs text-slate-500 dark:text-slate-400">H (cm)</span>
+                      <input type="number" value={form.height_cm} onChange={(e) => updateForm(order.id, { height_cm: e.target.value })} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
                     </label>
                   </div>
                 )}

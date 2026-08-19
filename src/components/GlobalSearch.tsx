@@ -79,39 +79,39 @@ export default function GlobalSearch({ onNavigate }: { onNavigate?: () => void }
         className="w-full text-sm rounded-lg border border-white/10 bg-white/5 text-white placeholder:text-slate-400 px-3 py-1.5 outline-none focus:border-indigo-400"
       />
       {open && query.trim().length >= 2 && (
-        <div className="absolute z-50 mt-1 w-full max-h-96 overflow-y-auto rounded-lg bg-white border border-slate-200 shadow-lg text-sm">
+        <div className="absolute z-50 mt-1 w-full max-h-96 overflow-y-auto rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg text-sm">
           {loading ? (
-            <div className="px-3 py-2 text-slate-400">Searching…</div>
+            <div className="px-3 py-2 text-slate-400 dark:text-slate-500">Searching…</div>
           ) : !hasResults ? (
-            <div className="px-3 py-2 text-slate-400">No matches.</div>
+            <div className="px-3 py-2 text-slate-400 dark:text-slate-500">No matches.</div>
           ) : (
             <>
               {orders.length > 0 && (
                 <div>
-                  <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase text-slate-400">Orders</div>
+                  <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase text-slate-400 dark:text-slate-500">Orders</div>
                   {orders.map((o) => (
                     <button
                       key={o.id}
                       onClick={() => go(`/orders?q=${encodeURIComponent(o.amazon_order_id)}`)}
-                      className="w-full text-left px-3 py-1.5 hover:bg-slate-50 flex items-center justify-between gap-2"
+                      className="w-full text-left px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/40 flex items-center justify-between gap-2"
                     >
-                      <span className="font-medium text-slate-700">{o.amazon_order_id}</span>
-                      <span className="text-xs text-slate-400 truncate">{o.customer_name || '—'}</span>
+                      <span className="font-medium text-slate-700 dark:text-slate-300">{o.amazon_order_id}</span>
+                      <span className="text-xs text-slate-400 dark:text-slate-500 truncate">{o.customer_name || '—'}</span>
                     </button>
                   ))}
                 </div>
               )}
               {skus.length > 0 && (
                 <div>
-                  <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase text-slate-400">Products</div>
+                  <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase text-slate-400 dark:text-slate-500">Products</div>
                   {skus.map((s) => (
                     <button
                       key={s.id}
                       onClick={() => go(`/inventory?q=${encodeURIComponent(s.sku)}`)}
-                      className="w-full text-left px-3 py-1.5 hover:bg-slate-50 flex items-center justify-between gap-2"
+                      className="w-full text-left px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/40 flex items-center justify-between gap-2"
                     >
-                      <span className="font-medium text-slate-700">{s.sku}</span>
-                      <span className="text-xs text-slate-400 truncate">{s.title}</span>
+                      <span className="font-medium text-slate-700 dark:text-slate-300">{s.sku}</span>
+                      <span className="text-xs text-slate-400 dark:text-slate-500 truncate">{s.title}</span>
                     </button>
                   ))}
                 </div>

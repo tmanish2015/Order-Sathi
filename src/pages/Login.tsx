@@ -51,10 +51,10 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <div className="w-full max-w-sm bg-white p-8 rounded-xl shadow-sm border border-slate-200">
-        <h1 className="text-xl font-semibold text-slate-900 mb-1">Order Sathi</h1>
-        <p className="text-sm text-slate-500 mb-6">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+      <div className="w-full max-w-sm bg-white dark:bg-slate-800 p-8 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+        <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-1">Order Sathi</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
           {mode === 'signin' ? 'Sign in to your account' : 'Create an account'}
         </p>
 
@@ -65,7 +65,7 @@ export default function Login() {
               placeholder="Full name"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           )}
           <input
@@ -74,7 +74,7 @@ export default function Login() {
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
           <input
             type="password"
@@ -82,7 +82,7 @@ export default function Login() {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
           {error && <p className="text-sm text-red-600">{error}</p>}
           {info && <p className="text-sm text-emerald-600">{info}</p>}
@@ -97,7 +97,7 @@ export default function Login() {
 
         <button
           onClick={handleGoogle}
-          className="mt-3 w-full rounded-lg border border-slate-300 py-2 text-sm font-medium hover:bg-slate-50 text-slate-400"
+          className="mt-3 w-full rounded-lg border border-slate-300 dark:border-slate-600 py-2 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700/40 text-slate-400 dark:text-slate-500"
           title="Integration pending: Google provider not yet enabled"
         >
           Continue with Google (pending setup)

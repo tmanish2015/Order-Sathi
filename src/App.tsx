@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './lib/AuthContext'
 import { ToastProvider } from './lib/Toast'
+import { ThemeProvider } from './lib/ThemeContext'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
@@ -45,6 +46,7 @@ function PageFallback() {
 
 export default function App() {
   return (
+    <ThemeProvider>
     <BrowserRouter>
       <ToastProvider>
       <AuthProvider>
@@ -91,5 +93,6 @@ export default function App() {
       </AuthProvider>
       </ToastProvider>
     </BrowserRouter>
+    </ThemeProvider>
   )
 }

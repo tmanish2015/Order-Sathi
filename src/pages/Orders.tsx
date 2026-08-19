@@ -67,26 +67,26 @@ const STATUS_LABEL: Record<Enums<'order_status'>, string> = {
 }
 
 const STATUS_COLOR: Record<Enums<'order_status'>, string> = {
-  new: 'bg-slate-100 text-slate-600',
-  confirmed: 'bg-sky-100 text-sky-700',
-  inventory_allocated: 'bg-indigo-100 text-indigo-700',
-  partially_allocated: 'bg-amber-100 text-amber-700',
-  stock_shortage: 'bg-red-100 text-red-700',
-  ready_to_pick: 'bg-purple-100 text-purple-700',
-  picked: 'bg-purple-100 text-purple-700',
-  packed: 'bg-blue-100 text-blue-700',
-  ready_to_ship: 'bg-blue-100 text-blue-700',
-  shipped: 'bg-cyan-100 text-cyan-700',
-  delivered: 'bg-emerald-100 text-emerald-700',
-  cancelled: 'bg-slate-100 text-slate-500',
-  returned: 'bg-red-100 text-red-700',
-  rto: 'bg-red-100 text-red-700',
+  new: 'bg-slate-100 text-slate-600 dark:bg-slate-900/40 dark:text-slate-300',
+  confirmed: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',
+  inventory_allocated: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
+  partially_allocated: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  stock_shortage: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+  ready_to_pick: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
+  picked: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
+  packed: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  ready_to_ship: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  shipped: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300',
+  delivered: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+  cancelled: 'bg-slate-100 text-slate-500 dark:text-slate-400 dark:bg-slate-900/40 dark:text-slate-400',
+  returned: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+  rto: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
 }
 
 const PRIORITY_COLOR: Record<Enums<'order_priority'>, string> = {
-  normal: 'bg-slate-100 text-slate-600',
-  high: 'bg-amber-100 text-amber-700',
-  urgent: 'bg-red-100 text-red-700',
+  normal: 'bg-slate-100 text-slate-600 dark:bg-slate-900/40 dark:text-slate-300',
+  high: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  urgent: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
 }
 
 const TERMINAL_STATUSES: Enums<'order_status'>[] = ['delivered', 'cancelled', 'returned', 'rto']
@@ -768,15 +768,15 @@ export default function Orders() {
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6">
         <div>
-          <h2 className="text-xl font-semibold text-slate-900">Orders</h2>
-          <p className="text-xs text-slate-400 mt-0.5">{format(new Date(), 'EEEE, dd MMMM yyyy')}</p>
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Orders</h2>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{format(new Date(), 'EEEE, dd MMMM yyyy')}</p>
         </div>
         <div className="flex items-center gap-3">
           <Link to="/integrations" className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700">
             🔌 Connect Amazon
           </Link>
           {canEdit && channels.length > 0 && (
-            <button onClick={() => setShowNewOrder((v) => !v)} className="text-sm rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50">
+            <button onClick={() => setShowNewOrder((v) => !v)} className="text-sm rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/40">
               {showNewOrder ? 'Cancel' : '+ New order'}
             </button>
           )}
@@ -784,7 +784,7 @@ export default function Orders() {
       </div>
 
       {channels.length === 0 && !loading && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-sm text-amber-800 flex items-center justify-between gap-3 flex-wrap">
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 mb-6 text-sm text-amber-800 flex items-center justify-between gap-3 flex-wrap">
           <span>
             No Amazon channel connected yet. Orders won't sync until SP-API credentials are added —{' '}
             <Link to="/integrations" className="underline font-medium">connect one here</Link>.
@@ -793,7 +793,7 @@ export default function Orders() {
             <button
               onClick={createTestChannel}
               disabled={creatingChannel}
-              className="text-xs font-medium rounded-lg border border-amber-300 bg-white px-3 py-1.5 hover:bg-amber-100 disabled:opacity-50 whitespace-nowrap"
+              className="text-xs font-medium rounded-lg border border-amber-300 bg-white dark:bg-slate-800 px-3 py-1.5 hover:bg-amber-100 disabled:opacity-50 whitespace-nowrap"
             >
               {creatingChannel ? 'Creating…' : 'Create test channel for a dry run'}
             </button>
@@ -802,26 +802,26 @@ export default function Orders() {
       )}
 
       {showNewOrder && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6">
-          <div className="text-xs font-semibold uppercase text-slate-500 mb-3">New manual order</div>
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 mb-6">
+          <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-3">New manual order</div>
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-3">
             <Field label="Order ID" value={orderForm.amazon_order_id} onChange={(v) => setOrderForm((f) => ({ ...f, amazon_order_id: v }))} placeholder="TEST-001" />
             <label className="block">
-              <span className="text-xs text-slate-500">Order date</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Order date</span>
               <input
                 type="date"
                 value={orderForm.order_date}
                 onChange={(e) => setOrderForm((f) => ({ ...f, order_date: e.target.value }))}
-                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
               />
             </label>
             <Field label="Customer name" value={orderForm.customer_name} onChange={(v) => setOrderForm((f) => ({ ...f, customer_name: v }))} placeholder="Optional" />
             <label className="block">
-              <span className="text-xs text-slate-500">Payment type</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Payment type</span>
               <select
                 value={orderForm.payment_type}
                 onChange={(e) => setOrderForm((f) => ({ ...f, payment_type: e.target.value }))}
-                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
               >
                 <option value="Prepaid">Prepaid</option>
                 <option value="COD">COD</option>
@@ -830,11 +830,11 @@ export default function Orders() {
             <Field label="Buyer state" value={orderForm.buyer_state} onChange={(v) => setOrderForm((f) => ({ ...f, buyer_state: v }))} placeholder="e.g. Rajasthan" />
             {channels.length > 1 ? (
               <label className="block">
-                <span className="text-xs text-slate-500">Channel</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">Channel</span>
                 <select
                   value={orderForm.channel_id}
                   onChange={(e) => setOrderForm((f) => ({ ...f, channel_id: e.target.value }))}
-                  className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                  className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
                 >
                   {channels.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -847,21 +847,21 @@ export default function Orders() {
               <Field label="Ship state" value={orderForm.ship_state} onChange={(v) => setOrderForm((f) => ({ ...f, ship_state: v }))} placeholder="defaults to buyer state" />
             )}
             <label className="block sm:col-span-4">
-              <span className="text-xs text-slate-500">Shipping address</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Shipping address</span>
               <textarea
                 value={orderForm.ship_address}
                 onChange={(e) => setOrderForm((f) => ({ ...f, ship_address: e.target.value }))}
                 placeholder="Full address as it should appear on the invoice"
                 rows={2}
-                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
               />
             </label>
             <label className="block">
-              <span className="text-xs text-slate-500">Priority</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Priority</span>
               <select
                 value={orderForm.priority}
                 onChange={(e) => setOrderForm((f) => ({ ...f, priority: e.target.value as Enums<'order_priority'> }))}
-                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
               >
                 <option value="normal">Normal</option>
                 <option value="high">High</option>
@@ -869,19 +869,19 @@ export default function Orders() {
               </select>
             </label>
             <label className="block">
-              <span className="text-xs text-slate-500">SLA due (optional)</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">SLA due (optional)</span>
               <input
                 type="datetime-local"
                 value={orderForm.sla_due_at}
                 onChange={(e) => setOrderForm((f) => ({ ...f, sla_due_at: e.target.value }))}
-                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
               />
             </label>
           </div>
 
-          <div className="text-xs text-slate-500 mb-2">Line items</div>
+          <div className="text-xs text-slate-500 dark:text-slate-400 mb-2">Line items</div>
           {skus.length === 0 ? (
-            <p className="text-sm text-slate-400 mb-3">
+            <p className="text-sm text-slate-400 dark:text-slate-500 mb-3">
               No SKUs yet — <Link to="/inventory" className="underline font-medium">add one under Inventory</Link> first.
             </p>
           ) : (
@@ -891,7 +891,7 @@ export default function Orders() {
                   <select
                     value={li.sku_id}
                     onChange={(e) => updateLineItem(i, { sku_id: e.target.value })}
-                    className="flex-1 text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                    className="flex-1 text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
                   >
                     <option value="">Select SKU…</option>
                     {skus.map((s) => (
@@ -906,19 +906,19 @@ export default function Orders() {
                     value={li.quantity}
                     onChange={(e) => updateLineItem(i, { quantity: e.target.value })}
                     placeholder="Qty"
-                    className="w-20 text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                    className="w-20 text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
                   />
                   <input
                     type="number"
                     value={li.unit_price}
                     onChange={(e) => updateLineItem(i, { unit_price: e.target.value })}
                     placeholder="Unit price"
-                    className="w-28 text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                    className="w-28 text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
                   />
                   <button
                     onClick={() => setLineItems((items) => items.filter((_, idx) => idx !== i))}
                     disabled={lineItems.length === 1}
-                    className="text-xs text-slate-400 hover:text-red-600 disabled:opacity-30"
+                    className="text-xs text-slate-400 dark:text-slate-500 hover:text-red-600 disabled:opacity-30"
                   >
                     Remove
                   </button>
@@ -941,7 +941,7 @@ export default function Orders() {
       )}
 
       {org && !org.state && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-sm text-amber-800">
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 mb-6 text-sm text-amber-800">
           Your organization's state isn't set — GST invoices can't tell CGST/SGST from IGST without it. Set it under{' '}
           <Link to="/team" className="underline font-medium">Team → Organization</Link>.
         </div>
@@ -954,18 +954,18 @@ export default function Orders() {
         <Stat label="Channels connected" value={String(connectedChannels.length)} />
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-100 flex flex-col gap-2">
-          <span className="text-xs font-semibold uppercase text-slate-500">Orders</span>
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700/60 flex flex-col gap-2">
+          <span className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Orders</span>
           <div className="flex items-center gap-2 flex-wrap">
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search order ID…"
-              className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 w-40"
+              className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 w-40 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
             />
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as Enums<'order_status'> | '')} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5">
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as Enums<'order_status'> | '')} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
               <option value="">All statuses</option>
               {ALL_STATUSES.map((s) => (
                 <option key={s} value={s}>
@@ -973,7 +973,7 @@ export default function Orders() {
                 </option>
               ))}
             </select>
-            <select value={channelFilter} onChange={(e) => setChannelFilter(e.target.value)} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5">
+            <select value={channelFilter} onChange={(e) => setChannelFilter(e.target.value)} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
               <option value="">All channels</option>
               {channels.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -981,7 +981,7 @@ export default function Orders() {
                 </option>
               ))}
             </select>
-            <select value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5">
+            <select value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
               <option value="">All warehouses</option>
               {warehousesList.map((w) => (
                 <option key={w.id} value={w.id}>
@@ -989,17 +989,17 @@ export default function Orders() {
                 </option>
               ))}
             </select>
-            <select value={paymentFilter} onChange={(e) => setPaymentFilter(e.target.value)} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5">
+            <select value={paymentFilter} onChange={(e) => setPaymentFilter(e.target.value)} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
               <option value="">All payment types</option>
               <option value="Prepaid">Prepaid</option>
               <option value="COD">COD</option>
             </select>
-            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" title="From date" />
-            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" title="To date" />
+            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" title="From date" />
+            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" title="To date" />
           </div>
         </div>
         {canEdit && selectedIds.size > 0 && (
-          <div className="px-4 py-2.5 border-b border-slate-100 bg-indigo-50 flex items-center gap-3 flex-wrap">
+          <div className="px-4 py-2.5 border-b border-slate-100 dark:border-slate-700/60 bg-indigo-50 flex items-center gap-3 flex-wrap">
             <span className="text-xs font-medium text-indigo-700">{selectedIds.size} selected</span>
             <BulkBtn onClick={bulkAllocate} busy={bulkBusy === 'allocate'} label="Allocate inventory" />
             <BulkBtn onClick={bulkMarkReadyToPick} busy={bulkBusy === 'rtp'} label="Mark ready to pick" />
@@ -1011,7 +1011,7 @@ export default function Orders() {
             <BulkBtn onClick={bulkGenerateInvoices} busy={bulkBusy === 'invoice'} label={bulkBusy === 'invoice' ? `Generating ${bulkInvoiceProgress.done}/${bulkInvoiceProgress.total}…` : 'Generate invoices'} />
             <BulkBtn onClick={bulkPrintInvoices} busy={printingInvoices} label="🖨 Print invoices" />
             <BulkBtn onClick={bulkPrintLabels} busy={printingLabels} label="🖨 Print shipping labels" />
-            <button onClick={() => setSelectedIds(new Set())} className="text-xs text-slate-400 hover:text-slate-600">
+            <button onClick={() => setSelectedIds(new Set())} className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600">
               Clear
             </button>
           </div>
@@ -1024,7 +1024,7 @@ export default function Orders() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                <tr className="text-left text-xs text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-700/60">
                   {canEdit && (
                     <th className="px-4 py-2 font-medium w-8">
                       <input type="checkbox" checked={selectedIds.size === orders.length && orders.length > 0} onChange={toggleSelectAll} />
@@ -1046,7 +1046,7 @@ export default function Orders() {
                   <th className="px-4 py-2 font-medium text-right">GST invoice</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-700/60">
                 {orders.map((o) => {
                   const invoiced = invoicedOrderIds.has(o.id)
                   const lines = lineItemsByOrder[o.id] ?? []
@@ -1061,20 +1061,20 @@ export default function Orders() {
                           <input type="checkbox" checked={selectedIds.has(o.id)} onChange={() => toggleSelected(o.id)} />
                         </td>
                       )}
-                      <td className="px-4 py-2.5 font-medium text-slate-700">{o.amazon_order_id}</td>
-                      <td className="px-4 py-2.5 text-slate-500">{format(new Date(o.order_date), 'dd MMM yyyy')}</td>
-                      <td className="px-4 py-2.5 text-slate-500">{o.channels?.display_name ?? '—'}</td>
-                      <td className="px-4 py-2.5 text-slate-500">{o.customer_name ?? '—'}</td>
-                      <td className="px-4 py-2.5 text-slate-500 max-w-[160px] truncate" title={skuSummary}>{skuSummary}</td>
-                      <td className="px-4 py-2.5 text-right text-slate-500">{totalQty || '—'}</td>
-                      <td className="px-4 py-2.5 text-right text-slate-700">{formatINR(Number(o.gross_amount))}</td>
-                      <td className="px-4 py-2.5 text-slate-500">{o.payment_type ?? '—'}</td>
+                      <td className="px-4 py-2.5 font-medium text-slate-700 dark:text-slate-300">{o.amazon_order_id}</td>
+                      <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{format(new Date(o.order_date), 'dd MMM yyyy')}</td>
+                      <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{o.channels?.display_name ?? '—'}</td>
+                      <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{o.customer_name ?? '—'}</td>
+                      <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400 max-w-[160px] truncate" title={skuSummary}>{skuSummary}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">{totalQty || '—'}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-700 dark:text-slate-300">{formatINR(Number(o.gross_amount))}</td>
+                      <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{o.payment_type ?? '—'}</td>
                       <td className="px-4 py-2.5">
                         <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${STATUS_COLOR[o.order_status]}`}>
                           {STATUS_LABEL[o.order_status]}
                         </span>
                       </td>
-                      <td className="px-4 py-2.5 text-slate-500">{warehouseNames.join(', ') || '—'}</td>
+                      <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{warehouseNames.join(', ') || '—'}</td>
                       <td className="px-4 py-2.5">
                         {canEdit ? (
                           <select
@@ -1093,7 +1093,7 @@ export default function Orders() {
                       </td>
                       <td className="px-4 py-2.5 text-xs">
                         {o.sla_due_at ? (
-                          <span className={slaState(o) === 'overdue' ? 'text-red-600 font-medium' : slaState(o) === 'due_soon' ? 'text-amber-600 font-medium' : 'text-slate-400'}>
+                          <span className={slaState(o) === 'overdue' ? 'text-red-600 font-medium' : slaState(o) === 'due_soon' ? 'text-amber-600 font-medium' : 'text-slate-400 dark:text-slate-500'}>
                             {format(new Date(o.sla_due_at), 'dd MMM, HH:mm')}
                             {slaState(o) === 'overdue' && ' (overdue)'}
                           </span>
@@ -1101,7 +1101,7 @@ export default function Orders() {
                           <span className="text-slate-300">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-2.5 text-slate-500">{shipment ? `${shipment.courier_name} / ${shipment.awb_number}` : '—'}</td>
+                      <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{shipment ? `${shipment.courier_name} / ${shipment.awb_number}` : '—'}</td>
                       <td className="px-4 py-2.5 text-right">
                         {invoiced ? (
                           <Link to="/invoices" className="text-xs text-emerald-600 font-medium hover:underline">
@@ -1161,10 +1161,10 @@ const ACCENTS = {
 
 function Stat({ label, value, accent }: { label: string; value: string; accent?: keyof typeof ACCENTS }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3.5 sm:p-4 relative overflow-hidden">
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-3.5 sm:p-4 relative overflow-hidden">
       {accent && <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${ACCENTS[accent]}`} />}
-      <div className="text-xs text-slate-400">{label}</div>
-      <div className="text-lg sm:text-xl font-semibold mt-1 text-slate-900">{value}</div>
+      <div className="text-xs text-slate-400 dark:text-slate-500">{label}</div>
+      <div className="text-lg sm:text-xl font-semibold mt-1 text-slate-900 dark:text-slate-100">{value}</div>
     </div>
   )
 }
@@ -1172,13 +1172,13 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
 function Field({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
     <label className="block">
-      <span className="text-xs text-slate-500">{label}</span>
+      <span className="text-xs text-slate-500 dark:text-slate-400">{label}</span>
       <input
         type="text"
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+        className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
       />
     </label>
   )

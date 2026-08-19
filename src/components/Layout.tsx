@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, Outlet, Navigate } from 'react-router-dom'
 import { useAuth } from '../lib/AuthContext'
 import { supabase } from '../lib/supabase'
+import { useTheme } from '../lib/ThemeContext'
 import GlobalSearch from './GlobalSearch'
 
 interface NavItem {
@@ -84,6 +85,7 @@ const NAV_SECTIONS: { section: string; items: NavItem[] }[] = [
 
 export default function Layout() {
   const { user, profile, loading, signOut } = useAuth()
+  const { theme, toggle: toggleTheme } = useTheme()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
 
@@ -96,22 +98,22 @@ export default function Layout() {
       .then(({ count }) => setUnreadCount(count ?? 0))
   }, [profile?.organization_id])
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-slate-400">Loading…</div>
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-slate-400 dark:bg-slate-900">Loading…</div>
   if (!user) return <Navigate to="/login" replace />
 
   if (profile?.status === 'pending') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-6">
         <div className="max-w-sm text-center">
           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-sm font-bold text-white mx-auto mb-4">
             I
           </div>
-          <h1 className="text-lg font-semibold text-slate-900 mb-1">Awaiting approval</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">Awaiting approval</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             Your account ({user.email}) has been created but hasn't been approved by an admin yet. You'll get
             access as soon as someone on the team approves your account and assigns your role.
           </p>
-          <button onClick={signOut} className="mt-6 text-sm text-indigo-600 hover:underline">
+          <button onClick={signOut} className="mt-6 text-sm text-indigo-600 dark:text-indigo-400 hover:underline">
             Sign out
           </button>
         </div>
@@ -172,7 +174,14 @@ export default function Layout() {
           </div>
         ))}
       </nav>
-      <div className="px-2 py-3 border-t border-white/10">
+      <div className="px-2 py-3 border-t border-white/10 space-y-0.5">
+        <button
+          onClick={toggleTheme}
+          className="w-full text-left rounded-lg px-3 py-2 text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-2.5"
+        >
+          <span className="text-base leading-none">{theme === 'dark' ? '☀️' : '🌙'}</span>
+          {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+        </button>
         <button
           onClick={signOut}
           className="w-full text-left rounded-lg px-3 py-2 text-sm text-slate-300 hover:bg-white/5 hover:text-white"
@@ -184,7 +193,7 @@ export default function Layout() {
   )
 
   return (
-    <div className="min-h-screen flex bg-slate-50">
+    <div className="min-h-screen flex bg-slate-50 dark:bg-slate-900">
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex lg:w-60 lg:flex-col bg-gradient-to-b from-slate-900 to-slate-800 shrink-0">
         {sidebarContent}
@@ -202,17 +211,20 @@ export default function Layout() {
 
       <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile topbar */}
-        <div className="lg:hidden flex items-center gap-3 px-4 py-3 bg-white border-b border-slate-200 sticky top-0 z-30">
+        <div className="lg:hidden flex items-center gap-3 px-4 py-3 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30">
           <button
             onClick={() => setDrawerOpen(true)}
-            className="text-slate-600 p-1 -ml-1"
+            className="text-slate-600 dark:text-slate-300 p-1 -ml-1"
             aria-label="Open menu"
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M3 6h18M3 12h18M3 18h18" strokeLinecap="round" />
             </svg>
           </button>
-          <span className="text-sm font-semibold text-slate-900">Order Sathi</span>
+          <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">Order Sathi</span>
+          <button onClick={toggleTheme} className="ml-auto text-slate-500 dark:text-slate-400 p-1" aria-label="Toggle theme">
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
         </div>
 
         <main className="flex-1 overflow-y-auto">

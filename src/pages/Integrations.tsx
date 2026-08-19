@@ -13,11 +13,11 @@ type Channel = Tables<'channels'>
 const PROVIDERS = ['amazon', 'flipkart', 'myntra', 'meesho', 'shopify', 'woocommerce', 'other']
 
 const SYNC_STATUS_COLOR: Record<string, string> = {
-  idle: 'bg-slate-100 text-slate-600',
-  running: 'bg-blue-100 text-blue-700',
-  success: 'bg-emerald-100 text-emerald-700',
-  partial: 'bg-amber-100 text-amber-700',
-  failed: 'bg-red-100 text-red-700',
+  idle: 'bg-slate-100 text-slate-600 dark:bg-slate-900/40 dark:text-slate-300',
+  running: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  success: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+  partial: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  failed: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
 }
 
 function providerOf(c: Channel): string {
@@ -90,28 +90,28 @@ export default function Integrations() {
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-1">
-        <h2 className="text-lg font-semibold text-slate-900">Integrations</h2>
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Integrations</h2>
         {isAdmin && (
-          <button onClick={() => setShowAdd((v) => !v)} className="text-sm rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50">
+          <button onClick={() => setShowAdd((v) => !v)} className="text-sm rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/40">
             {showAdd ? 'Cancel' : '+ Add channel'}
           </button>
         )}
       </div>
-      <p className="text-xs text-slate-400 mb-6">
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
         Amazon SP-API is the only channel with a working sync connector today (<code>sp-api-sync</code> edge function, needs your Seller
         Central credentials). Other channels can be added as records now — the architecture supports them — but their sync connectors
         aren't built or live yet, and this page won't pretend otherwise.
       </p>
 
       {showAdd && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6 grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 mb-6 grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
           <label className="block">
-            <span className="text-xs text-slate-500">Display name</span>
-            <input type="text" value={form.display_name} onChange={(e) => setForm((f) => ({ ...f, display_name: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+            <span className="text-xs text-slate-500 dark:text-slate-400">Display name</span>
+            <input type="text" value={form.display_name} onChange={(e) => setForm((f) => ({ ...f, display_name: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
           </label>
           <label className="block">
-            <span className="text-xs text-slate-500">Provider</span>
-            <select value={form.provider} onChange={(e) => setForm((f) => ({ ...f, provider: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5">
+            <span className="text-xs text-slate-500 dark:text-slate-400">Provider</span>
+            <select value={form.provider} onChange={(e) => setForm((f) => ({ ...f, provider: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
               {PROVIDERS.map((p) => (
                 <option key={p} value={p}>
                   {p}
@@ -121,13 +121,13 @@ export default function Integrations() {
           </label>
           {form.provider === 'amazon' && (
             <label className="block">
-              <span className="text-xs text-slate-500">Marketplace ID</span>
-              <input type="text" value={form.marketplace_id} onChange={(e) => setForm((f) => ({ ...f, marketplace_id: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+              <span className="text-xs text-slate-500 dark:text-slate-400">Marketplace ID</span>
+              <input type="text" value={form.marketplace_id} onChange={(e) => setForm((f) => ({ ...f, marketplace_id: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
             </label>
           )}
           <label className="block">
-            <span className="text-xs text-slate-500">Seller / Store ID (optional)</span>
-            <input type="text" value={form.seller_id} onChange={(e) => setForm((f) => ({ ...f, seller_id: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+            <span className="text-xs text-slate-500 dark:text-slate-400">Seller / Store ID (optional)</span>
+            <input type="text" value={form.seller_id} onChange={(e) => setForm((f) => ({ ...f, seller_id: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
           </label>
           <div className="sm:col-span-4">
             <button onClick={addChannel} disabled={saving} className="text-sm rounded-lg bg-indigo-600 text-white px-3 py-1.5 hover:bg-indigo-700 disabled:opacity-50">
@@ -137,23 +137,23 @@ export default function Integrations() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         {loading ? (
           <Skeleton rows={2} />
         ) : channels.length === 0 ? (
           <EmptyState icon="🔌" title="No channels connected yet." />
         ) : (
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-slate-50 dark:divide-slate-700/60">
             {channels.map((c) => (
               <div key={c.id} className="px-4 py-3">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div>
-                    <div className="font-medium text-sm text-slate-900 flex items-center gap-2">
+                    <div className="font-medium text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
                       {c.display_name}
-                      <span className="text-[10px] uppercase tracking-wide bg-slate-100 text-slate-500 rounded px-1.5 py-0.5">{providerOf(c)}</span>
-                      {!c.enabled && <span className="text-[10px] uppercase tracking-wide bg-slate-100 text-slate-400 rounded px-1.5 py-0.5">Disabled</span>}
+                      <span className="text-[10px] uppercase tracking-wide bg-slate-100 text-slate-500 dark:bg-slate-900/40 dark:text-slate-300 rounded px-1.5 py-0.5">{providerOf(c)}</span>
+                      {!c.enabled && <span className="text-[10px] uppercase tracking-wide bg-slate-100 text-slate-400 dark:bg-slate-900/40 dark:text-slate-300 rounded px-1.5 py-0.5">Disabled</span>}
                     </div>
-                    <div className="text-xs text-slate-400 mt-0.5">
+                    <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                       Connection: {c.status} · Sync direction: {c.sync_direction}
                     </div>
                   </div>
@@ -166,12 +166,12 @@ export default function Integrations() {
                     )}
                   </div>
                 </div>
-                <div className="text-xs text-slate-400 mt-2 flex gap-4">
+                <div className="text-xs text-slate-400 dark:text-slate-500 mt-2 flex gap-4">
                   <span>Last success: {c.last_success_at ? format(new Date(c.last_success_at), 'dd MMM yyyy, HH:mm') : '—'}</span>
                   <span>Last failure: {c.last_failure_at ? format(new Date(c.last_failure_at), 'dd MMM yyyy, HH:mm') : '—'}</span>
                 </div>
                 {providerOf(c) === 'amazon' && (
-                  <ul className="text-xs text-slate-400 mt-2 list-disc list-inside space-y-0.5">
+                  <ul className="text-xs text-slate-400 dark:text-slate-500 mt-2 list-disc list-inside space-y-0.5">
                     <li>LWA Client ID + Client Secret (from Seller Central → Develop Apps)</li>
                     <li>Refresh token (from authorizing this app against your seller account)</li>
                     <li>Seller ID + Marketplace ID</li>

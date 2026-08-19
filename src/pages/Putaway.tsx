@@ -62,27 +62,27 @@ export default function Putaway() {
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
-      <h2 className="text-lg font-semibold text-slate-900 mb-1">Put-away</h2>
-      <p className="text-xs text-slate-400 mb-6">
+      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">Put-away</h2>
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
         Stock that's been received (restocked) but not yet assigned a bin. Assign one to close it out.
       </p>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         {loading ? (
           <Skeleton rows={3} />
         ) : rows.length === 0 ? (
           <EmptyState icon="📥" title="Nothing waiting to be put away." />
         ) : (
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-slate-50 dark:divide-slate-700/60">
             {rows.map((row) => {
               const warehouseBins = bins.filter((b) => b.warehouse_id === row.warehouse_id)
               return (
                 <div key={row.id} className="px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
                   <div>
-                    <div className="font-medium text-sm text-slate-900">
+                    <div className="font-medium text-sm text-slate-900 dark:text-slate-100">
                       {row.skus?.sku} — {row.skus?.title}
                     </div>
-                    <div className="text-xs text-slate-400">
+                    <div className="text-xs text-slate-400 dark:text-slate-500">
                       +{row.quantity_delta} in {row.warehouses?.name ?? 'unknown warehouse'} · {format(new Date(row.created_at), 'dd MMM yyyy, HH:mm')}
                       {row.note && ` · ${row.note}`}
                     </div>
@@ -92,7 +92,7 @@ export default function Putaway() {
                       <select
                         value={selectedBin[row.id] ?? ''}
                         onChange={(e) => setSelectedBin((m) => ({ ...m, [row.id]: e.target.value }))}
-                        className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                        className="text-sm rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 px-2.5 py-1.5"
                       >
                         <option value="">
                           {warehouseBins.length === 0 ? 'No bins in this warehouse' : 'Select bin…'}

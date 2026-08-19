@@ -121,31 +121,31 @@ export default function Accounting() {
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-1">
-        <h2 className="text-lg font-semibold text-slate-900">Accounting Integration</h2>
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Accounting Integration</h2>
         {canEdit && (
-          <button onClick={() => setShowAdd((v) => !v)} className="text-sm rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50">
+          <button onClick={() => setShowAdd((v) => !v)} className="text-sm rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/40">
             {showAdd ? 'Cancel' : '+ Add connection'}
           </button>
         )}
       </div>
-      <p className="text-xs text-slate-400 mb-6">
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
         Architecture only, same honest pattern as non-Amazon sales channels: a connection record and field-mapping layer exist, but
         there's no live Tally/BUSY sync connector built or credentialed here. Never claim a live sync until it's actually tested against
         a real account.
       </p>
 
       {showAdd && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
           <label className="block">
-            <span className="text-xs text-slate-500">Provider</span>
-            <select value={form.provider} onChange={(e) => setForm((f) => ({ ...f, provider: e.target.value as Enums<'accounting_provider'> }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5">
+            <span className="text-xs text-slate-500 dark:text-slate-400">Provider</span>
+            <select value={form.provider} onChange={(e) => setForm((f) => ({ ...f, provider: e.target.value as Enums<'accounting_provider'> }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
               <option value="tally">Tally</option>
               <option value="busy">BUSY</option>
             </select>
           </label>
           <label className="block sm:col-span-2">
-            <span className="text-xs text-slate-500">Display name</span>
-            <input type="text" value={form.display_name} onChange={(e) => setForm((f) => ({ ...f, display_name: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+            <span className="text-xs text-slate-500 dark:text-slate-400">Display name</span>
+            <input type="text" value={form.display_name} onChange={(e) => setForm((f) => ({ ...f, display_name: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
           </label>
           <div className="sm:col-span-3">
             <button onClick={addConnection} disabled={saving} className="text-sm rounded-lg bg-indigo-600 text-white px-3 py-1.5 hover:bg-indigo-700 disabled:opacity-50">
@@ -155,25 +155,25 @@ export default function Accounting() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         {loading ? (
           <Skeleton rows={2} />
         ) : connections.length === 0 ? (
           <EmptyState icon="📒" title="No accounting connections yet." />
         ) : (
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-slate-50 dark:divide-slate-700/60">
             {connections.map((c) => {
               const connMappings = mappings.filter((m) => m.connection_id === c.id)
               return (
                 <div key={c.id} className="px-4 py-3">
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     <div>
-                      <div className="font-medium text-sm text-slate-900 flex items-center gap-2">
+                      <div className="font-medium text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
                         {c.display_name}
-                        <span className="text-[10px] uppercase tracking-wide bg-slate-100 text-slate-500 rounded px-1.5 py-0.5">{c.provider}</span>
-                        {!c.enabled && <span className="text-[10px] uppercase tracking-wide bg-slate-100 text-slate-400 rounded px-1.5 py-0.5">Disabled</span>}
+                        <span className="text-[10px] uppercase tracking-wide bg-slate-100 text-slate-500 dark:bg-slate-900/40 dark:text-slate-300 rounded px-1.5 py-0.5">{c.provider}</span>
+                        {!c.enabled && <span className="text-[10px] uppercase tracking-wide bg-slate-100 text-slate-400 dark:bg-slate-900/40 dark:text-slate-300 rounded px-1.5 py-0.5">Disabled</span>}
                       </div>
-                      <div className="text-xs text-slate-400 mt-0.5">Status: {c.status.replace('_', ' ')}</div>
+                      <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Status: {c.status.replace('_', ' ')}</div>
                     </div>
                     <div className="flex items-center gap-3">
                       <button onClick={() => setExpandedId(expandedId === c.id ? null : c.id)} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">
@@ -186,27 +186,27 @@ export default function Accounting() {
                       )}
                     </div>
                   </div>
-                  <div className="text-xs text-slate-400 mt-2 flex gap-4">
+                  <div className="text-xs text-slate-400 dark:text-slate-500 mt-2 flex gap-4">
                     <span>Last success: {c.last_success_at ? format(new Date(c.last_success_at), 'dd MMM yyyy, HH:mm') : '—'}</span>
                     <span>Last failure: {c.last_failure_at ? format(new Date(c.last_failure_at), 'dd MMM yyyy, HH:mm') : '—'}</span>
                   </div>
                   <p className="text-xs text-amber-600 mt-2">Connector architecture only — no live sync built for this provider yet.</p>
 
                   {expandedId === c.id && (
-                    <div className="mt-3 border-t border-slate-100 pt-3">
-                      <div className="text-xs font-semibold uppercase text-slate-500 mb-2">Field mappings</div>
+                    <div className="mt-3 border-t border-slate-100 dark:border-slate-700/60 pt-3">
+                      <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-2">Field mappings</div>
                       {connMappings.length === 0 ? (
-                        <p className="text-xs text-slate-400 mb-2">No mappings yet.</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mb-2">No mappings yet.</p>
                       ) : (
                         <div className="space-y-1 mb-3">
                           {connMappings.map((m) => (
                             <div key={m.id} className="flex items-center gap-2 text-sm">
-                              <span className="text-[10px] uppercase tracking-wide bg-slate-100 text-slate-500 rounded px-1.5 py-0.5">{MAPPING_TYPE_LABEL[m.mapping_type]}</span>
-                              <span className="text-slate-700">{m.internal_field}</span>
-                              <span className="text-slate-400">→</span>
-                              <span className="text-slate-700">{m.external_ledger_name}</span>
+                              <span className="text-[10px] uppercase tracking-wide bg-slate-100 text-slate-500 dark:bg-slate-900/40 dark:text-slate-300 rounded px-1.5 py-0.5">{MAPPING_TYPE_LABEL[m.mapping_type]}</span>
+                              <span className="text-slate-700 dark:text-slate-300">{m.internal_field}</span>
+                              <span className="text-slate-400 dark:text-slate-500">→</span>
+                              <span className="text-slate-700 dark:text-slate-300">{m.external_ledger_name}</span>
                               {canEdit && (
-                                <button onClick={() => removeMapping(m.id)} className="text-xs text-slate-400 hover:text-red-600 ml-2">
+                                <button onClick={() => removeMapping(m.id)} className="text-xs text-slate-400 dark:text-slate-500 hover:text-red-600 ml-2">
                                   Remove
                                 </button>
                               )}
@@ -216,15 +216,15 @@ export default function Accounting() {
                       )}
                       {canEdit && (
                         <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end">
-                          <select value={mapForm.mapping_type} onChange={(e) => setMapForm((f) => ({ ...f, mapping_type: e.target.value as Enums<'accounting_mapping_type'> }))} className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5">
+                          <select value={mapForm.mapping_type} onChange={(e) => setMapForm((f) => ({ ...f, mapping_type: e.target.value as Enums<'accounting_mapping_type'> }))} className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
                             {(Object.keys(MAPPING_TYPE_LABEL) as Enums<'accounting_mapping_type'>[]).map((t) => (
                               <option key={t} value={t}>
                                 {MAPPING_TYPE_LABEL[t]}
                               </option>
                             ))}
                           </select>
-                          <input type="text" placeholder="Internal field (e.g. gst_invoices)" value={mapForm.internal_field} onChange={(e) => setMapForm((f) => ({ ...f, internal_field: e.target.value }))} className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
-                          <input type="text" placeholder="External ledger/voucher name" value={mapForm.external_ledger_name} onChange={(e) => setMapForm((f) => ({ ...f, external_ledger_name: e.target.value }))} className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+                          <input type="text" placeholder="Internal field (e.g. gst_invoices)" value={mapForm.internal_field} onChange={(e) => setMapForm((f) => ({ ...f, internal_field: e.target.value }))} className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
+                          <input type="text" placeholder="External ledger/voucher name" value={mapForm.external_ledger_name} onChange={(e) => setMapForm((f) => ({ ...f, external_ledger_name: e.target.value }))} className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
                           <button onClick={() => addMapping(c.id)} disabled={savingMap} className="text-sm rounded-lg bg-indigo-600 text-white px-3 py-1.5 hover:bg-indigo-700 disabled:opacity-50">
                             {savingMap ? 'Saving…' : '+ Add mapping'}
                           </button>

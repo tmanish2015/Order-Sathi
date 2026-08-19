@@ -63,14 +63,14 @@ export default function Settings() {
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
-      <h2 className="text-lg font-semibold text-slate-900 mb-1">Settings</h2>
-      <p className="text-xs text-slate-400 mb-6">Organization profile and links to every other configurable area of Order Sathi.</p>
+      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">Settings</h2>
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">Organization profile and links to every other configurable area of Order Sathi.</p>
 
       {me?.role === 'admin' && (
         <>
-          <h3 className="text-xs font-semibold uppercase text-slate-500 mb-2">Organization</h3>
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6 space-y-3">
-            <p className="text-xs text-slate-400">
+          <h3 className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-2">Organization</h3>
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 mb-6 space-y-3">
+            <p className="text-xs text-slate-400 dark:text-slate-500">
               Used on generated GST invoices, and to tell CGST/SGST (same state as buyer) from IGST (different state).
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -90,18 +90,18 @@ export default function Settings() {
         </>
       )}
 
-      <h3 className="text-xs font-semibold uppercase text-slate-500 mb-2">Configuration areas</h3>
+      <h3 className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-2">Configuration areas</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {LINKS.map((l) => (
           <Link
             key={l.to}
             to={l.to}
-            className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 hover:border-indigo-300 hover:shadow transition-all flex gap-3"
+            className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 hover:border-indigo-300 hover:shadow transition-all flex gap-3"
           >
             <span className="text-xl leading-none">{l.icon}</span>
             <div>
-              <div className="text-sm font-medium text-slate-900">{l.label}</div>
-              <div className="text-xs text-slate-400 mt-0.5">{l.desc}</div>
+              <div className="text-sm font-medium text-slate-900 dark:text-slate-100">{l.label}</div>
+              <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{l.desc}</div>
             </div>
           </Link>
         ))}
@@ -113,13 +113,13 @@ export default function Settings() {
 function Field({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
     <label className="block">
-      <span className="text-xs text-slate-500">{label}</span>
+      <span className="text-xs text-slate-500 dark:text-slate-400">{label}</span>
       <input
         type="text"
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        className="mt-1 w-full text-sm rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
       />
     </label>
   )

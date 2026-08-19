@@ -16,16 +16,16 @@ type Courier = Tables<'couriers'>
 type TrackingEvent = Tables<'shipment_tracking_events'>
 
 const STATUS_COLOR: Record<Enums<'shipment_status'>, string> = {
-  courier_assigned: 'bg-slate-100 text-slate-600',
-  awb_assigned: 'bg-slate-100 text-slate-600',
-  manifested: 'bg-indigo-100 text-indigo-700',
-  shipped: 'bg-cyan-100 text-cyan-700',
-  in_transit: 'bg-blue-100 text-blue-700',
-  ndr: 'bg-amber-100 text-amber-700',
-  delivered: 'bg-emerald-100 text-emerald-700',
-  rto: 'bg-red-100 text-red-700',
-  cancelled: 'bg-slate-100 text-slate-500',
-  failed: 'bg-red-100 text-red-700',
+  courier_assigned: 'bg-slate-100 text-slate-600 dark:bg-slate-900/40 dark:text-slate-300',
+  awb_assigned: 'bg-slate-100 text-slate-600 dark:bg-slate-900/40 dark:text-slate-300',
+  manifested: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
+  shipped: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300',
+  in_transit: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  ndr: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  delivered: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+  rto: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+  cancelled: 'bg-slate-100 text-slate-500 dark:bg-slate-900/40 dark:text-slate-300',
+  failed: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
 }
 
 export default function Shipping() {
@@ -255,39 +255,39 @@ export default function Shipping() {
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between gap-3 mb-1">
-        <h2 className="text-lg font-semibold text-slate-900">Shipping</h2>
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Shipping</h2>
         {profile?.role === 'admin' && (
-          <button onClick={() => setShowCourierPanel((v) => !v)} className="text-sm rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50">
+          <button onClick={() => setShowCourierPanel((v) => !v)} className="text-sm rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/40">
             {showCourierPanel ? 'Cancel' : '🚚 Manage couriers'}
           </button>
         )}
       </div>
-      <p className="text-xs text-slate-400 mb-6">
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
         Manual AWB entry works today. A real 3PL integration (live tracking pulled automatically) needs a courier account's API
         credentials — architecture supports it, none is wired up live yet.
       </p>
 
       {showCourierPanel && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6">
-          <div className="text-xs font-semibold uppercase text-slate-500 mb-3">Couriers</div>
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 mb-6">
+          <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-3">Couriers</div>
           <div className="space-y-1 mb-3">
             {couriers.length === 0 ? (
-              <p className="text-sm text-slate-400">No couriers configured yet.</p>
+              <p className="text-sm text-slate-400 dark:text-slate-500">No couriers configured yet.</p>
             ) : (
               couriers.map((c) => (
                 <div key={c.id} className="flex items-center justify-between text-sm">
-                  <span className="text-slate-700">
-                    {c.name} {c.service_type && <span className="text-slate-400">· {c.service_type}</span>} {c.cod_support && <span className="text-emerald-600 text-xs">COD</span>}
+                  <span className="text-slate-700 dark:text-slate-300">
+                    {c.name} {c.service_type && <span className="text-slate-400 dark:text-slate-500">· {c.service_type}</span>} {c.cod_support && <span className="text-emerald-600 text-xs">COD</span>}
                   </span>
-                  <span className="text-[10px] uppercase tracking-wide bg-slate-100 text-slate-500 rounded px-1.5 py-0.5">{c.api_status.replace('_', ' ')}</span>
+                  <span className="text-[10px] uppercase tracking-wide bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400 rounded px-1.5 py-0.5">{c.api_status.replace('_', ' ')}</span>
                 </div>
               ))
             )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end">
-            <input type="text" placeholder="Name" value={courierForm.name} onChange={(e) => setCourierForm((f) => ({ ...f, name: e.target.value }))} className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
-            <input type="text" placeholder="Service type" value={courierForm.service_type} onChange={(e) => setCourierForm((f) => ({ ...f, service_type: e.target.value }))} className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
-            <label className="flex items-center gap-1.5 text-sm text-slate-600">
+            <input type="text" placeholder="Name" value={courierForm.name} onChange={(e) => setCourierForm((f) => ({ ...f, name: e.target.value }))} className="text-sm rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 px-2.5 py-1.5" />
+            <input type="text" placeholder="Service type" value={courierForm.service_type} onChange={(e) => setCourierForm((f) => ({ ...f, service_type: e.target.value }))} className="text-sm rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 px-2.5 py-1.5" />
+            <label className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-400">
               <input type="checkbox" checked={courierForm.cod_support} onChange={(e) => setCourierForm((f) => ({ ...f, cod_support: e.target.checked }))} />
               COD support
             </label>
@@ -299,20 +299,20 @@ export default function Shipping() {
       )}
 
       {canEdit && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6">
-          <div className="text-xs font-semibold uppercase text-slate-500 mb-3">Record a shipment</div>
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 mb-6">
+          <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-3">Record a shipment</div>
           <div className="flex items-end gap-2 mb-3">
             <label className="block">
-              <span className="text-xs text-slate-500">Order ID</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Order ID</span>
               <input
                 type="text"
                 value={orderIdInput}
                 onChange={(e) => setOrderIdInput(e.target.value)}
                 placeholder="TEST-001"
-                className="mt-1 text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 w-48"
+                className="mt-1 text-sm rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 px-2.5 py-1.5 w-48"
               />
             </label>
-            <button onClick={findOrder} disabled={finding} className="text-sm rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50 disabled:opacity-50">
+            <button onClick={findOrder} disabled={finding} className="text-sm rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/40 disabled:opacity-50">
               {finding ? 'Finding…' : 'Find order'}
             </button>
           </div>
@@ -320,14 +320,14 @@ export default function Shipping() {
           {foundOrder && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <label className="block">
-                <span className="text-xs text-slate-500">Courier</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">Courier</span>
                 {couriers.length === 0 ? (
                   <p className="text-xs text-red-600 mt-1">No couriers configured — add one above first.</p>
                 ) : (
                   <select
                     value={form.courier_name}
                     onChange={(e) => setForm((f) => ({ ...f, courier_name: e.target.value }))}
-                    className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                    className="mt-1 w-full text-sm rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 px-2.5 py-1.5"
                   >
                     {couriers.map((c) => (
                       <option key={c.id} value={c.name}>
@@ -338,21 +338,21 @@ export default function Shipping() {
                 )}
               </label>
               <label className="block">
-                <span className="text-xs text-slate-500">AWB number</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">AWB number</span>
                 <input
                   type="text"
                   value={form.awb_number}
                   onChange={(e) => setForm((f) => ({ ...f, awb_number: e.target.value }))}
-                  className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                  className="mt-1 w-full text-sm rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 px-2.5 py-1.5"
                 />
               </label>
               <label className="block">
-                <span className="text-xs text-slate-500">Tracking URL (optional)</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">Tracking URL (optional)</span>
                 <input
                   type="text"
                   value={form.tracking_url}
                   onChange={(e) => setForm((f) => ({ ...f, tracking_url: e.target.value }))}
-                  className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5"
+                  className="mt-1 w-full text-sm rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 px-2.5 py-1.5"
                 />
               </label>
               <div className="sm:col-span-3">
@@ -369,14 +369,14 @@ export default function Shipping() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         {canEdit && selectedIds.size > 0 && (
-          <div className="px-4 py-2.5 border-b border-slate-100 bg-indigo-50 flex items-center gap-3 flex-wrap">
+          <div className="px-4 py-2.5 border-b border-slate-100 dark:border-slate-700/60 bg-indigo-50 flex items-center gap-3 flex-wrap">
             <span className="text-xs font-medium text-indigo-700">{selectedIds.size} selected</span>
             <button onClick={generateManifest} disabled={generatingManifest} className="text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50">
               {generatingManifest ? 'Generating…' : '📋 Generate manifest'}
             </button>
-            <button onClick={() => setSelectedIds(new Set())} className="text-xs text-slate-400 hover:text-slate-600">
+            <button onClick={() => setSelectedIds(new Set())} className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600">
               Clear
             </button>
           </div>
@@ -389,7 +389,7 @@ export default function Shipping() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                <tr className="text-left text-xs text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-700/60">
                   {canEdit && <th className="px-4 py-2 font-medium w-8"></th>}
                   <th className="px-4 py-2 font-medium">Order</th>
                   <th className="px-4 py-2 font-medium">Courier</th>
@@ -399,7 +399,7 @@ export default function Shipping() {
                   <th className="px-4 py-2 font-medium">Manifest</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-700/60">
                 {shipments.map((s) => (
                   <>
                   <tr key={s.id}>
@@ -408,13 +408,13 @@ export default function Shipping() {
                         {!s.manifest_id && <input type="checkbox" checked={selectedIds.has(s.id)} onChange={() => toggleSelected(s.id)} />}
                       </td>
                     )}
-                    <td className="px-4 py-2.5 font-medium text-slate-700">
+                    <td className="px-4 py-2.5 font-medium text-slate-700 dark:text-slate-300">
                       <button onClick={() => expand(s)} className="hover:underline">
                         {s.orders?.amazon_order_id ?? '—'}
                       </button>
                     </td>
-                    <td className="px-4 py-2.5 text-slate-500">{s.courier_name}</td>
-                    <td className="px-4 py-2.5 text-slate-500">
+                    <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{s.courier_name}</td>
+                    <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">
                       {s.tracking_url ? (
                         <a href={s.tracking_url} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline">
                           {s.awb_number}
@@ -423,7 +423,7 @@ export default function Shipping() {
                         s.awb_number
                       )}
                     </td>
-                    <td className="px-4 py-2.5 text-slate-500">{format(new Date(s.shipped_at), 'dd MMM yyyy')}</td>
+                    <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{format(new Date(s.shipped_at), 'dd MMM yyyy')}</td>
                     <td className="px-4 py-2.5">
                       {canEdit ? (
                         <select
@@ -446,21 +446,21 @@ export default function Shipping() {
                         <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${STATUS_COLOR[s.status]}`}>{s.status}</span>
                       )}
                     </td>
-                    <td className="px-4 py-2.5 text-xs text-slate-400">{s.manifest_id ? '✓ manifested' : '—'}</td>
+                    <td className="px-4 py-2.5 text-xs text-slate-400 dark:text-slate-500">{s.manifest_id ? '✓ manifested' : '—'}</td>
                   </tr>
                   {expandedId === s.id && (
                     <tr>
-                      <td colSpan={7} className="px-4 py-3 bg-slate-50">
-                        <div className="text-xs font-semibold uppercase text-slate-500 mb-2">Tracking history</div>
+                      <td colSpan={7} className="px-4 py-3 bg-slate-50 dark:bg-slate-700/40">
+                        <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-2">Tracking history</div>
                         {(eventsByShipment[s.id] ?? []).length === 0 ? (
-                          <p className="text-xs text-slate-400">No events yet.</p>
+                          <p className="text-xs text-slate-400 dark:text-slate-500">No events yet.</p>
                         ) : (
                           <div className="space-y-1">
                             {(eventsByShipment[s.id] ?? []).map((e) => (
-                              <div key={e.id} className="text-xs text-slate-600 flex items-center gap-2">
+                              <div key={e.id} className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-2">
                                 <span className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${STATUS_COLOR[e.status]}`}>{e.status}</span>
                                 <span>{format(new Date(e.event_time), 'dd MMM yyyy, HH:mm')}</span>
-                                {e.remarks && <span className="text-slate-400">— {e.remarks}</span>}
+                                {e.remarks && <span className="text-slate-400 dark:text-slate-500">— {e.remarks}</span>}
                               </div>
                             ))}
                           </div>

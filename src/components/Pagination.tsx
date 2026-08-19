@@ -16,7 +16,7 @@ export default function Pagination({
   const to = Math.min((page + 1) * pageSize, total)
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 text-xs text-slate-500">
+    <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 dark:border-slate-700/60 text-xs text-slate-500 dark:text-slate-400">
       <span>
         {from}–{to} of {total}
       </span>
@@ -24,7 +24,7 @@ export default function Pagination({
         <button
           onClick={() => onPageChange(page - 1)}
           disabled={page === 0}
-          className="rounded-lg border border-slate-300 px-2.5 py-1 disabled:opacity-40 hover:bg-slate-50"
+          className="rounded-lg border border-slate-300 dark:border-slate-600 px-2.5 py-1 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700/40"
         >
           Prev
         </button>
@@ -34,7 +34,7 @@ export default function Pagination({
         <button
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages - 1}
-          className="rounded-lg border border-slate-300 px-2.5 py-1 disabled:opacity-40 hover:bg-slate-50"
+          className="rounded-lg border border-slate-300 dark:border-slate-600 px-2.5 py-1 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700/40"
         >
           Next
         </button>

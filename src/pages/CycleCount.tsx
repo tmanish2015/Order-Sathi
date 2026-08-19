@@ -15,11 +15,11 @@ type Warehouse = Tables<'warehouses'>
 type Bin = Tables<'bins'>
 
 const STATUS_COLOR: Record<Enums<'cycle_count_status'>, string> = {
-  scheduled: 'bg-slate-100 text-slate-600',
-  counting: 'bg-blue-100 text-blue-700',
-  pending_approval: 'bg-amber-100 text-amber-700',
-  approved: 'bg-emerald-100 text-emerald-700',
-  rejected: 'bg-red-100 text-red-700',
+  scheduled: 'bg-slate-100 text-slate-600 dark:bg-slate-700/60 dark:text-slate-400',
+  counting: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  pending_approval: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  approved: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+  rejected: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
 }
 
 export default function CycleCount() {
@@ -227,24 +227,24 @@ export default function CycleCount() {
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-1">
-        <h2 className="text-lg font-semibold text-slate-900">Cycle Count / Stock Audit</h2>
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Cycle Count / Stock Audit</h2>
         {canCount && (
-          <button onClick={() => setShowNew((v) => !v)} className="text-sm rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50">
+          <button onClick={() => setShowNew((v) => !v)} className="text-sm rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/40">
             {showNew ? 'Cancel' : '+ New count'}
           </button>
         )}
       </div>
-      <p className="text-xs text-slate-400 mb-6">
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
         System quantity is snapshotted when the count is scheduled. Variance only posts to the stock ledger after admin approval —
         rejecting a count leaves stock untouched.
       </p>
 
       {showNew && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 mb-6">
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
             <label className="block">
-              <span className="text-xs text-slate-500">Warehouse</span>
-              <select value={form.warehouse_id} onChange={(e) => setForm((f) => ({ ...f, warehouse_id: e.target.value, bin_id: '' }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5">
+              <span className="text-xs text-slate-500 dark:text-slate-400">Warehouse</span>
+              <select value={form.warehouse_id} onChange={(e) => setForm((f) => ({ ...f, warehouse_id: e.target.value, bin_id: '' }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 dark:border-slate-600 px-2.5 py-1.5 dark:bg-slate-800 dark:text-slate-100">
                 <option value="">Select…</option>
                 {warehouses.map((w) => (
                   <option key={w.id} value={w.id}>
@@ -254,8 +254,8 @@ export default function CycleCount() {
               </select>
             </label>
             <label className="block">
-              <span className="text-xs text-slate-500">Bin (optional, for reference)</span>
-              <select value={form.bin_id} onChange={(e) => setForm((f) => ({ ...f, bin_id: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5">
+              <span className="text-xs text-slate-500 dark:text-slate-400">Bin (optional, for reference)</span>
+              <select value={form.bin_id} onChange={(e) => setForm((f) => ({ ...f, bin_id: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 dark:border-slate-600 px-2.5 py-1.5 dark:bg-slate-800 dark:text-slate-100">
                 <option value="">No specific bin</option>
                 {bins.filter((b) => b.warehouse_id === form.warehouse_id).map((b) => (
                   <option key={b.id} value={b.id}>
@@ -265,16 +265,16 @@ export default function CycleCount() {
               </select>
             </label>
             <label className="block">
-              <span className="text-xs text-slate-500">Scheduled date</span>
-              <input type="date" value={form.scheduled_date} onChange={(e) => setForm((f) => ({ ...f, scheduled_date: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+              <span className="text-xs text-slate-500 dark:text-slate-400">Scheduled date</span>
+              <input type="date" value={form.scheduled_date} onChange={(e) => setForm((f) => ({ ...f, scheduled_date: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 dark:border-slate-600 px-2.5 py-1.5 dark:bg-slate-800 dark:text-slate-100" />
             </label>
             <label className="block">
-              <span className="text-xs text-slate-500">Notes</span>
-              <input type="text" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+              <span className="text-xs text-slate-500 dark:text-slate-400">Notes</span>
+              <input type="text" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 dark:border-slate-600 px-2.5 py-1.5 dark:bg-slate-800 dark:text-slate-100" />
             </label>
           </div>
-          <div className="text-xs text-slate-500 mb-2">SKUs to count ({selectedSkuIds.size} selected)</div>
-          <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-lg p-2 mb-3 space-y-1">
+          <div className="text-xs text-slate-500 dark:text-slate-400 mb-2">SKUs to count ({selectedSkuIds.size} selected)</div>
+          <div className="max-h-48 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-lg p-2 mb-3 space-y-1">
             {skus.map((s) => (
               <label key={s.id} className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={selectedSkuIds.has(s.id)} onChange={() => toggleSku(s.id)} />
@@ -288,30 +288,30 @@ export default function CycleCount() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         {loading ? (
           <Skeleton rows={3} />
         ) : counts.length === 0 ? (
           <EmptyState icon="🔍" title="No cycle counts yet." />
         ) : (
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-slate-50 dark:divide-slate-700/60">
             {counts.map((c) => (
               <div key={c.id}>
-                <button onClick={() => expand(c)} className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-slate-50">
+                <button onClick={() => expand(c)} className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700/40">
                   <div>
-                    <div className="font-medium text-sm text-slate-900">
+                    <div className="font-medium text-sm text-slate-900 dark:text-slate-100">
                       {c.count_number} — {c.warehouses?.name ?? '—'}
-                      {c.bins?.code && <span className="text-slate-400 font-normal"> · {c.bins.code}</span>}
+                      {c.bins?.code && <span className="text-slate-400 dark:text-slate-500 font-normal"> · {c.bins.code}</span>}
                     </div>
-                    <div className="text-xs text-slate-400">{format(new Date(c.created_at), 'dd MMM yyyy, HH:mm')}</div>
+                    <div className="text-xs text-slate-400 dark:text-slate-500">{format(new Date(c.created_at), 'dd MMM yyyy, HH:mm')}</div>
                   </div>
                   <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${STATUS_COLOR[c.status]}`}>{c.status.replace('_', ' ')}</span>
                 </button>
                 {expandedId === c.id && (
-                  <div className="border-t border-slate-100 px-4 py-3 bg-slate-50">
+                  <div className="border-t border-slate-100 dark:border-slate-700/60 px-4 py-3 bg-slate-50 dark:bg-slate-700/40">
                     <table className="w-full text-sm mb-3">
                       <thead>
-                        <tr className="text-left text-xs text-slate-400">
+                        <tr className="text-left text-xs text-slate-400 dark:text-slate-500">
                           <th className="py-1 font-medium">SKU</th>
                           <th className="py-1 font-medium text-right">System qty</th>
                           <th className="py-1 font-medium text-right">Physical qty</th>
@@ -324,21 +324,21 @@ export default function CycleCount() {
                           const variance = physical !== '' ? Number(physical) - i.system_qty : null
                           return (
                             <tr key={i.id}>
-                              <td className="py-1 text-slate-700">{i.skus?.sku}</td>
-                              <td className="py-1 text-right text-slate-500">{i.system_qty}</td>
+                              <td className="py-1 text-slate-700 dark:text-slate-300">{i.skus?.sku}</td>
+                              <td className="py-1 text-right text-slate-500 dark:text-slate-400">{i.system_qty}</td>
                               <td className="py-1 text-right">
                                 {(c.status === 'counting') && canCount ? (
                                   <input
                                     type="number"
                                     value={physical}
                                     onChange={(e) => setPhysicalDraft((m) => ({ ...m, [i.id]: e.target.value }))}
-                                    className="w-20 text-right text-sm rounded border border-slate-300 px-1.5 py-0.5"
+                                    className="w-20 text-right text-sm rounded border border-slate-300 dark:border-slate-600 px-1.5 py-0.5 dark:bg-slate-800 dark:text-slate-100"
                                   />
                                 ) : (
                                   i.physical_qty ?? '—'
                                 )}
                               </td>
-                              <td className={`py-1 text-right font-medium ${variance != null && variance !== 0 ? (variance > 0 ? 'text-emerald-600' : 'text-red-600') : 'text-slate-400'}`}>
+                              <td className={`py-1 text-right font-medium ${variance != null && variance !== 0 ? (variance > 0 ? 'text-emerald-600' : 'text-red-600') : 'text-slate-400 dark:text-slate-500'}`}>
                                 {variance != null ? (variance > 0 ? `+${variance}` : variance) : '—'}
                               </td>
                             </tr>

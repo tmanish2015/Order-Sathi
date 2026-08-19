@@ -173,8 +173,8 @@ export default function Profit() {
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
-      <h2 className="text-lg font-semibold text-slate-900 mb-1">Profit &amp; Loss</h2>
-      <p className="text-xs text-slate-400 mb-6">
+      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">Profit &amp; Loss</h2>
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
         Three distinct numbers, never merged: <strong>Revenue</strong> (gross order value) → <strong>Gross Profit</strong> (revenue minus
         cost price) → <strong>Contribution Profit</strong> (gross profit minus Amazon fees/commission/TCS/TDS, from MTR reconciliation).
         Contribution profit only shows once an order's MTR is imported — until then it's shown as an estimated gross-profit figure, never
@@ -194,12 +194,12 @@ export default function Profit() {
             <Stat label="Contribution profit (reconciled orders)" value={formatINR(totals.netProfit)} accent />
           </div>
 
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-6">
-            <div className="px-4 py-3 border-b border-slate-100 text-xs font-semibold uppercase text-slate-500">Profit by SKU</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden mb-6">
+            <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700/60 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Profit by SKU</div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                  <tr className="text-left text-xs text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-700/60">
                     <th className="px-4 py-2 font-medium">SKU</th>
                     <th className="px-4 py-2 font-medium">Title</th>
                     <th className="px-4 py-2 font-medium text-right">Units sold</th>
@@ -209,16 +209,16 @@ export default function Profit() {
                     <th className="px-4 py-2 font-medium text-right">Margin %</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody className="divide-y divide-slate-50 dark:divide-slate-700/60">
                   {skuRollups.map((r) => (
                     <tr key={r.sku}>
-                      <td className="px-4 py-2.5 font-medium text-slate-700">{r.sku}</td>
-                      <td className="px-4 py-2.5 text-slate-500">{r.title}</td>
-                      <td className="px-4 py-2.5 text-right text-slate-500">{r.units}</td>
-                      <td className="px-4 py-2.5 text-right text-slate-700">{formatINR(r.revenue)}</td>
-                      <td className="px-4 py-2.5 text-right text-slate-500">{formatINR(r.cogs)}</td>
+                      <td className="px-4 py-2.5 font-medium text-slate-700 dark:text-slate-300">{r.sku}</td>
+                      <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{r.title}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">{r.units}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-700 dark:text-slate-300">{formatINR(r.revenue)}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">{formatINR(r.cogs)}</td>
                       <td className={`px-4 py-2.5 text-right font-medium ${r.grossMargin < 0 ? 'text-red-600' : 'text-emerald-600'}`}>{formatINR(r.grossMargin)}</td>
-                      <td className="px-4 py-2.5 text-right text-slate-500">{r.revenue > 0 ? `${((r.grossMargin / r.revenue) * 100).toFixed(1)}%` : '—'}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">{r.revenue > 0 ? `${((r.grossMargin / r.revenue) * 100).toFixed(1)}%` : '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -226,12 +226,12 @@ export default function Profit() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-slate-100 text-xs font-semibold uppercase text-slate-500">Profit by order</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700/60 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Profit by order</div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                  <tr className="text-left text-xs text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-700/60">
                     <th className="px-4 py-2 font-medium">Order</th>
                     <th className="px-4 py-2 font-medium text-right">Revenue</th>
                     <th className="px-4 py-2 font-medium text-right">COGS</th>
@@ -239,18 +239,18 @@ export default function Profit() {
                     <th className="px-4 py-2 font-medium text-right">Contribution profit</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody className="divide-y divide-slate-50 dark:divide-slate-700/60">
                   {orderRows.map((r) => (
                     <tr key={r.order.id}>
-                      <td className="px-4 py-2.5 font-medium text-slate-700">{r.order.amazon_order_id}</td>
-                      <td className="px-4 py-2.5 text-right text-slate-700">{formatINR(Number(r.order.gross_amount))}</td>
-                      <td className="px-4 py-2.5 text-right text-slate-500">{formatINR(r.cogs)}</td>
-                      <td className="px-4 py-2.5 text-right text-slate-500">{r.fees != null ? formatINR(r.fees) : '—'}</td>
+                      <td className="px-4 py-2.5 font-medium text-slate-700 dark:text-slate-300">{r.order.amazon_order_id}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-700 dark:text-slate-300">{formatINR(Number(r.order.gross_amount))}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">{formatINR(r.cogs)}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">{r.fees != null ? formatINR(r.fees) : '—'}</td>
                       <td className="px-4 py-2.5 text-right">
                         {r.netProfit != null ? (
                           <span className={r.netProfit < 0 ? 'text-red-600 font-medium' : 'text-emerald-600 font-medium'}>{formatINR(r.netProfit)}</span>
                         ) : (
-                          <span className="text-slate-400" title="Fees unknown until this order's MTR is imported">
+                          <span className="text-slate-400 dark:text-slate-500" title="Fees unknown until this order's MTR is imported">
                             {formatINR(r.grossMargin)} (est.)
                           </span>
                         )}
@@ -262,12 +262,12 @@ export default function Profit() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mt-6">
-            <div className="px-4 py-3 border-b border-slate-100 text-xs font-semibold uppercase text-slate-500">Profit by channel</div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden mt-6">
+            <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700/60 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Profit by channel</div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                  <tr className="text-left text-xs text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-700/60">
                     <th className="px-4 py-2 font-medium">Channel</th>
                     <th className="px-4 py-2 font-medium text-right">Orders</th>
                     <th className="px-4 py-2 font-medium text-right">Revenue</th>
@@ -275,14 +275,14 @@ export default function Profit() {
                     <th className="px-4 py-2 font-medium text-right">Contribution profit</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody className="divide-y divide-slate-50 dark:divide-slate-700/60">
                   {channelRollups.map((r) => (
                     <tr key={r.name}>
-                      <td className="px-4 py-2.5 font-medium text-slate-700">{r.name}</td>
-                      <td className="px-4 py-2.5 text-right text-slate-500">{r.orders}</td>
-                      <td className="px-4 py-2.5 text-right text-slate-700">{formatINR(r.revenue)}</td>
+                      <td className="px-4 py-2.5 font-medium text-slate-700 dark:text-slate-300">{r.name}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">{r.orders}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-700 dark:text-slate-300">{formatINR(r.revenue)}</td>
                       <td className={`px-4 py-2.5 text-right font-medium ${r.grossProfit < 0 ? 'text-red-600' : 'text-emerald-600'}`}>{formatINR(r.grossProfit)}</td>
-                      <td className="px-4 py-2.5 text-right text-slate-500">
+                      <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">
                         {r.ordersWithFees > 0 ? `${formatINR(r.contributionProfit)} (${r.ordersWithFees}/${r.orders} orders)` : '— no MTR yet'}
                       </td>
                     </tr>
@@ -292,27 +292,27 @@ export default function Profit() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mt-6">
-            <div className="px-4 py-3 border-b border-slate-100 text-xs font-semibold uppercase text-slate-500">Profit by warehouse</div>
-            <p className="px-4 pt-3 text-xs text-slate-400">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden mt-6">
+            <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700/60 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Profit by warehouse</div>
+            <p className="px-4 pt-3 text-xs text-slate-400 dark:text-slate-500">
               Gross profit only — Amazon fees are per-order, not splittable across a multi-warehouse order's individual lines.
             </p>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                  <tr className="text-left text-xs text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-700/60">
                     <th className="px-4 py-2 font-medium">Warehouse</th>
                     <th className="px-4 py-2 font-medium text-right">Units sold</th>
                     <th className="px-4 py-2 font-medium text-right">Revenue</th>
                     <th className="px-4 py-2 font-medium text-right">Gross profit</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody className="divide-y divide-slate-50 dark:divide-slate-700/60">
                   {warehouseRollups.map((r) => (
                     <tr key={r.name}>
-                      <td className="px-4 py-2.5 font-medium text-slate-700">{r.name}</td>
-                      <td className="px-4 py-2.5 text-right text-slate-500">{r.units}</td>
-                      <td className="px-4 py-2.5 text-right text-slate-700">{formatINR(r.revenue)}</td>
+                      <td className="px-4 py-2.5 font-medium text-slate-700 dark:text-slate-300">{r.name}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">{r.units}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-700 dark:text-slate-300">{formatINR(r.revenue)}</td>
                       <td className={`px-4 py-2.5 text-right font-medium ${r.grossProfit < 0 ? 'text-red-600' : 'text-emerald-600'}`}>{formatINR(r.grossProfit)}</td>
                     </tr>
                   ))}
@@ -328,11 +328,11 @@ export default function Profit() {
 
 function Stat({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: boolean }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3.5 sm:p-4 relative overflow-hidden">
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-3.5 sm:p-4 relative overflow-hidden">
       {accent && <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-emerald-600" />}
-      <div className="text-xs text-slate-400">{label}</div>
-      <div className="text-lg sm:text-xl font-semibold mt-1 text-slate-900">{value}</div>
-      {sub && <div className="text-[10px] text-slate-400 mt-0.5">{sub}</div>}
+      <div className="text-xs text-slate-400 dark:text-slate-500">{label}</div>
+      <div className="text-lg sm:text-xl font-semibold mt-1 text-slate-900 dark:text-slate-100">{value}</div>
+      {sub && <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">{sub}</div>}
     </div>
   )
 }

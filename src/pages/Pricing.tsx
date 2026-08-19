@@ -93,8 +93,8 @@ export default function Pricing() {
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
-      <h2 className="text-lg font-semibold text-slate-900 mb-1">Pricing</h2>
-      <p className="text-xs text-slate-400 mb-6">
+      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">Pricing</h2>
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
         Price history is append-only — setting a new price never overwrites an old one, it adds a new effective-dated row. Base price
         applies unless a channel-specific price exists for that channel. Promotional discounts are a separate module; customer-specific
         pricing isn't supported yet (no customer master exists — see Customers page for why).
@@ -105,27 +105,27 @@ export default function Pricing() {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Search SKU or title…"
-        className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 w-64 mb-3"
+        className="text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 w-64 mb-3 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
       />
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         {loading ? (
           <Skeleton rows={3} />
         ) : filteredSkus.length === 0 ? (
           <EmptyState icon="💰" title="No SKUs yet." />
         ) : (
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-slate-50 dark:divide-slate-700/60">
             {filteredSkus.map((s) => {
               const base = currentPrice(s.id, null)
               const isExpanded = expandedId === s.id
               return (
                 <div key={s.id}>
-                  <button onClick={() => setExpandedId(isExpanded ? null : s.id)} className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-slate-50">
+                  <button onClick={() => setExpandedId(isExpanded ? null : s.id)} className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700/40">
                     <div>
-                      <div className="font-medium text-sm text-slate-900">
-                        {s.sku} <span className="text-slate-400 font-normal">— {s.title}</span>
+                      <div className="font-medium text-sm text-slate-900 dark:text-slate-100">
+                        {s.sku} <span className="text-slate-400 dark:text-slate-500 font-normal">— {s.title}</span>
                       </div>
-                      <div className="text-xs text-slate-400">
+                      <div className="text-xs text-slate-400 dark:text-slate-500">
                         {channels
                           .map((c) => {
                             const cp = currentPrice(s.id, c.id)
@@ -136,17 +136,17 @@ export default function Pricing() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-sm font-semibold text-slate-900">{base ? formatINR(Number(base.price)) : '—'}</div>
-                      <div className="text-[10px] text-slate-400">base price</div>
+                      <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">{base ? formatINR(Number(base.price)) : '—'}</div>
+                      <div className="text-[10px] text-slate-400 dark:text-slate-500">base price</div>
                     </div>
                   </button>
                   {isExpanded && (
-                    <div className="border-t border-slate-100 px-4 py-3 bg-slate-50">
+                    <div className="border-t border-slate-100 dark:border-slate-700/60 px-4 py-3 bg-slate-50 dark:bg-slate-700/40">
                       {canEdit && (
                         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4 items-end">
                           <label className="block">
-                            <span className="text-xs text-slate-500">Scope</span>
-                            <select value={form.channel_id} onChange={(e) => setForm((f) => ({ ...f, channel_id: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1.5">
+                            <span className="text-xs text-slate-500 dark:text-slate-400">Scope</span>
+                            <select value={form.channel_id} onChange={(e) => setForm((f) => ({ ...f, channel_id: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
                               <option value={BASE_SCOPE}>Base / internal</option>
                               {channels.map((c) => (
                                 <option key={c.id} value={c.id}>
@@ -156,29 +156,29 @@ export default function Pricing() {
                             </select>
                           </label>
                           <label className="block">
-                            <span className="text-xs text-slate-500">Price</span>
-                            <input type="number" value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1.5" />
+                            <span className="text-xs text-slate-500 dark:text-slate-400">Price</span>
+                            <input type="number" value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
                           </label>
                           <label className="block">
-                            <span className="text-xs text-slate-500">Min selling price</span>
-                            <input type="number" value={form.min_selling_price} onChange={(e) => setForm((f) => ({ ...f, min_selling_price: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1.5" />
+                            <span className="text-xs text-slate-500 dark:text-slate-400">Min selling price</span>
+                            <input type="number" value={form.min_selling_price} onChange={(e) => setForm((f) => ({ ...f, min_selling_price: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
                           </label>
                           <label className="block">
-                            <span className="text-xs text-slate-500">Effective from</span>
-                            <input type="date" value={form.effective_from} onChange={(e) => setForm((f) => ({ ...f, effective_from: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1.5" />
+                            <span className="text-xs text-slate-500 dark:text-slate-400">Effective from</span>
+                            <input type="date" value={form.effective_from} onChange={(e) => setForm((f) => ({ ...f, effective_from: e.target.value }))} className="mt-1 w-full text-sm rounded-lg border border-slate-300 px-2 py-1.5 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100" />
                           </label>
                           <button onClick={() => setPrice(s)} disabled={saving} className="text-sm rounded-lg bg-indigo-600 text-white px-3 py-1.5 hover:bg-indigo-700 disabled:opacity-50">
                             {saving ? 'Saving…' : 'Set price'}
                           </button>
                         </div>
                       )}
-                      <div className="text-xs font-semibold uppercase text-slate-500 mb-2">Price history</div>
+                      <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-2">Price history</div>
                       {historyFor(s.id).length === 0 ? (
-                        <p className="text-xs text-slate-400">No prices recorded yet.</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500">No prices recorded yet.</p>
                       ) : (
                         <table className="w-full text-sm">
                           <thead>
-                            <tr className="text-left text-xs text-slate-400">
+                            <tr className="text-left text-xs text-slate-400 dark:text-slate-500">
                               <th className="py-1 pr-4 font-medium">Scope</th>
                               <th className="py-1 pr-4 font-medium text-right">Price</th>
                               <th className="py-1 pr-4 font-medium text-right">Min selling price</th>
@@ -188,10 +188,10 @@ export default function Pricing() {
                           <tbody>
                             {historyFor(s.id).map((p) => (
                               <tr key={p.id}>
-                                <td className="py-1 pr-4 text-slate-700">{p.channel_id ? channels.find((c) => c.id === p.channel_id)?.display_name ?? '—' : 'Base / internal'}</td>
-                                <td className="py-1 pr-4 text-right text-slate-700">{formatINR(Number(p.price))}</td>
-                                <td className="py-1 pr-4 text-right text-slate-500">{p.min_selling_price != null ? formatINR(Number(p.min_selling_price)) : '—'}</td>
-                                <td className="py-1 text-slate-500">{format(new Date(p.effective_from), 'dd MMM yyyy')}</td>
+                                <td className="py-1 pr-4 text-slate-700 dark:text-slate-300">{p.channel_id ? channels.find((c) => c.id === p.channel_id)?.display_name ?? '—' : 'Base / internal'}</td>
+                                <td className="py-1 pr-4 text-right text-slate-700 dark:text-slate-300">{formatINR(Number(p.price))}</td>
+                                <td className="py-1 pr-4 text-right text-slate-500 dark:text-slate-400">{p.min_selling_price != null ? formatINR(Number(p.min_selling_price)) : '—'}</td>
+                                <td className="py-1 text-slate-500 dark:text-slate-400">{format(new Date(p.effective_from), 'dd MMM yyyy')}</td>
                               </tr>
                             ))}
                           </tbody>

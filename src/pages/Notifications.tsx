@@ -10,10 +10,10 @@ import type { Tables, Enums } from '../lib/database.types'
 type Notification = Tables<'notifications'>
 
 const PRIORITY_COLOR: Record<Enums<'notification_priority'>, string> = {
-  critical: 'bg-red-100 text-red-700',
-  high: 'bg-amber-100 text-amber-700',
-  medium: 'bg-blue-100 text-blue-700',
-  low: 'bg-slate-100 text-slate-500',
+  critical: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+  high: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  medium: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  low: 'bg-slate-100 text-slate-500 dark:bg-slate-900/40 dark:text-slate-300',
 }
 
 const PRIORITY_RANK: Record<Enums<'notification_priority'>, number> = { critical: 0, high: 1, medium: 2, low: 3 }
@@ -116,40 +116,40 @@ export default function Notifications() {
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       <div className="flex items-center justify-between gap-3 mb-1">
-        <h2 className="text-lg font-semibold text-slate-900">Notifications</h2>
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Notifications</h2>
         {unreadCount > 0 && (
           <button onClick={markAllRead} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">
             Mark all read
           </button>
         )}
       </div>
-      <p className="text-xs text-slate-400 mb-6">
+      <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
         Refreshed from live exception data every time this page loads — one entry per category (not per record), matching the Dashboard
         exceptions panel. Resolved categories disappear automatically.
       </p>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         {loading ? (
           <Skeleton rows={4} />
         ) : notifications.length === 0 ? (
           <EmptyState icon="🔔" title="No open notifications — everything's clear." />
         ) : (
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-slate-50 dark:divide-slate-700/60">
             {notifications.map((n) => (
               <Link
                 key={n.id}
                 to={n.action_href ?? '#'}
                 onClick={() => !n.read && markRead(n)}
-                className={`block px-4 py-3 hover:bg-slate-50 ${n.read ? 'opacity-60' : ''}`}
+                className={`block px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/40 ${n.read ? 'opacity-60' : ''}`}
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     {!n.read && <span className="w-2 h-2 rounded-full bg-indigo-600 shrink-0" />}
-                    <span className="text-sm text-slate-900">{n.message}</span>
+                    <span className="text-sm text-slate-900 dark:text-slate-100">{n.message}</span>
                   </div>
                   <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded shrink-0 ${PRIORITY_COLOR[n.priority]}`}>{n.priority}</span>
                 </div>
-                <div className="text-xs text-slate-400 mt-1 ml-4">{format(new Date(n.updated_at), 'dd MMM yyyy, HH:mm')}</div>
+                <div className="text-xs text-slate-400 dark:text-slate-500 mt-1 ml-4">{format(new Date(n.updated_at), 'dd MMM yyyy, HH:mm')}</div>
               </Link>
             ))}
           </div>
