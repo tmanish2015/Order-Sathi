@@ -63,6 +63,9 @@ export default function Returns() {
   const [qcNotes, setQcNotes] = useState('')
   const [qcSavingId, setQcSavingId] = useState<string | null>(null)
 
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkBusy, setBulkBusy] = useState(false)
+
   const orgId = profile?.organization_id
   const canEdit = profile?.role === 'admin' || profile?.role === 'ops' || profile?.role === 'finance'
 
@@ -158,6 +161,36 @@ export default function Returns() {
       return
     }
     showSuccess('Marked received — run QC to release stock.')
+    load()
+  }
+
+  const receivableIds = returns.filter((r) => r.status === 'initiated').map((r) => r.id)
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleSelectAll() {
+    setSelectedIds((prev) => (prev.size === receivableIds.length ? new Set() : new Set(receivableIds)))
+  }
+
+  async function bulkMarkReceived() {
+    const ids = Array.from(selectedIds).filter((id) => receivableIds.includes(id))
+    if (ids.length === 0) return
+    setBulkBusy(true)
+    const { error } = await supabase.from('order_returns').update({ status: 'received', updated_at: new Date().toISOString() }).in('id', ids)
+    setBulkBusy(false)
+    if (error) {
+      reportError(showError, 'Bulk mark received', error, orgId, profile?.id)
+      return
+    }
+    showSuccess(`${ids.length} return(s) marked received — run QC to release stock.`)
+    setSelectedIds(new Set())
     load()
   }
 
@@ -377,6 +410,19 @@ export default function Returns() {
         </div>
       )}
 
+      {canEdit && selectedIds.size > 0 && (
+        <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 mb-3">
+          <span className="text-xs font-medium text-indigo-700">{selectedIds.size} selected</span>
+          <button
+            onClick={bulkMarkReceived}
+            disabled={bulkBusy}
+            className="text-xs font-medium rounded-lg bg-indigo-600 text-white px-2.5 py-1 hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {bulkBusy ? 'Saving…' : 'Mark received'}
+          </button>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         {loading ? (
           <Skeleton />
@@ -387,6 +433,11 @@ export default function Returns() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                  {canEdit && (
+                    <th className="px-4 py-2 font-medium">
+                      <input type="checkbox" checked={receivableIds.length > 0 && selectedIds.size === receivableIds.length} onChange={toggleSelectAll} />
+                    </th>
+                  )}
                   <th className="px-4 py-2 font-medium">Order</th>
                   <th className="px-4 py-2 font-medium">SKU</th>
                   <th className="px-4 py-2 font-medium">Type</th>
@@ -405,6 +456,13 @@ export default function Returns() {
                   return (
                     <>
                     <tr key={r.id}>
+                      {canEdit && (
+                        <td className="px-4 py-2.5">
+                          {r.status === 'initiated' && (
+                            <input type="checkbox" checked={selectedIds.has(r.id)} onChange={() => toggleSelected(r.id)} />
+                          )}
+                        </td>
+                      )}
                       <td className="px-4 py-2.5 font-medium text-slate-700">{r.orders?.amazon_order_id ?? '—'}</td>
                       <td className="px-4 py-2.5 text-slate-500">{r.skus?.sku ?? '—'}</td>
                       <td className="px-4 py-2.5 text-slate-500">{TYPE_LABEL[r.return_type]}</td>
@@ -460,7 +518,7 @@ export default function Returns() {
                     </tr>
                     {qcId === r.id && (
                       <tr>
-                        <td colSpan={10} className="px-4 py-3 bg-amber-50">
+                        <td colSpan={canEdit ? 11 : 10} className="px-4 py-3 bg-amber-50">
                           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
                             <label className="block sm:col-span-2">
                               <span className="text-xs text-slate-500">QC outcome</span>
