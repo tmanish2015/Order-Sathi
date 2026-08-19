@@ -179,18 +179,18 @@ export default function Pricing() {
                         <table className="w-full text-sm">
                           <thead>
                             <tr className="text-left text-xs text-slate-400">
-                              <th className="py-1 font-medium">Scope</th>
-                              <th className="py-1 font-medium text-right">Price</th>
-                              <th className="py-1 font-medium text-right">Min selling price</th>
+                              <th className="py-1 pr-4 font-medium">Scope</th>
+                              <th className="py-1 pr-4 font-medium text-right">Price</th>
+                              <th className="py-1 pr-4 font-medium text-right">Min selling price</th>
                               <th className="py-1 font-medium">Effective from</th>
                             </tr>
                           </thead>
                           <tbody>
                             {historyFor(s.id).map((p) => (
                               <tr key={p.id}>
-                                <td className="py-1 text-slate-700">{p.channel_id ? channels.find((c) => c.id === p.channel_id)?.display_name ?? '—' : 'Base / internal'}</td>
-                                <td className="py-1 text-right text-slate-700">{formatINR(Number(p.price))}</td>
-                                <td className="py-1 text-right text-slate-500">{p.min_selling_price != null ? formatINR(Number(p.min_selling_price)) : '—'}</td>
+                                <td className="py-1 pr-4 text-slate-700">{p.channel_id ? channels.find((c) => c.id === p.channel_id)?.display_name ?? '—' : 'Base / internal'}</td>
+                                <td className="py-1 pr-4 text-right text-slate-700">{formatINR(Number(p.price))}</td>
+                                <td className="py-1 pr-4 text-right text-slate-500">{p.min_selling_price != null ? formatINR(Number(p.min_selling_price)) : '—'}</td>
                                 <td className="py-1 text-slate-500">{format(new Date(p.effective_from), 'dd MMM yyyy')}</td>
                               </tr>
                             ))}
