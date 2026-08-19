@@ -9,6 +9,8 @@ import type { Tables } from '../lib/database.types'
 type Order = Tables<'orders'>
 type LineItem = Tables<'order_line_items'> & { skus: Tables<'skus'> | null }
 type ReconEntry = Tables<'reconciliation_entries'>
+type Channel = Tables<'channels'>
+type Warehouse = Tables<'warehouses'>
 
 interface OrderRow {
   order: Order
@@ -27,10 +29,31 @@ interface SkuRollup {
   grossMargin: number
 }
 
+interface ChannelRollup {
+  name: string
+  orders: number
+  revenue: number
+  cogs: number
+  grossProfit: number
+  fees: number
+  ordersWithFees: number
+  contributionProfit: number
+}
+
+interface WarehouseRollup {
+  name: string
+  units: number
+  revenue: number
+  cogs: number
+  grossProfit: number
+}
+
 export default function Profit() {
   const { profile } = useAuth()
   const [orderRows, setOrderRows] = useState<OrderRow[]>([])
   const [skuRollups, setSkuRollups] = useState<SkuRollup[]>([])
+  const [channelRollups, setChannelRollups] = useState<ChannelRollup[]>([])
+  const [warehouseRollups, setWarehouseRollups] = useState<WarehouseRollup[]>([])
   const [loading, setLoading] = useState(true)
   const orgId = profile?.organization_id
 
@@ -38,10 +61,12 @@ export default function Profit() {
     if (!orgId) return
     ;(async () => {
       setLoading(true)
-      const [{ data: orders }, { data: lineItems }, { data: entries }] = await Promise.all([
+      const [{ data: orders }, { data: lineItems }, { data: entries }, { data: channels }, { data: warehouses }] = await Promise.all([
         supabase.from('orders').select('*').order('order_date', { ascending: false }),
         supabase.from('order_line_items').select('*, skus(*)'),
         supabase.from('reconciliation_entries').select('*'),
+        supabase.from('channels').select('*'),
+        supabase.from('warehouses').select('*'),
       ])
 
       const entryByOrderId = new Map((entries as ReconEntry[] ?? []).map((e) => [e.order_id, e]))
@@ -80,6 +105,59 @@ export default function Profit() {
         rollupBySku.set(key, existing)
       }
       setSkuRollups(Array.from(rollupBySku.values()).sort((a, b) => b.grossMargin - a.grossMargin))
+
+      // Channel contribution profit - fees are known per order (from MTR
+      // reconciliation), so this can compute a real contribution profit,
+      // not just gross margin.
+      const channelById = new Map((channels as Channel[] ?? []).map((c) => [c.id, c.display_name]))
+      const rollupByChannel = new Map<string, ChannelRollup>()
+      for (const order of (orders as Order[]) ?? []) {
+        const key = order.channel_id
+        const existing = rollupByChannel.get(key) ?? {
+          name: channelById.get(key) ?? 'Unknown channel',
+          orders: 0,
+          revenue: 0,
+          cogs: 0,
+          grossProfit: 0,
+          fees: 0,
+          ordersWithFees: 0,
+          contributionProfit: 0,
+        }
+        const items = lineItemsByOrderId.get(order.id) ?? []
+        const cogs = items.reduce((sum, li) => sum + li.quantity * Number(li.skus?.cost_price ?? 0), 0)
+        const entry = entryByOrderId.get(order.id)
+        const fees = entry ? Number(entry.commission) + Number(entry.tcs_cgst) + Number(entry.tcs_sgst) + Number(entry.tcs_igst) + Number(entry.tds_194o) + Number(entry.other_fees) : null
+        existing.orders += 1
+        existing.revenue += Number(order.gross_amount)
+        existing.cogs += cogs
+        existing.grossProfit += Number(order.gross_amount) - cogs
+        if (fees != null) {
+          existing.fees += fees
+          existing.ordersWithFees += 1
+          existing.contributionProfit += Number(order.gross_amount) - cogs - fees
+        }
+        rollupByChannel.set(key, existing)
+      }
+      setChannelRollups(Array.from(rollupByChannel.values()).sort((a, b) => b.revenue - a.revenue))
+
+      // Warehouse contribution - gross margin only. Amazon fees are
+      // per-order from reconciliation, not splittable across a multi-
+      // warehouse order's individual lines, so contribution profit isn't
+      // shown here (would require fabricating an allocation).
+      const warehouseById = new Map((warehouses as Warehouse[] ?? []).map((w) => [w.id, w.name]))
+      const rollupByWarehouse = new Map<string, WarehouseRollup>()
+      for (const li of (lineItems as unknown as LineItem[]) ?? []) {
+        if (!li.warehouse_id) continue
+        const key = li.warehouse_id
+        const existing = rollupByWarehouse.get(key) ?? { name: warehouseById.get(key) ?? 'Unknown warehouse', units: 0, revenue: 0, cogs: 0, grossProfit: 0 }
+        existing.units += li.quantity
+        existing.revenue += li.quantity * Number(li.unit_price)
+        existing.cogs += li.quantity * Number(li.skus?.cost_price ?? 0)
+        existing.grossProfit = existing.revenue - existing.cogs
+        rollupByWarehouse.set(key, existing)
+      }
+      setWarehouseRollups(Array.from(rollupByWarehouse.values()).sort((a, b) => b.revenue - a.revenue))
+
       setLoading(false)
     })()
   }, [orgId])
@@ -97,8 +175,10 @@ export default function Profit() {
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       <h2 className="text-lg font-semibold text-slate-900 mb-1">Profit &amp; Loss</h2>
       <p className="text-xs text-slate-400 mb-6">
-        Gross margin (revenue − cost price) is always shown. Net profit (after Amazon fees) only shows once an order has been through MTR
-        reconciliation — until then those orders are counted at gross margin only, not silently assumed to be full profit.
+        Three distinct numbers, never merged: <strong>Revenue</strong> (gross order value) → <strong>Gross Profit</strong> (revenue minus
+        cost price) → <strong>Contribution Profit</strong> (gross profit minus Amazon fees/commission/TCS/TDS, from MTR reconciliation).
+        Contribution profit only shows once an order's MTR is imported — until then it's shown as an estimated gross-profit figure, never
+        silently assumed to equal full profit.
       </p>
 
       {loading ? (
@@ -111,7 +191,7 @@ export default function Profit() {
             <Stat label="Revenue (all orders)" value={formatINR(totals.revenue)} />
             <Stat label="COGS" value={formatINR(totals.cogs)} />
             <Stat label="Amazon fees (reconciled orders)" value={formatINR(totals.fees)} sub={`${totals.ordersWithFees} of ${totals.ordersTotal} orders`} />
-            <Stat label="Net profit (reconciled orders)" value={formatINR(totals.netProfit)} accent />
+            <Stat label="Contribution profit (reconciled orders)" value={formatINR(totals.netProfit)} accent />
           </div>
 
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-6">
@@ -125,7 +205,7 @@ export default function Profit() {
                     <th className="px-4 py-2 font-medium text-right">Units sold</th>
                     <th className="px-4 py-2 font-medium text-right">Revenue</th>
                     <th className="px-4 py-2 font-medium text-right">COGS</th>
-                    <th className="px-4 py-2 font-medium text-right">Gross margin</th>
+                    <th className="px-4 py-2 font-medium text-right">Gross profit</th>
                     <th className="px-4 py-2 font-medium text-right">Margin %</th>
                   </tr>
                 </thead>
@@ -156,7 +236,7 @@ export default function Profit() {
                     <th className="px-4 py-2 font-medium text-right">Revenue</th>
                     <th className="px-4 py-2 font-medium text-right">COGS</th>
                     <th className="px-4 py-2 font-medium text-right">Amazon fees</th>
-                    <th className="px-4 py-2 font-medium text-right">Net profit</th>
+                    <th className="px-4 py-2 font-medium text-right">Contribution profit</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -175,6 +255,65 @@ export default function Profit() {
                           </span>
                         )}
                       </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mt-6">
+            <div className="px-4 py-3 border-b border-slate-100 text-xs font-semibold uppercase text-slate-500">Profit by channel</div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                    <th className="px-4 py-2 font-medium">Channel</th>
+                    <th className="px-4 py-2 font-medium text-right">Orders</th>
+                    <th className="px-4 py-2 font-medium text-right">Revenue</th>
+                    <th className="px-4 py-2 font-medium text-right">Gross profit</th>
+                    <th className="px-4 py-2 font-medium text-right">Contribution profit</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {channelRollups.map((r) => (
+                    <tr key={r.name}>
+                      <td className="px-4 py-2.5 font-medium text-slate-700">{r.name}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-500">{r.orders}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-700">{formatINR(r.revenue)}</td>
+                      <td className={`px-4 py-2.5 text-right font-medium ${r.grossProfit < 0 ? 'text-red-600' : 'text-emerald-600'}`}>{formatINR(r.grossProfit)}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-500">
+                        {r.ordersWithFees > 0 ? `${formatINR(r.contributionProfit)} (${r.ordersWithFees}/${r.orders} orders)` : '— no MTR yet'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mt-6">
+            <div className="px-4 py-3 border-b border-slate-100 text-xs font-semibold uppercase text-slate-500">Profit by warehouse</div>
+            <p className="px-4 pt-3 text-xs text-slate-400">
+              Gross profit only — Amazon fees are per-order, not splittable across a multi-warehouse order's individual lines.
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                    <th className="px-4 py-2 font-medium">Warehouse</th>
+                    <th className="px-4 py-2 font-medium text-right">Units sold</th>
+                    <th className="px-4 py-2 font-medium text-right">Revenue</th>
+                    <th className="px-4 py-2 font-medium text-right">Gross profit</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {warehouseRollups.map((r) => (
+                    <tr key={r.name}>
+                      <td className="px-4 py-2.5 font-medium text-slate-700">{r.name}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-500">{r.units}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-700">{formatINR(r.revenue)}</td>
+                      <td className={`px-4 py-2.5 text-right font-medium ${r.grossProfit < 0 ? 'text-red-600' : 'text-emerald-600'}`}>{formatINR(r.grossProfit)}</td>
                     </tr>
                   ))}
                 </tbody>
