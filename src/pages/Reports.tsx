@@ -17,6 +17,7 @@ type Return = Tables<'order_returns'>
 type SettlementTxn = Tables<'settlement_transactions'>
 type Warehouse = Tables<'warehouses'>
 type LedgerRow = { sku_id: string; warehouse_id: string; quantity_delta: number; created_at: string; movement_type: Enums<'inventory_movement_type'> }
+type TrackingEvent = { shipment_id: string; status: Enums<'shipment_status'>; event_time: string }
 
 const TABS = ['Sales', 'Orders', 'Inventory', 'Ageing', 'ABC/FSN', 'Products', 'Warehouse', 'Shipping', 'Returns', 'Reconciliation', 'Profitability'] as const
 type Tab = (typeof TABS)[number]
@@ -37,6 +38,7 @@ export default function Reports() {
   const [shipments, setShipments] = useState<Shipment[]>([])
   const [returns, setReturns] = useState<Return[]>([])
   const [settlements, setSettlements] = useState<SettlementTxn[]>([])
+  const [trackingEvents, setTrackingEvents] = useState<TrackingEvent[]>([])
 
   const orgId = profile?.organization_id
 
@@ -44,7 +46,7 @@ export default function Reports() {
     if (!orgId) return
     ;(async () => {
       setLoading(true)
-      const [{ data: o }, { data: li }, { data: s }, { data: c }, { data: l }, { data: w }, { data: sh }, { data: r }, { data: st }] = await Promise.all([
+      const [{ data: o }, { data: li }, { data: s }, { data: c }, { data: l }, { data: w }, { data: sh }, { data: r }, { data: st }, { data: te }] = await Promise.all([
         supabase.from('orders').select('*'),
         supabase.from('order_line_items').select('*, skus(*)'),
         supabase.from('skus').select('*'),
@@ -54,6 +56,7 @@ export default function Reports() {
         supabase.from('shipments').select('*'),
         supabase.from('order_returns').select('*'),
         supabase.from('settlement_transactions').select('*'),
+        supabase.from('shipment_tracking_events').select('shipment_id, status, event_time'),
       ])
       setOrders(o ?? [])
       setLineItems((li as unknown as LineItem[]) ?? [])
@@ -64,6 +67,7 @@ export default function Reports() {
       setShipments(sh ?? [])
       setReturns(r ?? [])
       setSettlements(st ?? [])
+      setTrackingEvents(te ?? [])
       setLoading(false)
     })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -99,7 +103,7 @@ export default function Reports() {
           {tab === 'ABC/FSN' && <AbcFsnReport skus={skus} lineItems={lineItems} ledger={ledger} warehouses={warehouses} />}
           {tab === 'Products' && <ProductsReport skus={skus} lineItems={lineItems} returns={returns} />}
           {tab === 'Warehouse' && <WarehouseReport warehouses={warehouses} lineItems={lineItems} ledger={ledger} />}
-          {tab === 'Shipping' && <ShippingReport shipments={shipments} />}
+          {tab === 'Shipping' && <ShippingReport shipments={shipments} orders={orders} trackingEvents={trackingEvents} />}
           {tab === 'Returns' && <ReturnsReport returns={returns} />}
           {tab === 'Reconciliation' && <ReconciliationReport settlements={settlements} />}
           {tab === 'Profitability' && <ProfitabilityReport orders={orders} lineItems={lineItems} />}
@@ -534,7 +538,7 @@ function AbcFsnReport({
   )
 }
 
-function ShippingReport({ shipments }: { shipments: Shipment[] }) {
+function ShippingReport({ shipments, orders, trackingEvents }: { shipments: Shipment[]; orders: Order[]; trackingEvents: TrackingEvent[] }) {
   const byCourier: Record<string, Record<string, number>> = {}
   for (const s of shipments) {
     byCourier[s.courier_name] = byCourier[s.courier_name] ?? {}
@@ -550,6 +554,57 @@ function ShippingReport({ shipments }: { shipments: Shipment[] }) {
   const rto = shipments.filter((s) => s.status === 'rto').length
   const ndr = shipments.filter((s) => s.status === 'ndr').length
 
+  const orderById = new Map(orders.map((o) => [o.id, o]))
+  const deliveredEventByShipment = new Map<string, string>()
+  for (const te of trackingEvents) {
+    if (te.status !== 'delivered') continue
+    const existing = deliveredEventByShipment.get(te.shipment_id)
+    if (!existing || te.event_time < existing) deliveredEventByShipment.set(te.shipment_id, te.event_time)
+  }
+
+  const courierNames = Array.from(new Set(shipments.map((s) => s.courier_name)))
+  const courierPerf = courierNames.map((courier) => {
+    const courierShipments = shipments.filter((s) => s.courier_name === courier)
+    const total = courierShipments.length
+    const deliveredCount = courierShipments.filter((s) => s.status === 'delivered').length
+    const ndrCount = courierShipments.filter((s) => s.status === 'ndr').length
+    const rtoCount = courierShipments.filter((s) => s.status === 'rto').length
+    const deliveryTimes = courierShipments
+      .map((s) => {
+        const deliveredAt = deliveredEventByShipment.get(s.id)
+        if (!deliveredAt) return null
+        return (new Date(deliveredAt).getTime() - new Date(s.shipped_at).getTime()) / (24 * 60 * 60 * 1000)
+      })
+      .filter((d): d is number => d != null && d >= 0)
+    const avgDeliveryDays = deliveryTimes.length > 0 ? deliveryTimes.reduce((a, b) => a + b, 0) / deliveryTimes.length : null
+    const codShipments = courierShipments.filter((s) => orderById.get(s.order_id)?.payment_type === 'COD')
+    const codDelivered = codShipments.filter((s) => s.status === 'delivered').length
+    return {
+      courier,
+      total,
+      deliveryPct: total > 0 ? (deliveredCount / total) * 100 : 0,
+      ndrPct: total > 0 ? (ndrCount / total) * 100 : 0,
+      rtoPct: total > 0 ? (rtoCount / total) * 100 : 0,
+      avgDeliveryDays,
+      codTotal: codShipments.length,
+      codDeliveredPct: codShipments.length > 0 ? (codDelivered / codShipments.length) * 100 : null,
+    }
+  })
+
+  // Pincode-level intelligence isn't derivable honestly: orders only have a
+  // free-text ship_address, no structured pincode field. Showing ship_state
+  // instead (which IS structured) rather than fabricating pincode extraction
+  // from unreliable text parsing.
+  const byState: Record<string, { total: number; delivered: number; ndr: number; rto: number }> = {}
+  for (const s of shipments) {
+    const state = orderById.get(s.order_id)?.ship_state || 'Unknown'
+    byState[state] = byState[state] ?? { total: 0, delivered: 0, ndr: 0, rto: 0 }
+    byState[state].total += 1
+    if (s.status === 'delivered') byState[state].delivered += 1
+    if (s.status === 'ndr') byState[state].ndr += 1
+    if (s.status === 'rto') byState[state].rto += 1
+  }
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -559,8 +614,41 @@ function ShippingReport({ shipments }: { shipments: Shipment[] }) {
         <Stat label="NDR" value={ndr} />
       </div>
       <div>
-        <div className="text-xs font-semibold uppercase text-slate-500 mb-2">By courier</div>
+        <div className="text-xs font-semibold uppercase text-slate-500 mb-2">By courier — status breakdown</div>
         <Table headers={['Courier', 'Total', ...statuses.map((s) => s.replace(/_/g, ' '))]} rows={rows} />
+      </div>
+      <div>
+        <div className="text-xs font-semibold uppercase text-slate-500 mb-2">Courier performance</div>
+        <Table
+          headers={['Courier', 'Shipments', 'Delivery %', 'NDR %', 'RTO %', 'Avg delivery time', 'COD delivery %']}
+          rows={courierPerf.map((c) => [
+            c.courier,
+            c.total,
+            `${c.deliveryPct.toFixed(1)}%`,
+            `${c.ndrPct.toFixed(1)}%`,
+            `${c.rtoPct.toFixed(1)}%`,
+            c.avgDeliveryDays != null ? `${c.avgDeliveryDays.toFixed(1)}d` : '—',
+            c.codDeliveredPct != null ? `${c.codDeliveredPct.toFixed(1)}% (${c.codTotal})` : '— no COD',
+          ])}
+        />
+      </div>
+      <div>
+        <div className="text-xs font-semibold uppercase text-slate-500 mb-2">
+          Delivery intelligence by state
+          <span className="ml-2 text-[10px] normal-case text-slate-400 font-normal">
+            (pincode-level not shown — orders only store a free-text address, no structured pincode field)
+          </span>
+        </div>
+        <Table
+          headers={['State', 'Shipments', 'Delivered %', 'NDR %', 'RTO %']}
+          rows={Object.entries(byState).map(([state, s]) => [
+            state,
+            s.total,
+            `${((s.delivered / s.total) * 100).toFixed(1)}%`,
+            `${((s.ndr / s.total) * 100).toFixed(1)}%`,
+            `${((s.rto / s.total) * 100).toFixed(1)}%`,
+          ])}
+        />
       </div>
     </div>
   )
