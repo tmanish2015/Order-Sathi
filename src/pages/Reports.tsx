@@ -18,7 +18,7 @@ type SettlementTxn = Tables<'settlement_transactions'>
 type Warehouse = Tables<'warehouses'>
 type LedgerRow = { sku_id: string; warehouse_id: string; quantity_delta: number; created_at: string; movement_type: Enums<'inventory_movement_type'> }
 
-const TABS = ['Sales', 'Orders', 'Inventory', 'Ageing', 'ABC/FSN', 'Shipping', 'Returns', 'Reconciliation', 'Profitability'] as const
+const TABS = ['Sales', 'Orders', 'Inventory', 'Ageing', 'ABC/FSN', 'Products', 'Warehouse', 'Shipping', 'Returns', 'Reconciliation', 'Profitability'] as const
 type Tab = (typeof TABS)[number]
 
 const TREND_DAYS = 30
@@ -97,6 +97,8 @@ export default function Reports() {
           {tab === 'Inventory' && <InventoryReport skus={skus} ledger={ledger} lineItems={lineItems} orders={orders} />}
           {tab === 'Ageing' && <AgeingReport skus={skus} ledger={ledger} warehouses={warehouses} />}
           {tab === 'ABC/FSN' && <AbcFsnReport skus={skus} lineItems={lineItems} ledger={ledger} warehouses={warehouses} />}
+          {tab === 'Products' && <ProductsReport skus={skus} lineItems={lineItems} returns={returns} />}
+          {tab === 'Warehouse' && <WarehouseReport warehouses={warehouses} lineItems={lineItems} ledger={ledger} />}
           {tab === 'Shipping' && <ShippingReport shipments={shipments} />}
           {tab === 'Returns' && <ReturnsReport returns={returns} />}
           {tab === 'Reconciliation' && <ReconciliationReport settlements={settlements} />}
@@ -165,6 +167,16 @@ function SalesReport({ orders, channels }: { orders: Order[]; channels: Channel[
   const totalRevenue = orders.reduce((s, o) => s + Number(o.gross_amount), 0)
   const aov = orders.length > 0 ? totalRevenue / orders.length : 0
 
+  // Growth: last 30 days vs the 30 days before that.
+  const now = Date.now()
+  const periodStart = now - TREND_DAYS * 24 * 60 * 60 * 1000
+  const priorStart = periodStart - TREND_DAYS * 24 * 60 * 60 * 1000
+  const currentPeriodRevenue = orders.filter((o) => new Date(o.order_date).getTime() >= periodStart).reduce((s, o) => s + Number(o.gross_amount), 0)
+  const priorPeriodRevenue = orders
+    .filter((o) => new Date(o.order_date).getTime() >= priorStart && new Date(o.order_date).getTime() < periodStart)
+    .reduce((s, o) => s + Number(o.gross_amount), 0)
+  const growthPct = priorPeriodRevenue > 0 ? ((currentPeriodRevenue - priorPeriodRevenue) / priorPeriodRevenue) * 100 : null
+
   const byChannel = channels.map((c) => {
     const channelOrders = orders.filter((o) => o.channel_id === c.id)
     const revenue = channelOrders.reduce((s, o) => s + Number(o.gross_amount), 0)
@@ -173,10 +185,15 @@ function SalesReport({ orders, channels }: { orders: Order[]; channels: Channel[
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Stat label="Total orders" value={orders.length} />
-        <Stat label="Total revenue" value={formatINR(totalRevenue)} />
+        <Stat label="Total revenue (GMV)" value={formatINR(totalRevenue)} />
         <Stat label="Average order value" value={formatINR(aov)} />
+        <Stat
+          label="Growth (30d vs prior 30d)"
+          value={growthPct != null ? `${growthPct >= 0 ? '+' : ''}${growthPct.toFixed(1)}%` : '—'}
+          sub={growthPct == null ? 'No orders in the prior 30-day window to compare against' : undefined}
+        />
       </div>
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
         <div className="text-xs font-semibold uppercase text-slate-500 mb-3">Sales trend (last 30 days)</div>
@@ -620,6 +637,113 @@ function ProfitabilityReport({ orders, lineItems }: { orders: Order[]; lineItems
         </Link>{' '}
         page, since it depends on MTR reconciliation being imported per order.
       </p>
+    </div>
+  )
+}
+
+type ProductSort = 'revenue' | 'units_asc' | 'margin' | 'return_rate'
+
+function ProductsReport({ skus, lineItems, returns }: { skus: Sku[]; lineItems: LineItem[]; returns: Return[] }) {
+  const [sortBy, setSortBy] = useState<ProductSort>('revenue')
+
+  const unitsBySku: Record<string, number> = {}
+  const revenueBySku: Record<string, number> = {}
+  const cogsBySku: Record<string, number> = {}
+  for (const li of lineItems) {
+    unitsBySku[li.sku_id] = (unitsBySku[li.sku_id] ?? 0) + li.quantity
+    revenueBySku[li.sku_id] = (revenueBySku[li.sku_id] ?? 0) + li.quantity * Number(li.unit_price)
+    cogsBySku[li.sku_id] = (cogsBySku[li.sku_id] ?? 0) + li.quantity * Number(li.skus?.cost_price ?? 0)
+  }
+  const returnUnitsBySku: Record<string, number> = {}
+  for (const r of returns) {
+    if (r.return_type !== 'customer_return') continue
+    returnUnitsBySku[r.sku_id] = (returnUnitsBySku[r.sku_id] ?? 0) + r.quantity
+  }
+
+  const rows = skus
+    .filter((s) => (unitsBySku[s.id] ?? 0) > 0)
+    .map((s) => {
+      const units = unitsBySku[s.id] ?? 0
+      const revenue = revenueBySku[s.id] ?? 0
+      const cogs = cogsBySku[s.id] ?? 0
+      const margin = revenue - cogs
+      const returnUnits = returnUnitsBySku[s.id] ?? 0
+      return { sku: s, units, revenue, margin, marginPct: revenue > 0 ? (margin / revenue) * 100 : 0, returnRate: units > 0 ? (returnUnits / units) * 100 : 0 }
+    })
+
+  const sorted = [...rows].sort((a, b) => {
+    if (sortBy === 'revenue') return b.revenue - a.revenue
+    if (sortBy === 'units_asc') return a.units - b.units
+    if (sortBy === 'margin') return b.margin - a.margin
+    return b.returnRate - a.returnRate
+  })
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap gap-2">
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value as ProductSort)} className="text-sm rounded-lg border border-slate-300 px-2 py-1.5">
+          <option value="revenue">Top sellers (revenue)</option>
+          <option value="units_asc">Slow movers (lowest units)</option>
+          <option value="margin">Highest margin</option>
+          <option value="return_rate">Highest return rate</option>
+        </select>
+      </div>
+      <Table
+        headers={['SKU', 'Product', 'Units sold', 'Revenue', 'Margin', 'Margin %', 'Return rate']}
+        rows={sorted.map((r) => [
+          r.sku.sku,
+          r.sku.title,
+          r.units,
+          formatINR(r.revenue),
+          formatINR(r.margin),
+          `${r.marginPct.toFixed(1)}%`,
+          `${r.returnRate.toFixed(1)}%`,
+        ])}
+      />
+    </div>
+  )
+}
+
+function WarehouseReport({ warehouses, lineItems, ledger }: { warehouses: Warehouse[]; lineItems: LineItem[]; ledger: LedgerRow[] }) {
+  const stockValueByWarehouse: Record<string, number> = {}
+  const skuCostBySkuId = new Map<string, number>()
+  for (const li of lineItems) if (li.skus) skuCostBySkuId.set(li.sku_id, Number(li.skus.cost_price))
+
+  const stockByWarehouseSku: Record<string, Record<string, number>> = {}
+  for (const row of ledger) {
+    stockByWarehouseSku[row.warehouse_id] = stockByWarehouseSku[row.warehouse_id] ?? {}
+    stockByWarehouseSku[row.warehouse_id][row.sku_id] = (stockByWarehouseSku[row.warehouse_id][row.sku_id] ?? 0) + row.quantity_delta
+  }
+  for (const [warehouseId, bySku] of Object.entries(stockByWarehouseSku)) {
+    let value = 0
+    for (const [skuId, qty] of Object.entries(bySku)) value += qty * (skuCostBySkuId.get(skuId) ?? 0)
+    stockValueByWarehouse[warehouseId] = value
+  }
+
+  const ordersByWarehouse: Record<string, Set<string>> = {}
+  for (const li of lineItems) {
+    if (!li.warehouse_id) continue
+    ordersByWarehouse[li.warehouse_id] = ordersByWarehouse[li.warehouse_id] ?? new Set()
+    ordersByWarehouse[li.warehouse_id].add(li.order_id)
+  }
+  const movementsByWarehouse: Record<string, number> = {}
+  for (const row of ledger) movementsByWarehouse[row.warehouse_id] = (movementsByWarehouse[row.warehouse_id] ?? 0) + 1
+
+  const rows = warehouses.map((w) => [
+    w.name,
+    ordersByWarehouse[w.id]?.size ?? 0,
+    movementsByWarehouse[w.id] ?? 0,
+    formatINR(stockValueByWarehouse[w.id] ?? 0),
+  ])
+
+  return (
+    <div className="space-y-6">
+      <p className="text-xs text-slate-400">
+        Pick/pack/dispatch productivity isn't tracked per warehouse in the current schema (picklists, packages, and shipments aren't
+        warehouse-tagged) — shown here is what's honestly derivable: orders allocated from each warehouse, stock movement volume, and
+        current inventory value.
+      </p>
+      <Table headers={['Warehouse', 'Orders processed', 'Stock movements', 'Inventory value (at cost)']} rows={rows} />
     </div>
   )
 }
