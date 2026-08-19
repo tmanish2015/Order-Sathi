@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import Papa from 'papaparse'
+import * as XLSX from 'xlsx'
 import { format } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/AuthContext'
@@ -86,8 +87,22 @@ export default function ImportCentre() {
     return { raw, valid: true }
   }
 
-  function handleFile(f: File) {
+  async function handleFile(f: File) {
     setFile(f)
+    const isExcel = /\.xlsx?$/i.test(f.name)
+    if (isExcel) {
+      const buf = await f.arrayBuffer()
+      const workbook = XLSX.read(buf, { type: 'array' })
+      const sheet = workbook.Sheets[workbook.SheetNames[0]]
+      const parsed = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' })
+      const stringRows = parsed.map((row) => {
+        const out: Record<string, string> = {}
+        for (const [k, v] of Object.entries(row)) out[k] = String(v ?? '').trim()
+        return out
+      })
+      setRows(stringRows.map((raw) => validateRow(raw)))
+      return
+    }
     Papa.parse<Record<string, string>>(f, {
       header: true,
       skipEmptyLines: true,
@@ -222,10 +237,11 @@ export default function ImportCentre() {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".csv"
+            accept=".csv,.xlsx,.xls"
             onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
             className="text-sm text-slate-500 dark:text-slate-400 mb-4"
           />
+          <p className="text-[11px] text-slate-400 dark:text-slate-500 -mt-3 mb-4">Accepts CSV or Excel (.xlsx, .xls) — first sheet is used.</p>
 
           {rows.length > 0 && (
             <>
