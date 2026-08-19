@@ -1378,6 +1378,10 @@ export type Database = {
         Args: { p_user_id: string; p_role: Database["public"]["Enums"]["user_role"] }
         Returns: undefined
       }
+      update_team_member: {
+        Args: { p_user_id: string; p_role: Database["public"]["Enums"]["user_role"]; p_status: Database["public"]["Enums"]["user_status"] }
+        Returns: undefined
+      }
       next_invoice_number: { Args: Record<PropertyKey, never>; Returns: string }
       next_grn_number: { Args: Record<PropertyKey, never>; Returns: string }
       next_transfer_number: { Args: Record<PropertyKey, never>; Returns: string }
