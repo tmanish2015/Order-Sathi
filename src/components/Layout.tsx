@@ -32,6 +32,7 @@ const NAV = [
   { to: '/sync-logs', label: 'Sync Logs', icon: '📡', roles: ['admin', 'ops', 'finance'] },
   { to: '/integrations', label: 'Integrations', icon: '🔌', roles: ['admin', 'finance'] },
   { to: '/accounting', label: 'Accounting', icon: '📒', roles: ['admin', 'finance'] },
+  { to: '/exports', label: 'Exports', icon: '📤', roles: ['admin', 'ops', 'finance'] },
   { to: '/team', label: 'Team', icon: '👥', roles: ['admin'] },
 ]
 
