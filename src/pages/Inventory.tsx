@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/AuthContext'
 import { useToast } from '../lib/Toast'
@@ -103,7 +104,8 @@ export default function Inventory() {
   const [savingAdjust, setSavingAdjust] = useState(false)
   const [pushing, setPushing] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
+  const [searchParams] = useSearchParams()
+  const [search, setSearch] = useState(searchParams.get('q') ?? '')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<SkuFormValues>({
     title: '',

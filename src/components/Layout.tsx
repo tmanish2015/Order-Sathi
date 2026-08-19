@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, Outlet, Navigate } from 'react-router-dom'
 import { useAuth } from '../lib/AuthContext'
 import { supabase } from '../lib/supabase'
+import GlobalSearch from './GlobalSearch'
 
 const NAV = [
   { to: '/', label: 'Dashboard', icon: '📊', roles: ['admin', 'ops', 'finance'] },
@@ -93,6 +94,9 @@ export default function Layout() {
         <span className="inline-block mt-1 text-[10px] uppercase tracking-wide bg-white/10 text-indigo-200 rounded px-1.5 py-0.5">
           {role}
         </span>
+      </div>
+      <div className="px-2 pt-3">
+        <GlobalSearch onNavigate={() => setDrawerOpen(false)} />
       </div>
       <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
         {visible.map((item) => (

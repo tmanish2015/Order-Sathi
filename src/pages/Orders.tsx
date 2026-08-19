@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { format } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/AuthContext'
@@ -104,10 +104,11 @@ function slaState(o: Order): 'overdue' | 'due_soon' | 'ok' | null {
 export default function Orders() {
   const { profile } = useAuth()
   const { showError, showSuccess } = useToast()
+  const [searchParams] = useSearchParams()
   const [orders, setOrders] = useState<Order[]>([])
   const [totalOrders, setTotalOrders] = useState(0)
   const [page, setPage] = useState(0)
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(searchParams.get('q') ?? '')
   const [statusFilter, setStatusFilter] = useState<Enums<'order_status'> | ''>('')
   const [channelFilter, setChannelFilter] = useState('')
   const [warehouseFilter, setWarehouseFilter] = useState('')
