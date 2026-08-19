@@ -677,6 +677,62 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["notifications"]["Insert"]>
         Relationships: []
       }
+      accounting_connections: {
+        Row: {
+          id: string
+          organization_id: string
+          provider: Database["public"]["Enums"]["accounting_provider"]
+          display_name: string
+          config: Json
+          status: string
+          sync_status: string
+          last_success_at: string | null
+          last_failure_at: string | null
+          enabled: boolean
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          provider: Database["public"]["Enums"]["accounting_provider"]
+          display_name: string
+          config?: Json
+          status?: string
+          sync_status?: string
+          last_success_at?: string | null
+          last_failure_at?: string | null
+          enabled?: boolean
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["accounting_connections"]["Insert"]>
+        Relationships: []
+      }
+      accounting_mappings: {
+        Row: {
+          id: string
+          organization_id: string
+          connection_id: string
+          mapping_type: Database["public"]["Enums"]["accounting_mapping_type"]
+          internal_field: string
+          external_ledger_name: string
+          active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          connection_id: string
+          mapping_type: Database["public"]["Enums"]["accounting_mapping_type"]
+          internal_field: string
+          external_ledger_name: string
+          active?: boolean
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["accounting_mappings"]["Insert"]>
+        Relationships: []
+      }
       stock_transfers: {
         Row: {
           id: string
@@ -1311,6 +1367,8 @@ export type Database = {
       promotion_type: "percentage" | "fixed" | "bxgy"
       automation_trigger: "inventory_low" | "order_value_channel" | "shipping_cod_pincode" | "return_qc_resalable"
       notification_priority: "low" | "medium" | "high" | "critical"
+      accounting_provider: "tally" | "busy"
+      accounting_mapping_type: "sales" | "purchase" | "customer" | "supplier" | "tax" | "credit_note" | "debit_note" | "payment"
       serial_status: "in_stock" | "allocated" | "shipped" | "returned" | "damaged"
       order_status:
         | "new"

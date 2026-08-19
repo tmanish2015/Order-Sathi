@@ -31,6 +31,7 @@ const NAV = [
   { to: '/reports', label: 'Reports & Analytics', icon: '📈', roles: ['admin', 'ops', 'finance'] },
   { to: '/sync-logs', label: 'Sync Logs', icon: '📡', roles: ['admin', 'ops', 'finance'] },
   { to: '/integrations', label: 'Integrations', icon: '🔌', roles: ['admin', 'finance'] },
+  { to: '/accounting', label: 'Accounting', icon: '📒', roles: ['admin', 'finance'] },
   { to: '/team', label: 'Team', icon: '👥', roles: ['admin'] },
 ]
 
