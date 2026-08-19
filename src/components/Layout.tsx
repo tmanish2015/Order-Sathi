@@ -15,6 +15,7 @@ const NAV = [
   { to: '/batch-serial', label: 'Batch / Serial', icon: '🏷', roles: ['admin', 'ops'] },
   { to: '/pricing', label: 'Pricing', icon: '💰', roles: ['admin', 'ops', 'finance'] },
   { to: '/promotions', label: 'Promotions', icon: '🏷', roles: ['admin', 'ops'] },
+  { to: '/automation', label: 'Automation', icon: '⚡', roles: ['admin', 'ops'] },
   { to: '/customers', label: 'Customers', icon: '👤', roles: ['admin', 'ops', 'finance'] },
   { to: '/forecast', label: 'Forecast', icon: '📈', roles: ['admin', 'ops'] },
   { to: '/picklist', label: 'Picklists', icon: '🧾', roles: ['admin', 'ops'] },
