@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, Navigate } from 'react-router-dom'
 import { useAuth } from '../lib/AuthContext'
+import { supabase } from '../lib/supabase'
 
 const NAV = [
   { to: '/', label: 'Dashboard', icon: '📊', roles: ['admin', 'ops', 'finance'] },
+  { to: '/notifications', label: 'Notifications', icon: '🔔', roles: ['admin', 'ops', 'finance'] },
   { to: '/orders', label: 'Orders', icon: '📦', roles: ['admin', 'ops', 'finance'] },
   { to: '/inventory', label: 'Inventory', icon: '📋', roles: ['admin', 'ops', 'finance'] },
   { to: '/sku-mapping', label: 'SKU Mapping', icon: '🔗', roles: ['admin', 'ops'] },
@@ -35,6 +37,16 @@ const NAV = [
 export default function Layout() {
   const { user, profile, loading, signOut } = useAuth()
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+    if (!profile?.organization_id) return
+    supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('read', false)
+      .then(({ count }) => setUnreadCount(count ?? 0))
+  }, [profile?.organization_id])
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-slate-400">Loading…</div>
   if (!user) return <Navigate to="/login" replace />
@@ -94,6 +106,9 @@ export default function Layout() {
           >
             <span className="text-base leading-none">{item.icon}</span>
             {item.label}
+            {item.to === '/notifications' && unreadCount > 0 && (
+              <span className="ml-auto text-[10px] font-semibold bg-red-500 text-white rounded-full px-1.5 py-0.5 leading-none">{unreadCount}</span>
+            )}
           </NavLink>
         ))}
       </nav>

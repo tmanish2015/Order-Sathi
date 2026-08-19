@@ -651,6 +651,32 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["automation_rules"]["Insert"]>
         Relationships: []
       }
+      notifications: {
+        Row: {
+          id: string
+          organization_id: string
+          type: string
+          priority: Database["public"]["Enums"]["notification_priority"]
+          message: string
+          action_href: string | null
+          read: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          type: string
+          priority?: Database["public"]["Enums"]["notification_priority"]
+          message: string
+          action_href?: string | null
+          read?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["notifications"]["Insert"]>
+        Relationships: []
+      }
       stock_transfers: {
         Row: {
           id: string
@@ -1284,6 +1310,7 @@ export type Database = {
       sku_tracking_mode: "none" | "batch" | "serial"
       promotion_type: "percentage" | "fixed" | "bxgy"
       automation_trigger: "inventory_low" | "order_value_channel" | "shipping_cod_pincode" | "return_qc_resalable"
+      notification_priority: "low" | "medium" | "high" | "critical"
       serial_status: "in_stock" | "allocated" | "shipped" | "returned" | "damaged"
       order_status:
         | "new"

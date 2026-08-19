@@ -24,6 +24,7 @@ const BatchSerial = lazy(() => import('./pages/BatchSerial'))
 const Pricing = lazy(() => import('./pages/Pricing'))
 const Promotions = lazy(() => import('./pages/Promotions'))
 const Automation = lazy(() => import('./pages/Automation'))
+const Notifications = lazy(() => import('./pages/Notifications'))
 const Invoices = lazy(() => import('./pages/Invoices'))
 const Reconciliation = lazy(() => import('./pages/Reconciliation'))
 const Returns = lazy(() => import('./pages/Returns'))
@@ -65,6 +66,7 @@ export default function App() {
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/promotions" element={<Promotions />} />
               <Route path="/automation" element={<Automation />} />
+              <Route path="/notifications" element={<Notifications />} />
               <Route path="/invoices" element={<Invoices />} />
               <Route path="/reconciliation" element={<Reconciliation />} />
               <Route path="/returns" element={<Returns />} />
