@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { format, subDays, startOfDay } from 'date-fns'
 import { Bar, BarChart, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, Legend } from 'recharts'
@@ -276,12 +276,13 @@ export default function Dashboard() {
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Dashboard</h2>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{format(new Date(), 'EEEE, dd MMMM yyyy')}</p>
+      <div className="mb-6 flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Dashboard</h2>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{format(new Date(), 'EEEE, dd MMMM yyyy')}</p>
+        </div>
+        <ExceptionsPanel exceptions={exceptions} />
       </div>
-
-      <ExceptionsPanel exceptions={exceptions} />
 
       <Section title="Order status">
         <KpiGrid>
@@ -455,6 +456,9 @@ export default function Dashboard() {
 }
 
 function ExceptionsPanel({ exceptions }: { exceptions: Exceptions }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
   const items: { label: string; value: number; to: string }[] = [
     { label: 'Stock shortages', value: exceptions.stockShortages, to: '/orders' },
     { label: 'SLA breaches', value: exceptions.slaBreaches, to: '/orders' },
@@ -466,25 +470,50 @@ function ExceptionsPanel({ exceptions }: { exceptions: Exceptions }) {
     { label: 'Failed syncs (last 50)', value: exceptions.failedSyncs, to: '/sync-logs' },
   ].filter((i) => i.value > 0)
 
+  const total = items.reduce((s, i) => s + i.value, 0)
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [])
+
   if (items.length === 0) {
     return (
-      <div className="mb-6 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl px-4 py-3 text-sm text-emerald-800">
-        No open exceptions — stock, SLA, mapping, shipping, and reconciliation all clear.
+      <div className="shrink-0 flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-full px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+        <span>✓</span> All clear
       </div>
     )
   }
 
   return (
-    <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
-      <div className="text-xs font-semibold uppercase text-red-700 mb-3">Exceptions — needs attention</div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {items.map((i) => (
-          <Link key={i.label} to={i.to} className="bg-white dark:bg-slate-800 rounded-lg border border-red-100 px-3 py-2 hover:border-red-300 transition-colors">
-            <div className="text-[11px] text-slate-500 dark:text-slate-400">{i.label}</div>
-            <div className="text-lg font-semibold text-red-600 mt-0.5">{i.value}</div>
-          </Link>
-        ))}
-      </div>
+    <div ref={ref} className="relative shrink-0">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-full px-3 py-1.5 text-xs font-semibold text-red-700 dark:text-red-300 hover:border-red-300 dark:hover:border-red-700 transition-colors"
+      >
+        <span>⚠</span> {total} issue{total > 1 ? 's' : ''}
+      </button>
+      {open && (
+        <div className="absolute right-0 z-50 mt-1 w-72 max-h-96 overflow-y-auto rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg">
+          <div className="px-3 pt-2.5 pb-1.5 text-[10px] font-semibold uppercase text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-700/60">
+            Needs attention
+          </div>
+          {items.map((i) => (
+            <Link
+              key={i.label}
+              to={i.to}
+              onClick={() => setOpen(false)}
+              className="flex items-center justify-between px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700/40"
+            >
+              <span className="text-slate-600 dark:text-slate-300">{i.label}</span>
+              <span className="font-semibold text-red-600 dark:text-red-400">{i.value}</span>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
