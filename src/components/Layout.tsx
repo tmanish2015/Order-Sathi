@@ -17,6 +17,7 @@ const NAV_SECTIONS: { section: string; items: NavItem[] }[] = [
     section: 'Overview',
     items: [
       { to: '/', label: 'Dashboard', icon: '📊', roles: ['admin', 'ops', 'finance'] },
+      { to: '/ceo-dashboard', label: 'CEO Dashboard', icon: '🚀', roles: ['admin', 'finance'] },
       { to: '/notifications', label: 'Notifications', icon: '🔔', roles: ['admin', 'ops', 'finance'] },
       { to: '/reports', label: 'Reports & Analytics', icon: '📈', roles: ['admin', 'ops', 'finance'] },
     ],
