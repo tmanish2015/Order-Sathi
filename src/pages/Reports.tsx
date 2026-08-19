@@ -423,6 +423,17 @@ function AgeingReport({ skus, ledger, warehouses }: { skus: Sku[]; ledger: Ledge
 const FSN_WINDOW_DAYS_DEFAULT = 30
 const FAST_MOVING_RATE = 1
 
+const ABC_COLOR: Record<'A' | 'B' | 'C', { chip: string; card: string; num: string }> = {
+  A: { chip: 'bg-indigo-100 text-indigo-700', card: 'border-indigo-200 bg-indigo-50', num: 'text-indigo-700' },
+  B: { chip: 'bg-amber-100 text-amber-700', card: 'border-amber-200 bg-amber-50', num: 'text-amber-700' },
+  C: { chip: 'bg-slate-200 text-slate-600', card: 'border-slate-300 bg-slate-100', num: 'text-slate-600' },
+}
+const FSN_COLOR: Record<'Fast' | 'Slow' | 'Non', { chip: string; card: string; num: string }> = {
+  Fast: { chip: 'bg-emerald-100 text-emerald-700', card: 'border-emerald-200 bg-emerald-50', num: 'text-emerald-700' },
+  Slow: { chip: 'bg-amber-100 text-amber-700', card: 'border-amber-200 bg-amber-50', num: 'text-amber-700' },
+  Non: { chip: 'bg-red-100 text-red-700', card: 'border-red-200 bg-red-50', num: 'text-red-700' },
+}
+
 function AbcFsnReport({
   skus,
   lineItems,
@@ -522,18 +533,61 @@ function AbcFsnReport({
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <Stat label="A (top 80% revenue)" value={abcCounts.A} />
-        <Stat label="B (next 15%)" value={abcCounts.B} />
-        <Stat label="C (remaining 5% + zero)" value={abcCounts.C} />
-        <Stat label="Fast moving" value={fsnCounts.Fast} />
-        <Stat label="Slow moving" value={fsnCounts.Slow} />
-        <Stat label="Non moving" value={fsnCounts.Non} />
+        <CategoryStat label="A (top 80% revenue)" value={abcCounts.A} color={ABC_COLOR.A} />
+        <CategoryStat label="B (next 15%)" value={abcCounts.B} color={ABC_COLOR.B} />
+        <CategoryStat label="C (remaining 5% + zero)" value={abcCounts.C} color={ABC_COLOR.C} />
+        <CategoryStat label="Fast moving" value={fsnCounts.Fast} color={FSN_COLOR.Fast} />
+        <CategoryStat label="Slow moving" value={fsnCounts.Slow} color={FSN_COLOR.Slow} />
+        <CategoryStat label="Non moving" value={fsnCounts.Non} color={FSN_COLOR.Non} />
       </div>
 
-      <Table
-        headers={['SKU', 'Revenue', 'Units sold', 'ABC', 'FSN']}
-        rows={rows.map((r) => [r.sku.sku, formatINR(r.revenue), r.units, r.abc, r.fsn])}
-      />
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs text-slate-400 border-b border-slate-100">
+                <th className="px-4 py-2 font-medium">SKU</th>
+                <th className="px-4 py-2 font-medium">Revenue</th>
+                <th className="px-4 py-2 font-medium">Units sold</th>
+                <th className="px-4 py-2 font-medium">ABC</th>
+                <th className="px-4 py-2 font-medium">FSN</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
+                    No data for this window.
+                  </td>
+                </tr>
+              ) : (
+                rows.map((r) => (
+                  <tr key={r.sku.id}>
+                    <td className="px-4 py-2.5 font-medium text-slate-700">{r.sku.sku}</td>
+                    <td className="px-4 py-2.5 text-slate-600">{formatINR(r.revenue)}</td>
+                    <td className="px-4 py-2.5 text-slate-600">{r.units}</td>
+                    <td className="px-4 py-2.5">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded ${ABC_COLOR[r.abc].chip}`}>{r.abc}</span>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded ${FSN_COLOR[r.fsn].chip}`}>{r.fsn}</span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function CategoryStat({ label, value, color }: { label: string; value: number; color: { card: string; num: string } }) {
+  return (
+    <div className={`rounded-xl border shadow-sm p-3.5 ${color.card}`}>
+      <div className="text-xs text-slate-500">{label}</div>
+      <div className={`text-lg font-semibold mt-1 ${color.num}`}>{value}</div>
     </div>
   )
 }
