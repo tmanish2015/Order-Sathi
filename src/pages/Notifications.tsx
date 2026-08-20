@@ -72,23 +72,23 @@ export default function Notifications() {
       { type: 'failed_sync', priority: 'medium', href: '/sync-logs', count: failedSyncCount, label: 'failed sync(s) (last 50)' },
     ]
 
-    for (const def of defs) {
-      if (def.count > 0) {
-        await supabase.from('notifications').upsert(
-          {
-            organization_id: orgId,
-            type: def.type,
-            priority: def.priority,
-            message: `${def.count} ${def.label}`,
-            action_href: def.href,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'organization_id,type' }
-        )
-      } else {
-        await supabase.from('notifications').delete().eq('organization_id', orgId).eq('type', def.type)
-      }
-    }
+    await Promise.all(
+      defs.map((def) =>
+        def.count > 0
+          ? supabase.from('notifications').upsert(
+              {
+                organization_id: orgId,
+                type: def.type,
+                priority: def.priority,
+                message: `${def.count} ${def.label}`,
+                action_href: def.href,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: 'organization_id,type' }
+            )
+          : supabase.from('notifications').delete().eq('organization_id', orgId).eq('type', def.type)
+      )
+    )
 
     const { data } = await supabase.from('notifications').select('*')
     const sorted = ((data ?? []) as Notification[]).sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || b.updated_at.localeCompare(a.updated_at))
