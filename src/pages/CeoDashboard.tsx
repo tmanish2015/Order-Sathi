@@ -311,9 +311,9 @@ export default function CeoDashboard() {
           tone={m.stockHealthPct >= 90 ? 'good' : m.stockHealthPct >= 70 ? 'warn' : 'bad'}
         />
         <PillarCard
-          label="Customer experience"
-          value={m.returnRatePct != null ? `${m.returnRatePct.toFixed(1)}%` : '—'}
-          sub={`return rate${m.rtoRatePct != null ? ` · ${m.rtoRatePct.toFixed(1)}% RTO` : ''}`}
+          label="Customer satisfaction"
+          value={m.returnRatePct != null ? `${Math.max(0, 100 - m.returnRatePct * 5).toFixed(0)}%` : '—'}
+          sub={`${m.returnRatePct != null ? `${m.returnRatePct.toFixed(1)}% returned` : 'no orders yet'}${m.rtoRatePct != null ? ` · ${m.rtoRatePct.toFixed(1)}% RTO` : ''}`}
           tone={m.returnRatePct == null ? 'neutral' : m.returnRatePct <= 3 ? 'good' : m.returnRatePct <= 8 ? 'warn' : 'bad'}
         />
         <PillarCard
