@@ -233,9 +233,9 @@ export default function Inventory() {
   // inventory-health bucket for the alert filter chips below.
   function alertKindFor(s: Sku): AlertKind {
     const stock = s.is_bundle ? bundleAvailable(s.id) : stockBySku[s.id] ?? 0
-    const available = s.is_bundle ? stock : Math.max(stock - s.buffer_stock, 0)
+    const available = stock
     if (available <= 0) return 'out_of_stock'
-    if (available <= s.reorder_level) return 'low_stock'
+    if (available <= s.buffer_stock) return 'low_stock'
     if (s.max_stock != null && stock > s.max_stock) return 'overstock'
     return movementClass(dailyRateBySku[s.id] ?? 0) === 'fast' ? 'fast_moving' : movementClass(dailyRateBySku[s.id] ?? 0) === 'slow' ? 'slow_moving' : 'non_moving'
   }
@@ -866,7 +866,7 @@ export default function Inventory() {
               <tbody className="divide-y divide-slate-50 dark:divide-slate-700/60">
                 {filteredSkus.map((s) => {
                   const stock = s.is_bundle ? bundleAvailable(s.id) : stockBySku[s.id] ?? 0
-                  const available = s.is_bundle ? stock : Math.max(stock - s.buffer_stock, 0)
+                  const available = stock
                   const low = stock <= s.buffer_stock
                   const isEditing = editingId === s.id
                   return (
