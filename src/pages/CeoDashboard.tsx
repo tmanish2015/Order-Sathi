@@ -17,6 +17,7 @@ const WINDOW_DAYS = 30
 interface Metrics {
   healthScore: number
   healthBreakdown: { label: string; value: number }[]
+  healthScoredCount: number
   revenue30: number
   revenuePrior30: number
   growthPct: number | null
@@ -68,7 +69,7 @@ export default function CeoDashboard() {
         supabase.from('order_line_items').select('*, skus(*)'),
         supabase.from('skus').select('*').eq('active', true),
         supabase.from('inventory_ledger').select('sku_id, quantity_delta'),
-        supabase.from('order_returns').select('created_at, return_type'),
+        supabase.from('order_returns').select('created_at, return_type, order_id'),
         supabase.from('channels').select('id, display_name'),
         supabase.from('reconciliation_entries').select('status, expected_settlement, actual_settlement'),
       ])
@@ -127,9 +128,14 @@ export default function CeoDashboard() {
     const inventoryValue = activeSkus.reduce((s, sku) => s + Math.max(stockBySku[sku.id] ?? 0, 0) * Number(sku.cost_price), 0)
 
     // Returns / RTO rate over the same 30d order volume
+    // Order-level rate, not return-row count - an order with 2 items
+    // returned only counts once, so a multi-item return can't inflate the
+    // rate past what actually happened to the order volume.
     const returns30 = (returns ?? []).filter((r) => new Date(r.created_at).getTime() >= cutoff30)
-    const returnRatePct = orders30.length > 0 ? (returns30.filter((r) => r.return_type === 'customer_return').length / orders30.length) * 100 : null
-    const rtoRatePct = orders30.length > 0 ? (returns30.filter((r) => r.return_type === 'rto').length / orders30.length) * 100 : null
+    const ordersWithCustomerReturn = new Set(returns30.filter((r) => r.return_type === 'customer_return').map((r) => r.order_id))
+    const ordersWithRto = new Set(returns30.filter((r) => r.return_type === 'rto').map((r) => r.order_id))
+    const returnRatePct = orders30.length > 0 ? (ordersWithCustomerReturn.size / orders30.length) * 100 : null
+    const rtoRatePct = orders30.length > 0 ? (ordersWithRto.size / orders30.length) * 100 : null
 
     // Reconciliation health + cash outstanding
     const recon = reconEntries ?? []
@@ -181,6 +187,7 @@ export default function CeoDashboard() {
     setM({
       healthScore,
       healthBreakdown: pillars.map((p) => ({ label: p.label, value: p.value != null ? Math.round(p.value) : 0 })),
+      healthScoredCount: scored.length,
       revenue30,
       revenuePrior30,
       growthPct,
@@ -234,35 +241,33 @@ export default function CeoDashboard() {
         </p>
       </div>
 
-      {/* Hero: health score + headline metrics */}
+      {/* Hero: revenue-led headline metrics, health score as a secondary badge */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 p-6 sm:p-8 mb-6 shadow-lg shadow-indigo-900/20">
         <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '20px 20px' }} />
-        <div className="relative flex flex-col lg:flex-row items-center lg:items-stretch gap-8">
-          <div className="flex flex-col items-center justify-center shrink-0">
-            <div
-              className="relative w-36 h-36 rounded-full flex items-center justify-center"
-              style={{ background: `conic-gradient(${scoreColor} ${m.healthScore * 3.6}deg, rgba(255,255,255,0.15) 0deg)` }}
-            >
-              <div className="absolute inset-2 rounded-full bg-indigo-700/90 backdrop-blur flex flex-col items-center justify-center">
-                <span className="text-3xl font-bold text-white tabular-nums">{m.healthScore}</span>
-                <span className="text-[10px] uppercase tracking-wide text-indigo-200">Health score</span>
-              </div>
+        <div className="relative flex items-start justify-between gap-3 mb-6">
+          <p className="text-xs text-indigo-200">Last 30 days, live</p>
+          <div className="group relative shrink-0">
+            <div className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5">
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: scoreColor }} />
+              <span className="text-xs font-semibold text-white tabular-nums">Health {m.healthScore}</span>
+              <span className="text-[10px] text-indigo-200">({m.healthScoredCount}/4 scored)</span>
             </div>
-            <div className="mt-3 flex flex-wrap justify-center gap-x-3 gap-y-1 max-w-[220px]">
+            <div className="absolute right-0 z-10 mt-1 w-64 rounded-lg bg-slate-900 text-white text-[11px] p-3 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity">
+              <p className="mb-1.5 text-slate-300">Average of the pillars below that have data — pillars with none yet (e.g. no SLA due dates set) are left out, not guessed at:</p>
               {m.healthBreakdown.map((p) => (
-                <span key={p.label} className="text-[10px] text-indigo-200" title={p.label}>
-                  {p.label.split(' ')[0]} {p.value}
-                </span>
+                <div key={p.label} className="flex justify-between py-0.5">
+                  <span className="text-slate-400">{p.label}</span>
+                  <span className="font-medium">{p.value}</span>
+                </div>
               ))}
             </div>
           </div>
-
-          <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
-            <HeroStat label="Revenue (30d)" value={formatINR(m.revenue30)} delta={m.growthPct} />
+        </div>
+        <div className="relative grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
+            <HeroStat label="Revenue (30d)" value={formatINR(m.revenue30)} delta={m.growthPct} big />
             <HeroStat label="Gross profit (30d)" value={formatINR(m.grossProfit30)} sub={m.marginPct != null ? `${m.marginPct.toFixed(1)}% margin` : undefined} />
             <HeroStat label="Orders (30d)" value={String(m.orders30)} sub={`AOV ${formatINR(m.aov)}`} />
             <HeroStat label="Today" value={formatINR(m.revenueToday)} sub={`${m.ordersToday} order${m.ordersToday === 1 ? '' : 's'}`} />
-          </div>
         </div>
       </div>
 
@@ -414,11 +419,11 @@ export default function CeoDashboard() {
   )
 }
 
-function HeroStat({ label, value, sub, delta }: { label: string; value: string; sub?: string; delta?: number | null }) {
+function HeroStat({ label, value, sub, delta, big }: { label: string; value: string; sub?: string; delta?: number | null; big?: boolean }) {
   return (
     <div>
       <div className="text-[11px] uppercase tracking-wide text-indigo-200">{label}</div>
-      <div className="text-2xl font-bold text-white mt-1 tabular-nums">{value}</div>
+      <div className={`font-bold text-white mt-1 tabular-nums ${big ? 'text-4xl' : 'text-2xl'}`}>{value}</div>
       {sub && <div className="text-xs text-indigo-200 mt-0.5">{sub}</div>}
       {delta != null && (
         <div className={`text-xs mt-0.5 font-medium ${delta >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>
