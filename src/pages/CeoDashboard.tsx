@@ -27,6 +27,10 @@ interface Metrics {
   grossProfit30: number
   marginPct: number | null
   slaCompliancePct: number | null
+  slaBreached: number
+  slaDueSoon: number
+  slaOnTrack: number
+  slaTracked: number
   stockHealthPct: number
   outOfStockCount: number
   totalSkus: number
@@ -37,6 +41,11 @@ interface Metrics {
   trend: { date: string; revenue: number }[]
   channelPerf: { channel: string; revenue: number; orders: number }[]
   topChannel: string | null
+  pendingPick: number
+  pendingPack: number
+  pendingDispatch: number
+  pendingSettlement: number
+  topSku: { sku: string; title: string; revenue: number } | null
 }
 
 export default function CeoDashboard() {
@@ -61,7 +70,7 @@ export default function CeoDashboard() {
         supabase.from('inventory_ledger').select('sku_id, quantity_delta'),
         supabase.from('order_returns').select('created_at, return_type'),
         supabase.from('channels').select('id, display_name'),
-        supabase.from('reconciliation_entries').select('status'),
+        supabase.from('reconciliation_entries').select('status, expected_settlement, actual_settlement'),
       ])
 
     const ordersData: Order[] = orders ?? []
@@ -90,12 +99,24 @@ export default function CeoDashboard() {
     const marginPct = revenue30 > 0 ? (grossProfit30 / revenue30) * 100 : null
     const aov = orders30.length > 0 ? revenue30 / orders30.length : 0
 
-    // SLA compliance: among open orders that ever had a due date, % not breached.
+    // SLA: among open orders that have a due date, split into breached /
+    // due within 24h / on track. Always shown with real counts (including
+    // zero) rather than hidden, since SLA risk is the most operationally
+    // urgent number on this page.
     const TERMINAL: string[] = ['delivered', 'cancelled', 'returned', 'rto']
-    const withSla = ordersData.filter((o) => o.sla_due_at)
-    const openWithSla = withSla.filter((o) => !TERMINAL.includes(o.order_status))
-    const breached = openWithSla.filter((o) => new Date(o.sla_due_at!).getTime() < now).length
-    const slaCompliancePct = openWithSla.length > 0 ? ((openWithSla.length - breached) / openWithSla.length) * 100 : null
+    const openOrders = ordersData.filter((o) => !TERMINAL.includes(o.order_status))
+    const openWithSla = openOrders.filter((o) => o.sla_due_at)
+    const slaBreached = openWithSla.filter((o) => new Date(o.sla_due_at!).getTime() < now).length
+    const slaDueSoon = openWithSla.filter((o) => {
+      const due = new Date(o.sla_due_at!).getTime()
+      return due >= now && due - now < 24 * 60 * 60 * 1000
+    }).length
+    const slaOnTrack = openWithSla.length - slaBreached - slaDueSoon
+    const slaCompliancePct = openWithSla.length > 0 ? ((openWithSla.length - slaBreached) / openWithSla.length) * 100 : null
+
+    const pendingPick = ordersData.filter((o) => o.order_status === 'ready_to_pick').length
+    const pendingPack = ordersData.filter((o) => o.order_status === 'picked').length
+    const pendingDispatch = ordersData.filter((o) => o.order_status === 'ready_to_ship').length
 
     // Inventory health
     const stockBySku: Record<string, number> = {}
@@ -110,9 +131,21 @@ export default function CeoDashboard() {
     const returnRatePct = orders30.length > 0 ? (returns30.filter((r) => r.return_type === 'customer_return').length / orders30.length) * 100 : null
     const rtoRatePct = orders30.length > 0 ? (returns30.filter((r) => r.return_type === 'rto').length / orders30.length) * 100 : null
 
-    // Reconciliation health
+    // Reconciliation health + cash outstanding
     const recon = reconEntries ?? []
     const reconciliationHealthPct = recon.length > 0 ? (recon.filter((r) => r.status === 'matched').length / recon.length) * 100 : null
+    const pendingSettlement = recon.filter((r) => r.actual_settlement == null).reduce((s, r) => s + Number(r.expected_settlement), 0)
+
+    // Top SKU by revenue in the last 30 days
+    const skuRevenue: Record<string, { sku: string; title: string; revenue: number }> = {}
+    for (const li of items30) {
+      if (!li.skus) continue
+      const key = li.sku_id
+      const existing = skuRevenue[key] ?? { sku: li.skus.sku, title: li.skus.title, revenue: 0 }
+      existing.revenue += li.quantity * Number(li.unit_price)
+      skuRevenue[key] = existing
+    }
+    const topSku = Object.values(skuRevenue).sort((a, b) => b.revenue - a.revenue)[0] ?? null
 
     // 14-day revenue trend
     const days = Array.from({ length: TREND_DAYS }).map((_, i) => startOfDay(subDays(new Date(), TREND_DAYS - 1 - i)))
@@ -158,6 +191,10 @@ export default function CeoDashboard() {
       grossProfit30,
       marginPct,
       slaCompliancePct,
+      slaBreached,
+      slaDueSoon,
+      slaOnTrack,
+      slaTracked: openWithSla.length,
       stockHealthPct,
       outOfStockCount,
       totalSkus: activeSkus.length,
@@ -168,6 +205,11 @@ export default function CeoDashboard() {
       trend,
       channelPerf,
       topChannel,
+      pendingPick,
+      pendingPack,
+      pendingDispatch,
+      pendingSettlement,
+      topSku,
     })
     setLoading(false)
   }
@@ -224,14 +266,44 @@ export default function CeoDashboard() {
         </div>
       </div>
 
+      {/* SLA - the most operationally urgent number, always shown with real counts */}
+      <div
+        className={`rounded-xl border shadow-sm p-4 mb-6 flex flex-wrap items-center gap-6 ${
+          m.slaBreached > 0
+            ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+        }`}
+      >
+        <div>
+          <div className="text-[10px] uppercase tracking-wide text-slate-400 dark:text-slate-500">SLA breached</div>
+          <div className={`text-3xl font-bold mt-0.5 tabular-nums ${m.slaBreached > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-900 dark:text-slate-100'}`}>
+            {m.slaBreached}
+          </div>
+        </div>
+        <div className="h-10 w-px bg-slate-200 dark:bg-slate-700" />
+        <div>
+          <div className="text-[10px] uppercase tracking-wide text-slate-400 dark:text-slate-500">Due within 24h</div>
+          <div className={`text-xl font-semibold mt-0.5 tabular-nums ${m.slaDueSoon > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-slate-100'}`}>
+            {m.slaDueSoon}
+          </div>
+        </div>
+        <div className="h-10 w-px bg-slate-200 dark:bg-slate-700" />
+        <div>
+          <div className="text-[10px] uppercase tracking-wide text-slate-400 dark:text-slate-500">On track</div>
+          <div className="text-xl font-semibold mt-0.5 tabular-nums text-slate-900 dark:text-slate-100">{m.slaOnTrack}</div>
+        </div>
+        <div className="h-10 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
+        <div className="ml-auto text-right">
+          <div className="text-[10px] uppercase tracking-wide text-slate-400 dark:text-slate-500">Compliance</div>
+          <div className="text-xl font-semibold mt-0.5 tabular-nums text-slate-900 dark:text-slate-100">
+            {m.slaCompliancePct != null ? `${m.slaCompliancePct.toFixed(0)}%` : '—'}
+          </div>
+          <div className="text-[10px] text-slate-400 dark:text-slate-500">{m.slaTracked} open order{m.slaTracked === 1 ? '' : 's'} tracked</div>
+        </div>
+      </div>
+
       {/* Pillar KPI tiles */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <PillarCard
-          label="Fulfilment"
-          value={m.slaCompliancePct != null ? `${m.slaCompliancePct.toFixed(0)}%` : '—'}
-          sub="SLA compliance"
-          tone={m.slaCompliancePct == null ? 'neutral' : m.slaCompliancePct >= 90 ? 'good' : m.slaCompliancePct >= 70 ? 'warn' : 'bad'}
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <PillarCard
           label="Inventory"
           value={`${m.stockHealthPct.toFixed(0)}%`}
@@ -299,6 +371,28 @@ export default function CeoDashboard() {
               })()}
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Operational backlog + cash + top mover */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 flex flex-wrap items-center gap-6 mb-6">
+        <div>
+          <div className="text-[10px] uppercase tracking-wide text-slate-400 dark:text-slate-500">Backlog: pick / pack / dispatch</div>
+          <div className="text-lg font-semibold text-slate-900 dark:text-slate-100 mt-0.5 tabular-nums">
+            {m.pendingPick} / {m.pendingPack} / {m.pendingDispatch}
+          </div>
+        </div>
+        <div className="h-8 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
+        <div>
+          <div className="text-[10px] uppercase tracking-wide text-slate-400 dark:text-slate-500">Cash pending settlement</div>
+          <div className="text-lg font-semibold text-amber-600 dark:text-amber-400 mt-0.5">{formatINR(m.pendingSettlement)}</div>
+        </div>
+        <div className="h-8 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
+        <div>
+          <div className="text-[10px] uppercase tracking-wide text-slate-400 dark:text-slate-500">Top mover (30d)</div>
+          <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 mt-0.5">
+            {m.topSku ? `${m.topSku.sku} — ${formatINR(m.topSku.revenue)}` : '—'}
+          </div>
         </div>
       </div>
 
