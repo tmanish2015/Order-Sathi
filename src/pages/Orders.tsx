@@ -1061,7 +1061,11 @@ export default function Orders() {
                           <input type="checkbox" checked={selectedIds.has(o.id)} onChange={() => toggleSelected(o.id)} />
                         </td>
                       )}
-                      <td className="px-4 py-2.5 font-medium text-slate-700 dark:text-slate-300">{o.amazon_order_id}</td>
+                      <td className="px-4 py-2.5 font-medium">
+                        <Link to={`/orders/${o.id}`} className="text-slate-700 dark:text-slate-300 hover:text-indigo-600 hover:underline">
+                          {o.amazon_order_id}
+                        </Link>
+                      </td>
                       <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{format(new Date(o.order_date), 'dd MMM yyyy')}</td>
                       <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{o.channels?.display_name ?? '—'}</td>
                       <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{o.customer_name ?? '—'}</td>

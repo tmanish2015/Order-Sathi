@@ -8,6 +8,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 
 const Orders = lazy(() => import('./pages/Orders'))
+const OrderDetail = lazy(() => import('./pages/OrderDetail'))
 const Inventory = lazy(() => import('./pages/Inventory'))
 const SkuMapping = lazy(() => import('./pages/SkuMapping'))
 const Warehouses = lazy(() => import('./pages/Warehouses'))
@@ -57,6 +58,7 @@ export default function App() {
             <Route element={<Layout />}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/orders" element={<Orders />} />
+              <Route path="/orders/:id" element={<OrderDetail />} />
               <Route path="/inventory" element={<Inventory />} />
               <Route path="/sku-mapping" element={<SkuMapping />} />
               <Route path="/warehouses" element={<Warehouses />} />
