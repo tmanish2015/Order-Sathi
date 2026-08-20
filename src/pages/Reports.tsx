@@ -102,7 +102,7 @@ export default function Reports() {
           {tab === 'Ageing' && <AgeingReport skus={skus} ledger={ledger} warehouses={warehouses} />}
           {tab === 'ABC/FSN' && <AbcFsnReport skus={skus} lineItems={lineItems} ledger={ledger} warehouses={warehouses} />}
           {tab === 'Products' && <ProductsReport skus={skus} lineItems={lineItems} returns={returns} />}
-          {tab === 'Warehouse' && <WarehouseReport warehouses={warehouses} lineItems={lineItems} ledger={ledger} />}
+          {tab === 'Warehouse' && <WarehouseReport warehouses={warehouses} skus={skus} lineItems={lineItems} ledger={ledger} />}
           {tab === 'Shipping' && <ShippingReport shipments={shipments} orders={orders} trackingEvents={trackingEvents} />}
           {tab === 'Returns' && <ReturnsReport returns={returns} />}
           {tab === 'Reconciliation' && <ReconciliationReport settlements={settlements} />}
@@ -846,10 +846,10 @@ function ProductsReport({ skus, lineItems, returns }: { skus: Sku[]; lineItems: 
   )
 }
 
-function WarehouseReport({ warehouses, lineItems, ledger }: { warehouses: Warehouse[]; lineItems: LineItem[]; ledger: LedgerRow[] }) {
+function WarehouseReport({ warehouses, skus, lineItems, ledger }: { warehouses: Warehouse[]; skus: Sku[]; lineItems: LineItem[]; ledger: LedgerRow[] }) {
   const stockValueByWarehouse: Record<string, number> = {}
   const skuCostBySkuId = new Map<string, number>()
-  for (const li of lineItems) if (li.skus) skuCostBySkuId.set(li.sku_id, Number(li.skus.cost_price))
+  for (const s of skus) skuCostBySkuId.set(s.id, Number(s.cost_price))
 
   const stockByWarehouseSku: Record<string, Record<string, number>> = {}
   for (const row of ledger) {
