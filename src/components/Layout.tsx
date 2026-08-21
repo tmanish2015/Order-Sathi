@@ -135,7 +135,9 @@ export default function Layout() {
             I
           </div>
           <div>
-            <h1 className="text-sm font-semibold text-white tracking-wide">Order Sathi</h1>
+            <h1 className="text-base font-bold tracking-tight">
+              <span className="text-white">Order</span> <span className="text-indigo-300">Sathi</span>
+            </h1>
             <p className="text-[10px] text-indigo-200/70 -mt-0.5">Amazon OMS</p>
           </div>
         </div>
@@ -222,7 +224,9 @@ export default function Layout() {
               <path d="M3 6h18M3 12h18M3 18h18" strokeLinecap="round" />
             </svg>
           </button>
-          <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">Order Sathi</span>
+          <span className="text-base font-bold tracking-tight">
+            <span className="text-slate-900 dark:text-slate-100">Order</span> <span className="text-indigo-600 dark:text-indigo-400">Sathi</span>
+          </span>
           <button onClick={toggleTheme} className="ml-auto text-slate-500 dark:text-slate-400 p-1" aria-label="Toggle theme">
             {theme === 'dark' ? '☀️' : '🌙'}
           </button>
